@@ -55,7 +55,7 @@ Direction set: the store is a GitHub repository, one per family tree. The Loom s
 ```
 tree/
   people/
-    p-7k2m9x/
+    hughes-margaret-ellen-7k2m9x/
       index.md     (the person's page)
   unions/    u-2b6n4c.md
   sources/   s-1900-census.md

@@ -98,7 +98,7 @@ void main(List<String> args) {
         (n.value.startsWith('@') ? byXref[n.value]?.value ?? '' : n.value).trim()
     ].where((t) => t.isNotEmpty);
 
-    write('$outDir/people/$id/index.md', '---\n$y---\n${notes.isEmpty ? '' : '\n${notes.join('\n\n')}\n'}');
+    write('$outDir/people/${personDir(plainName(primary.value), surname, id)}/index.md', '---\n$y---\n${notes.isEmpty ? '' : '\n${notes.join('\n\n')}\n'}');
     report.people++;
     if (notes.isNotEmpty) report.withProse++;
   }
@@ -198,6 +198,16 @@ String convertDate(String date, Report report) {
 
 /// N41.5083 -> 41.5083, W71.2417 -> -71.2417.
 String coordinate(String v) => '${'SW'.contains(v[0]) ? '-' : ''}${v.substring(1)}';
+
+/// A readable directory name ending in the id: carew-howard-joseph-tbczm8.
+/// Surname first, so a listing groups families. Only the trailing id
+/// identifies the person; the rest is never relied on.
+String personDir(String name, String? surname, String id) {
+  var given = name;
+  if (surname != null && surname.isNotEmpty) given = name.replaceFirst(surname, '');
+  final slug = '${surname ?? ''} $given'.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-').replaceAll(RegExp(r'^-+|-+$'), '');
+  return '${slug.isEmpty ? '' : '$slug-'}${id.substring(2)}';
+}
 
 String plainName(String gedcomName) => gedcomName.replaceAll('/', '').replaceAll(RegExp(r'\s+'), ' ').trim();
 

@@ -1,3 +1,5 @@
 .DS_Store
 spikes/*/out/
 data/
+.dart_tool/
+.loom_cache/

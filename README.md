@@ -31,6 +31,17 @@ Loom is a family-history wiki: pages about people, written as markdown with imag
 - **Every claim can cite its source.**
 - **Standards at the edges.** GEDCOM 7.0 for trees, XMP and IPTC for image metadata.
 
+## Running it
+
+The read-only server needs Dart, `exiftool` and `libvips`.
+
+```
+dart pub get
+dart run loom data/tree
+```
+
+It serves the tree at http://localhost:8080. The directory is a clone of a tree repository; `spikes/gedcom_import` can generate a sample one from a GEDCOM export. The index and resized images go in `.loom_cache/`, which can be deleted at any time.
+
 ## Design documents
 
 | File | Covers |

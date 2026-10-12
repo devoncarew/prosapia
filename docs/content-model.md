@@ -17,7 +17,7 @@ Margaret grew up above her father's hardware store...
 
 ## 1923: Trip to Wales
 
-She sailed from New York in June with her cousin [Owen Price](../p-4h8w2r/index.md) to visit her mother's family. [^s-ship-manifest]
+She sailed from New York in June with her cousin [Owen Price](../price-owen-4h8w2r/index.md) to visit her mother's family. [^s-ship-manifest]
 
 ![On the dock at Liverpool](../../media/m-5t1q8z.jpg)
 ```
@@ -30,12 +30,14 @@ She sailed from New York in June with her cousin [Owen Price](../p-4h8w2r/index.
 
 ### Proposed
 
-- **Stable opaque ids** (`p-7k2m9x`) name people, sources and media. Names change and collide; ids do not. Each person gets a directory named by the id (`people/p-7k2m9x/index.md`), so notes, transcripts or split-out entries can sit beside the page later without breaking any link.
+- **Stable opaque ids** (`p-7k2m9x`) name people, sources and media. Names change and collide; ids do not. Each person gets a directory of their own, so notes, transcripts or split-out entries can sit beside the page later.
+- **A person's directory is a readable name ending in the id**: `people/hughes-margaret-ellen-7k2m9x/index.md`, surname first so a listing groups families. Only the trailing id identifies the person. The readable part is set when the person is created and is never renamed automatically; if a name is later corrected, the old directory name still works, and a tidy-up rename is an ordinary pull request. Structured references use the bare id (`parents: [p-3f8d1a]`) and never break.
+- **Ids from other systems are extra links, not Loom's ids.** A person may record a FamilySearch or WikiTree id, which identify one person in a shared tree, to link outward and to match people on re-import. Ancestry ids identify a row in one member's tree, so they are weaker. Most people in a family tree are in none of these systems.
 - **Entries are sections** in the person's page: a heading with an optional date, then prose and images. The date-in-heading convention is all a timeline generator needs.
 - **Relationships are stored once.** A child lists its parents; a partnership is its own small record. Siblings, children and descendants are derived. This avoids two files that must be edited in step.
 - **Uncertain dates use the GEDCOM 7.0 date grammar** (`ABT 1961`, `BET 1880 AND 1885`), so import and export need no translation.
 - **Places are free text** in the first version, as written in the source.
-- **Links between people are relative markdown links** (`[Owen Price](../p-4h8w2r/index.md)`), not bare ids or wiki syntax. They work when the file is read on GitHub, and Loom resolves them to the person's current name.
+- **Links between people are relative markdown links** (`[Owen Price](../price-owen-4h8w2r/index.md)`), not bare ids or wiki syntax. They work when the file is read on GitHub, and Loom resolves them to the person's current name.
 - **The file reads well raw; Loom renders on top.** GitHub's own markdown view is a plain fallback reader. The Loom server adds the infobox from the structured facts, citation markers and derived views. It does not reorder the page body: the authored order stands, and chronological ordering lives in the separate timeline view. One gap: GitHub does not display HEIC images inline, so those show there as links.
 
 ### Open
@@ -56,7 +58,7 @@ A real export was converted into this layout by the script in [spikes/gedcom_imp
 - **Exact dates are written as ISO** (`1950-05-17`, `1987-11`, `1972`). Qualified dates and ranges stay in GEDCOM's grammar. One real value, `BET FEB AND JUL 1934`, is not valid GEDCOM and is kept as written.
 - **There are no sources** in this export, so citations are untested.
 - **Each record keeps its GEDCOM reference** (`gedcom_id`) so a later re-import can match it.
-- **Opaque ids make the files hard to browse by hand.** A directory of 203 names like `p-tbczm8` says nothing. This needs an answer: a generated index file, or a readable slug in the directory name.
+- **Opaque ids made the files hard to browse by hand**, which led to readable directory names ending in the id.
 
 ### Open: merging an update into the biography
 

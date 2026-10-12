@@ -1,12 +1,12 @@
 # Plan
 
-Six milestones settle the open decisions and end with a working edit loop. Milestone 1 is done and milestone 0 is mostly done. The rest build on each other.
+Six milestones settle the open decisions and end with a working edit loop. Milestones 0, 1 and 2 are done. The rest build on each other.
 
 | # | Milestone | Settles | Depends on |
 | --- | --- | --- | --- |
-| 0 | Sample tree (generated; enrichment to do) | The content model and directory layout | Nothing |
+| 0 | Sample tree (done, generated) | The content model and directory layout | Nothing |
 | 1 | Image-format spike (done) | How a photo is stored | Nothing |
-| 2 | Read-only server | Dart for rendering, the index, display copies | 0 |
+| 2 | Read-only server (done) | Dart for rendering, the index, display copies | 0 |
 | 3 | Edit loop | Dart with GitHub; minimal diffs; the TypeScript editor | 2 |
 | 4 | GEDCOM import | The GEDCOM mapping; older-version support | 0, 3 |
 | 5 | Photos in the app | Upload, pairing, tagging and rolls | 1, 3 |
@@ -15,7 +15,7 @@ Not planned yet: the sharing model, weaving entries into biographies, research c
 
 ## Milestone 0: sample tree
 
-Status: a sample tree of 203 people is generated from a real GEDCOM export by the script in [spikes/gedcom_import](../spikes/gedcom_import/README.md). It is sample data only, kept out of the repository in `data/tree/`. Findings are in [content-model.md](content-model.md#what-the-sample-import-showed). What remains is the hand enrichment below.
+Status: a sample tree of 203 people is generated from a real GEDCOM export by the script in [spikes/gedcom_import](../spikes/gedcom_import/README.md). It is sample data only, kept out of the repository in `data/tree/`. Findings are in [content-model.md](content-model.md#what-the-sample-import-showed). The export already holds all the prose the source tree has, so no hand enrichment is planned; sources and loose updates get sample content when milestones 3 and 4 need them.
 
 The original aim: a small real tree as files, to find where the content model does not fit.
 
@@ -33,6 +33,8 @@ Done. One photo was packaged sixteen ways with the script in [spikes/image_forma
 Outcome, recorded in [media.md](media.md): JPEGs and HEICs are stored as they are, uncompressed scans become JPEG, and a front and back are two files paired by name and embedded id rather than one combined file.
 
 ## Milestone 2: read-only server
+
+Status: done. `dart run loom data/tree` serves the sample tree: person pages with infobox, timeline and photos, a people list, a photo gallery, media pages and full-text search. The index and display copies live in `.loom_cache/` and are rebuilt after deletion. It loads 203 people and 136 media files in under a second. No browser-side code was needed yet; TypeScript starts with the editor in milestone 3.
 
 A Dart server that reads a clone of the sample tree and serves it as a website.
 
