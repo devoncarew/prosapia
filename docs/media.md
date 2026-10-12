@@ -47,7 +47,7 @@ This replaces the earlier requirement that the two sides be physically one file.
 
 ### Rolls
 
-Proposed: photos may belong to a roll, a set of related images likely taken together. A roll is optional.
+Direction set: photos may belong to a roll, a set of related images likely taken together. A roll is optional.
 
 - **A roll is a small record in the repository**, like a source: an id, a title, a rough date, notes, and its photos in order.
 - **A fact known for one frame can be suggested for the others**: the date, the place, the occasion.
@@ -60,7 +60,7 @@ rolls/
 
 ### Display copies
 
-The server generates resized web copies into a cache. HEIC files need one in every case, since most browsers do not display HEIC. JPEGs display as they are, including on GitHub.
+Display copies are never committed. The server makes them on the fly when serving a page: resized versions, and a JPEG version of each HEIC, since most browsers do not display HEIC. It may keep them in a local cache to avoid repeating the work. JPEGs display as they are, including on GitHub.
 
 ## Other decisions
 

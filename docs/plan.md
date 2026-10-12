@@ -37,7 +37,7 @@ A Dart server that reads a clone of the sample tree and serves it as a website.
 - Person pages rendered from markdown, with an infobox from the structured facts, working links between people, and footnote citations.
 - A SQLite index built from the clone: names, relationships, full-text search.
 - One derived view beyond the page: a timeline from structured events and dated entry headings.
-- Display copies of images, generated into a cache.
+- Display copies of images, made on the fly when a page is served.
 
 Done when: the sample tree can be browsed and searched locally, and deleting the index and cache then restarting rebuilds both.
 
@@ -57,7 +57,8 @@ Done when: changing one word in the editor produces a one-line diff in the pull 
 
 - Verify the GEDCOM 7.0 tags listed in [content-model.md](content-model.md) against the specification.
 - Import one real export from an existing genealogy tool, arriving as a single pull request.
-- List what did not fit, and decide whether to read GEDCOM 5.5.1 directly.
+- Read GEDCOM 5.5.1 as well as 7.0: the first real export, from Family Tree Maker, is 5.5.1.
+- List what did not fit, including the exporting tool's own extension tags.
 
 Done when: an imported tree browses correctly on the milestone 2 server, and the mapping table is confirmed or corrected.
 

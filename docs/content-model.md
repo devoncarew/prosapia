@@ -136,6 +136,6 @@ The tag names below are from memory of the 7.0 specification and should be confi
 
 ### Open
 
-- **Older files.** Most tools still export GEDCOM 5.5 or 5.5.1. Either Loom reads those too, or it relies on a converter first.
+- **Older files.** Settled in principle: Loom must read GEDCOM 5.5.1. The first real input, a 2024 export from Family Tree Maker, is 5.5.1 and uses that tool's own extension tags. How far to support 5.5 and other tools' extensions is open.
 - **Re-import and merge.** Importing a newer export of the same tree must match people already present, not duplicate them. Matching rules are undefined.
 - **How much prose to push out.** Whole pages as notes, a summary only, or a link back to Loom.

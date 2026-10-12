@@ -79,7 +79,7 @@ tree/
 - **One file per person keeps merges small.** Two relatives editing different people never conflict.
 - **Contributors sign in with GitHub.** Early versions require a GitHub account with access to the repository. The server opens each pull request on behalf of the signed-in person.
 - **The clone follows upstream.** A webhook tells the server when a pull request merges, so it pulls and rebuilds the index.
-- **Display copies are derived.** The server generates resized web copies into a cache, and converts the few stored formats browsers cannot show. Like the index, the cache can be deleted and rebuilt.
+- **Display copies are derived and never committed.** The server makes resized web copies on the fly when serving a page, and converts the few stored formats browsers cannot show. Any cache of them is local and can be deleted.
 
 ### Open
 
