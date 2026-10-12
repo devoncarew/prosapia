@@ -19,7 +19,7 @@ Margaret grew up above her father's hardware store...
 
 She sailed from New York in June with her cousin [Owen Price](../p-4h8w2r/index.md) to visit her mother's family. [^s-ship-manifest]
 
-![On the dock at Liverpool](../../media/m-5t1q8z.tif)
+![On the dock at Liverpool](../../media/m-5t1q8z.jpg)
 ```
 
 ### Decided by the brief
@@ -36,7 +36,7 @@ She sailed from New York in June with her cousin [Owen Price](../p-4h8w2r/index.
 - **Uncertain dates use the GEDCOM 7.0 date grammar** (`ABT 1961`, `BET 1880 AND 1885`), so import and export need no translation.
 - **Places are free text** in the first version, as written in the source.
 - **Links between people are relative markdown links** (`[Owen Price](../p-4h8w2r/index.md)`), not bare ids or wiki syntax. They work when the file is read on GitHub, and Loom resolves them to the person's current name.
-- **The file reads well raw; Loom renders on top.** GitHub's own markdown view is a plain fallback reader. The Loom server adds the infobox from the structured facts, citation markers and derived views. It does not reorder the page body: the authored order stands, and chronological ordering lives in the separate timeline view. One gap: GitHub displays only common web image formats inline, so depending on the stored format, photos may show there as links.
+- **The file reads well raw; Loom renders on top.** GitHub's own markdown view is a plain fallback reader. The Loom server adds the infobox from the structured facts, citation markers and derived views. It does not reorder the page body: the authored order stands, and chronological ordering lives in the separate timeline view. One gap: GitHub does not display HEIC images inline, so those show there as links.
 
 ### Open
 

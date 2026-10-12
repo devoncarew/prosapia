@@ -1,6 +1,6 @@
 # Loom
 
-Loom is a family-history wiki: pages about people, written as markdown with images, kept in a GitHub repository and changed through reviewed pull requests. Seven directions are set, two designs are proposed for confirmation, and three questions are open. Two of the open questions, privacy tiers and access enforcement, are deferred: early versions require a GitHub account with access to the repository, and everyone with access sees everything.
+Loom is a family-history wiki: pages about people, written as markdown with images, kept in a GitHub repository and changed through reviewed pull requests. Eight directions are set, one design is proposed for confirmation, and three questions are open. Two of the open questions, privacy tiers and access enforcement, are deferred: early versions require a GitHub account with access to the repository, and everyone with access sees everything.
 
 ## Status
 
@@ -17,7 +17,7 @@ Loom is a family-history wiki: pages about people, written as markdown with imag
 | Privacy tiers | Open | Deferred. The sharing model is to be decided; four levels are sketched below as a starting point |
 | Edit and review flow | Direction set | Changes arrive as GitHub pull requests, are reviewed, then merged |
 | Access enforcement | Open | Deferred with the sharing model. Early versions require sign-in with a GitHub account that has access to the private repository |
-| Front and back scan format | Proposed | A JPEG with the back appended as a second image and the text embedded in both; from the image-format spike, pending a few manual checks |
+| Photo storage | Direction set | JPEGs and HEICs kept as they are; uncompressed scans become JPEG. A front and back are two files paired by name and embedded id |
 | Hosting and technology stack | Direction set | A Dart server on a clone of the GitHub repository; TypeScript in the browser. Fallback: TypeScript for both |
 | Merging new entries | Open | An update is kept as a dated entry first; how it is woven into the biography is undecided |
 
@@ -25,7 +25,7 @@ Loom is a family-history wiki: pages about people, written as markdown with imag
 
 - **The repository is the record.** Plain files that outlive the software. Indexes, rendered pages and trees are rebuilt from it.
 - **Prose first, structure where it pays.** A contributor can add a story without filling in a form.
-- **Information travels with its artifact.** What is known about a photo lives inside the photo file.
+- **Information travels with its artifact.** What is known about a photo lives inside the photo file, including which photo it is the back of.
 - **Every change is attributed, reviewable and reversible.**
 - **Private by default.** The repository is private. Wider sharing is designed later, deliberately.
 - **Every claim can cite its source.**

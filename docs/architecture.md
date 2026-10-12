@@ -43,7 +43,7 @@ Direction set: the server is written in Dart and the browser code in TypeScript.
 | Browser | TypeScript. Pages are server-rendered HTML; the editor is the one substantial browser-side component |
 | Derived index | SQLite, with its built-in full-text search |
 | Git | The `git` command line, run on the clone |
-| Image encoding and metadata | Command-line tools run by the server; which ones is settled by the image-format spike |
+| Image encoding and metadata | Command-line tools run by the server: `exiftool` for metadata, an image tool for JPEG encoding and display copies |
 | GEDCOM 7.0 | Loom's own reader and writer |
 
 Known risks of Dart on the server, to test early: GitHub sign-in, pull requests and webhooks need more hand-written code than in TypeScript, and an edit must change only the lines the person touched, which needs source-preserving markdown edits. Both are exercised by milestone 3 in the [plan](plan.md).
@@ -59,7 +59,10 @@ tree/
       index.md     (the person's page)
   unions/    u-2b6n4c.md
   sources/   s-1900-census.md
-  media/     m-5t1q8z.tif   (front and back in one file)
+  media/
+    m-5t1q8z.jpg        (a photo's front)
+    m-5t1q8z-back.jpg   (its back)
+  rolls/     r-8d2k5n.md   (an optional group of related photos)
   loom.yaml  (tree name and settings)
 ```
 
@@ -76,7 +79,7 @@ tree/
 - **One file per person keeps merges small.** Two relatives editing different people never conflict.
 - **Contributors sign in with GitHub.** Early versions require a GitHub account with access to the repository. The server opens each pull request on behalf of the signed-in person.
 - **The clone follows upstream.** A webhook tells the server when a pull request merges, so it pulls and rebuilds the index.
-- **Display copies are derived.** Browsers cannot show every stored image format, so the server generates web-friendly copies into a cache. Like the index, the cache can be deleted and rebuilt.
+- **Display copies are derived.** The server generates resized web copies into a cache, and converts the few stored formats browsers cannot show. Like the index, the cache can be deleted and rebuilt.
 
 ### Open
 

@@ -25,7 +25,6 @@ Chosen: the last option, a web app over an existing git host, with GitHub as the
 
 ### Can wait
 
-- The image-format spike: container and codec (Photos and media).
 - Where image bytes live (Storage and versioning).
 - Shared events, places and household pages (Content model).
 - GEDCOM 5.5.1 support and re-import matching (GEDCOM 7.0 interchange).

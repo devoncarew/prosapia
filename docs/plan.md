@@ -1,15 +1,15 @@
 # Plan
 
-Six milestones settle the open decisions and end with a working edit loop. Milestones 0 and 1 need no product code and can run in parallel; the rest build on each other.
+Six milestones settle the open decisions and end with a working edit loop. Milestone 1 is done. Milestone 0 needs no product code; the rest build on each other.
 
 | # | Milestone | Settles | Depends on |
 | --- | --- | --- | --- |
 | 0 | Sample tree | The content model and directory layout | Nothing |
-| 1 | Image-format spike | How a photo is stored | Nothing |
+| 1 | Image-format spike (done) | How a photo is stored | Nothing |
 | 2 | Read-only server | Dart for rendering, the index, display copies | 0 |
 | 3 | Edit loop | Dart with GitHub; minimal diffs; the TypeScript editor | 2 |
 | 4 | GEDCOM import | The GEDCOM mapping; older-version support | 0, 3 |
-| 5 | Photos in the app | Upload, packaging and tagging | 1, 3 |
+| 5 | Photos in the app | Upload, pairing, tagging and rolls | 1, 3 |
 
 Not planned yet: the sharing model, weaving entries into biographies, research capture and generated summaries.
 
@@ -26,54 +26,9 @@ Done when: the tree exists, and [content-model.md](content-model.md) is updated 
 
 ## Milestone 1: image-format spike
 
-Status: run on the first photo. Results and a proposed decision are in [media.md](media.md#spike-results); a few manual checks remain there.
+Done. One photo was packaged sixteen ways with the script in [spikes/image_format](../spikes/image_format/README.md) and measured for size, quality, and whether the back and the text survived.
 
-Package one real photo in every candidate format and measure each against the three requirements in [media.md](media.md): preserve the original data, readable in 20 or more years, packaged together.
-
-### Input
-
-One photograph, supplied by you:
-
-- the front scan and the back scan, as they came from the scanner;
-- the related text: who is in it, when and where it was taken, what is written on the back, a caption.
-
-The first input is in `spikes/image_format/input/`: a JPEG front and back of a 1949 snapshot, with the text from its back. A second photo of a different kind (for example a small snapshot and a large studio portrait) would make the size results more trustworthy, but one is enough to start.
-
-### Candidates
-
-| # | Package | Encodings to try |
-| --- | --- | --- |
-| 1 | Multi-page TIFF | Lossless; JPEG-compressed at two quality levels |
-| 2 | HEIF collection | HEIC (HEVC), lossy at two quality levels |
-| 3 | AVIF, two images | Lossless; lossy at two quality levels |
-| 4 | JPEG XL | Lossless; lossy at two quality levels; exact JPEG repacking if the input is JPEG |
-| 5 | Two-page PDF | Original images embedded unchanged |
-| 6 | One side-by-side image | JPEG, WebP, AVIF, JPEG XL |
-| 7 | Zip bundle | Original files plus a metadata file |
-| 8 | Two files with cross-references | Baseline for comparison: JPEG, WebP |
-
-### What is measured
-
-| Requirement | Test |
-| --- | --- |
-| Preserve the original data | Decode each package and compare with the input: a measured difference, checked by eye. The bar is no real quality loss, not identical pixels. Note where a JPEG input is re-compressed, since that loses quality a second time. Record file size |
-| Preserve the original data | Write every text field into the package, read it back with a second tool, and compare |
-| Packaged together | Does one file hold both sides and all the text? |
-| Packaged together | Does the package survive being copied, emailed, uploaded to and downloaded from a photo service, and opened and re-saved in a common editor? Check that the back and the text are still there |
-| Packaged together | After a metadata edit by a standard tool, is the second image still present? |
-| Readable in 20+ years | Age of the format; whether the specification is open and free of patent fees; how many independent programs can read it; whether archives recommend it |
-| Readable in 20+ years | What opens it today with no extra software: macOS, Windows, iOS, Android, the major browsers, GitHub. Record whether each shows both sides, the front only, or nothing |
-| Practical | Can the server produce and read it with command-line tools called from Dart? |
-
-### Output
-
-- Scripts under `spikes/image_format/` that build every package from the inputs, so the comparison can be rerun on more photos.
-- A results table in [media.md](media.md): one row per candidate, one column per test.
-- A decision recorded in [media.md](media.md): the package, the encoding, whether storage is lossless, and the display-copy format.
-
-Done when: the decision is recorded, or the table shows that no candidate meets all three requirements and names the trade-off to choose between.
-
-Tools: this machine has ImageMagick, `heif-enc`, `cwebp` and `tiffcp`. The spike also needs `exiftool`, `libvips`, `cjxl` (JPEG XL) and `avifenc`, all available from Homebrew.
+Outcome, recorded in [media.md](media.md): JPEGs and HEICs are stored as they are, uncompressed scans become JPEG, and a front and back are two files paired by name and embedded id rather than one combined file.
 
 ## Milestone 2: read-only server
 
@@ -108,9 +63,12 @@ Done when: an imported tree browses correctly on the milestone 2 server, and the
 
 ## Milestone 5: photos in the app
 
-- Upload a front, a back and the related text; the server packages them in the format milestone 1 chose and writes the metadata into the file.
-- Verify the XMP and IPTC field names in [media.md](media.md) against the specifications.
+- Upload a front, an optional back and the related text. The server stores JPEGs and HEICs as they are, encodes uncompressed scans to JPEG, names the pair, and writes the metadata into each file.
+- Verify the XMP and IPTC field names in [media.md](media.md) against the specifications, and define Loom's own fields for photo id and side.
+- Choose the JPEG quality for scans using a real full-resolution scanner output.
+- Front and back shown together wherever the photo appears.
+- Rolls: create one, add photos in order, and suggest a frame's date or place to the rest.
 - A per-person photo gallery built from the names embedded in the files.
 - Decide where image bytes live: in git, Git LFS, or a store beside the repository.
 
-Done when: a photo added through the app shows on the right people's pages, and the file copied out of the repository still carries its names, date and transcription.
+Done when: a photo added through the app shows on the right people's pages with its back, and both files copied out of the repository still carry their names, date, transcription and pairing.
