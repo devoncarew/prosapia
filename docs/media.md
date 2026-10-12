@@ -29,7 +29,7 @@ The field names below are from memory and should be checked against the current 
 
 ## Open: how a photo is stored
 
-The format is undecided and is settled by the image-format spike, milestone 1 in the [plan](plan.md). Any choice must meet three requirements:
+A format is proposed in [Spike results](#spike-results) below, from the image-format spike (milestone 1 in the [plan](plan.md)). Any choice must meet three requirements:
 
 1. **Preserve the original data.** No real quality is lost: the photo keeps its intent and the memories it holds. This is not archival preservation, so exact pixels need not be recoverable. No text is lost.
 2. **Readable in 20 or more years.** An open, widely implemented format that software will still open without Loom.
@@ -41,6 +41,7 @@ These pull against each other. The oldest and safest formats are large or single
 
 | Candidate | For | Against |
 | --- | --- | --- |
+| JPEG with the back appended (Multi-Picture Format) | A plain JPEG to every viewer; a JPEG input is kept untouched; the mechanism phones use for a second image | Viewers show only the front; a re-save drops the back |
 | Multi-page TIFF, lossless or JPEG-compressed | Decades old; archives use it; carries XMP; two pages in one file | Browsers do not display it; many viewers show page one only; large when lossless |
 | HEIF collection (HEIC) | One file, several images; the front as primary item is what single-image viewers show | HEVC carries patent terms; viewers show only the primary item; no standard marker for "back of"; uneven tool support |
 | AVIF (HEIF container, AV1 codec) | Royalty-free; displays in all major browsers; can hold several images | Young; browsers show only the primary item; multi-image tool support is thin |
@@ -52,6 +53,51 @@ These pull against each other. The oldest and safest formats are large or single
 | Two files plus embedded cross-references | Simple; each side is a normal image | The two can still be separated, which is the problem to solve |
 
 Whatever is stored, the server generates display copies in a web format, so the stored format does not need to display in a browser.
+
+## Spike results
+
+The image-format spike packaged one photo sixteen ways: a 1949 snapshot supplied as two JPEGs (front and back, 214 kB together) plus the text from its back. The script and full measurements are in [spikes/image_format](../spikes/image_format/README.md).
+
+| Candidate | One file | Size vs input | Pixels | Back survives a metadata edit | Back survives a macOS re-save | Displays in browsers |
+| --- | --- | --- | --- | --- | --- | --- |
+| JPEG with the back appended (MPF) | Yes | 103% | Unchanged | Yes | No | Yes, the front |
+| Two-page PDF, JPEGs embedded | Yes | 102% | Unchanged | Yes | Not tested | As a document |
+| Zip bundle | Yes | 104% | Unchanged | Yes | Does not open | No |
+| Multi-page TIFF, lossless | Yes | 472% | Unchanged | Yes | Yes | No |
+| Multi-page TIFF, JPEG quality 90 / 75 | Yes | 265% / 156% | Re-compressed | Yes | Yes | No |
+| HEIC collection, quality 90 / 75 | Yes | 168% / 111% | Re-compressed | Yes | No | Safari only |
+| AVIF collection, quality 90 / 75 | Yes | 80% / 51% | Re-compressed | Yes | No | Yes, the front |
+| Side by side: JPEG, WebP, AVIF, JPEG XL | Yes | 106%, 61%, 79%, 65% | Re-compressed | Yes | Yes | Yes, except JPEG XL |
+| Two JPEG XL files, repacked | No | 84% | Original JPEG restorable exactly | Two files | Cannot save | Safari only |
+| Two JPEGs (baseline) | No | 103% | Unchanged | Two files | Two files | Yes |
+
+The browser column is from general knowledge, not tested here. "macOS re-save" used `sips`, the system converter that shares its image code with Preview.
+
+### Findings
+
+- **The text survived everywhere.** XMP written by `exiftool` read back correctly from every image format, stayed findable as plain text in the raw bytes, and survived every re-save that could be tested.
+- **Re-compressing a JPEG costs size or quality, usually both.** TIFF and HEIC came out larger than the input. Only AVIF and WebP came out smaller, and they are the youngest formats.
+- **Three candidates keep the input JPEGs untouched in one file:** the JPEG with the back appended, the PDF and the zip. Only the first is still a photo that every viewer opens.
+- **No multi-image format keeps the back through a re-save, except TIFF.** HEIC, AVIF and the appended JPEG all came back as the front alone. The text was kept in each case.
+- **JPEG XL has no page concept**, only animation frames, so a front and back stay two files. Its exact JPEG repacking works and saves 16%.
+- **The appended-JPEG index must come after the metadata.** Placed before it, a later `exiftool` edit silently broke the pointer to the back. Placed last, the back survived edits.
+
+### Proposed decision
+
+Store each photo as a JPEG with the back appended: the front is an ordinary JPEG, and the back is a second JPEG added after it and indexed by a Multi-Picture Format segment. This is the mechanism current phone cameras use to attach a second image to a JPEG.
+
+- **Preserve the original data:** a JPEG input is kept as it is, with no second compression. A scan is encoded to JPEG once, at high quality.
+- **Readable in 20+ years:** it is a JPEG. Every viewer, browser and GitHub show the front with no extra software, so display copies are needed only for resizing.
+- **Packaged together:** one file holds the front, the back and the text. The text is written into both images, so even a back that is extracted on its own says what it is.
+
+The known weakness: ordinary viewers show only the front, and an editor that re-saves the file drops the back. The transcription of the back survives in the text. Multi-page TIFF is the alternative if showing both sides in ordinary viewers matters more than size, browser display and leaving JPEGs untouched.
+
+### Still to check
+
+- [ ] A real scanner output at full resolution. The test input was a small JPEG, so the scan path and the JPEG quality for scans are untested.
+- [ ] Round trips by hand: email, a photo service (upload then download), and messaging apps. Check whether the back and the text come back.
+- [ ] Opening the file on Windows, iOS and Android.
+- [ ] A second reader for the appended back. So far only `exiftool` has extracted it.
 
 ## Also open
 

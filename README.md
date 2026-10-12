@@ -1,6 +1,6 @@
 # Loom
 
-Loom is a family-history wiki: pages about people, written as markdown with images, kept in a GitHub repository and changed through reviewed pull requests. Seven directions are set, one design is proposed for confirmation, and four questions are open. Two of the open questions, privacy tiers and access enforcement, are deferred: early versions require a GitHub account with access to the repository, and everyone with access sees everything.
+Loom is a family-history wiki: pages about people, written as markdown with images, kept in a GitHub repository and changed through reviewed pull requests. Seven directions are set, two designs are proposed for confirmation, and three questions are open. Two of the open questions, privacy tiers and access enforcement, are deferred: early versions require a GitHub account with access to the repository, and everyone with access sees everything.
 
 ## Status
 
@@ -17,7 +17,7 @@ Loom is a family-history wiki: pages about people, written as markdown with imag
 | Privacy tiers | Open | Deferred. The sharing model is to be decided; four levels are sketched below as a starting point |
 | Edit and review flow | Direction set | Changes arrive as GitHub pull requests, are reviewed, then merged |
 | Access enforcement | Open | Deferred with the sharing model. Early versions require sign-in with a GitHub account that has access to the private repository |
-| Front and back scan format | Open | Must preserve the original data, stay readable for 20+ years and keep both sides and their information in one package; settled by the image-format spike |
+| Front and back scan format | Proposed | A JPEG with the back appended as a second image and the text embedded in both; from the image-format spike, pending a few manual checks |
 | Hosting and technology stack | Direction set | A Dart server on a clone of the GitHub repository; TypeScript in the browser. Fallback: TypeScript for both |
 | Merging new entries | Open | An update is kept as a dated entry first; how it is woven into the biography is undecided |
 

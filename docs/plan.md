@@ -26,6 +26,8 @@ Done when: the tree exists, and [content-model.md](content-model.md) is updated 
 
 ## Milestone 1: image-format spike
 
+Status: run on the first photo. Results and a proposed decision are in [media.md](media.md#spike-results); a few manual checks remain there.
+
 Package one real photo in every candidate format and measure each against the three requirements in [media.md](media.md): preserve the original data, readable in 20 or more years, packaged together.
 
 ### Input
