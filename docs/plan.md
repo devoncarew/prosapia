@@ -1,10 +1,10 @@
 # Plan
 
-Six milestones settle the open decisions and end with a working edit loop. Milestone 1 is done. Milestone 0 needs no product code; the rest build on each other.
+Six milestones settle the open decisions and end with a working edit loop. Milestone 1 is done and milestone 0 is mostly done. The rest build on each other.
 
 | # | Milestone | Settles | Depends on |
 | --- | --- | --- | --- |
-| 0 | Sample tree | The content model and directory layout | Nothing |
+| 0 | Sample tree (generated; enrichment to do) | The content model and directory layout | Nothing |
 | 1 | Image-format spike (done) | How a photo is stored | Nothing |
 | 2 | Read-only server | Dart for rendering, the index, display copies | 0 |
 | 3 | Edit loop | Dart with GitHub; minimal diffs; the TypeScript editor | 2 |
@@ -15,7 +15,9 @@ Not planned yet: the sharing model, weaving entries into biographies, research c
 
 ## Milestone 0: sample tree
 
-Hand-write a small real tree as files, with no code, to find where the content model does not fit.
+Status: a sample tree of 203 people is generated from a real GEDCOM export by the script in [spikes/gedcom_import](../spikes/gedcom_import/README.md). It is sample data only, kept out of the repository in `data/tree/`. Findings are in [content-model.md](content-model.md#what-the-sample-import-showed). What remains is the hand enrichment below.
+
+The original aim: a small real tree as files, to find where the content model does not fit.
 
 - Create a private GitHub repository in the layout from [architecture.md](architecture.md).
 - Write ten real people across three generations, their partnerships, and three or four sources.

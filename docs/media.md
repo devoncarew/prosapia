@@ -13,7 +13,7 @@ The field names below are from memory and should be checked against the current 
 | Caption or title | XMP `dc:title` |
 | Where it was taken | IPTC `Location Shown` |
 | Who holds the original, who scanned it | XMP `dc:source` and `dc:rights` |
-| Link back to Loom | A custom XMP namespace holding the photo id, which side this is (front or back), and person ids |
+| Link back to Loom | The photo id in XMP `dc:identifier`; each person's id in the standard IPTC `Person Shown with Details` field. Which side this is (front or back) needs a field of Loom's own |
 
 ## How a photo is stored
 
@@ -86,6 +86,7 @@ The image-format spike packaged one photo, a 1949 snapshot with a written back, 
 
 ## Open
 
-- Do documents (letters, certificates, census pages) follow the same rules as photos?
-- Audio and video recordings of relatives: in scope, and with what metadata?
+- Do documents (letters, certificates, census pages) follow the same rules as photos? The sample import brought in 13 PDFs alongside 122 JPEGs. Metadata could be written into the PDFs too.
+- Size. The 122 sample JPEGs total 244 MB, about 2 MB each, which presses the question of where image bytes live.
+- Audio and video recordings of relatives: in scope, and with what metadata? The sample has one 260 MB video. It is over GitHub's 100 MB file limit, and its format cannot take embedded metadata.
 - Should face regions be suggested automatically, and if so, does that run locally only?

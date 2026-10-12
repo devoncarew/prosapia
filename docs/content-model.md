@@ -45,6 +45,19 @@ She sailed from New York in June with her cousin [Owen Price](../p-4h8w2r/index.
 - Does a couple or household get its own page, as Wikipedia would give a notable family?
 - How are conflicting claims shown, for example two sources with different birth years?
 
+### What the sample import showed
+
+A real export was converted into this layout by the script in [spikes/gedcom_import](../spikes/gedcom_import/README.md): 203 people, 58 partnerships and 136 media files, from Family Tree Maker's GEDCOM 5.5.1.
+
+- **Most pages are nearly empty.** 132 of 203 people have no birth event and 37 have nothing but a name. Pages and views must read well with almost no data.
+- **People have facts beyond birth and death**: occupations, education, residences, burials, titles. Proposed: a `facts` list in the structured block, each with a type, a value, a date and a place. Whether these belong there or in the prose is open.
+- **A person can have more than two parents.** One child is listed with both adoptive and birth parents. Proposed: an entry in `parents` may carry a `relationship`, such as `adopted`.
+- **Other names are common.** Nicknames arrive as extra names. Proposed: an `also_known_as` list.
+- **Exact dates are written as ISO** (`1950-05-17`, `1987-11`, `1972`). Qualified dates and ranges stay in GEDCOM's grammar. One real value, `BET FEB AND JUL 1934`, is not valid GEDCOM and is kept as written.
+- **There are no sources** in this export, so citations are untested.
+- **Each record keeps its GEDCOM reference** (`gedcom_id`) so a later re-import can match it.
+- **Opaque ids make the files hard to browse by hand.** A directory of 203 names like `p-tbczm8` says nothing. This needs an answer: a generated index file, or a readable slug in the directory name.
+
 ### Open: merging an update into the biography
 
 A typical update is a short story from a relative: a trip the person took, when it happened, who went, and a few photos. The writer rarely knows where it belongs in a long biography and should not have to decide.
