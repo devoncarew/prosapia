@@ -113,6 +113,10 @@ class Person {
   Event? died;
   String? photo;
   String body = '';
+
+  /// The number of the saved version this is. Zero when the store keeps no
+  /// history.
+  int revision = 0;
   final alsoKnownAs = <String>[];
   final parents = <ParentLink>[];
   final facts = <Fact>[];

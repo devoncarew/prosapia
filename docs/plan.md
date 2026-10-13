@@ -1,6 +1,6 @@
 # Plan
 
-Eight milestones take Loom from design to a deployed site a family can edit. Milestones 0 to 3 are done. The rest build on each other.
+Eight milestones take Loom from design to a deployed site a family can edit. Milestones 0 to 4 are done, with gaps noted under milestone 4. The rest build on each other.
 
 | # | Milestone | Settles | Depends on |
 | --- | --- | --- | --- |
@@ -8,7 +8,7 @@ Eight milestones take Loom from design to a deployed site a family can edit. Mil
 | 1 | Image-format spike (done) | How a photo is stored | Nothing |
 | 2 | Read-only server (done) | Dart for rendering, the index, display copies | 0 |
 | 3 | Firebase foundation (done) | Dart with Firebase; the store interface; sign-in and members | 2 |
-| 4 | Editing | The TypeScript editor; revisions, history and restore | 3 |
+| 4 | Editing (done for existing pages) | The TypeScript editor; revisions, history and restore | 3 |
 | 5 | Deploy and backup | Hosting on Cloud Run; the nightly export to GitHub | 4 |
 | 6 | Photos in the app | Upload, pairing, tagging and rolls | 1, 4 |
 | 7 | GEDCOM import | The GEDCOM mapping; older-version support | 4 |
@@ -63,6 +63,14 @@ Move the working site from files onto Firebase, running locally against Firebase
 Done when: the milestone 2 site serves the sample tree from the emulators to a signed-in member, and refuses anyone who is not a member.
 
 ## Milestone 4: editing
+
+Status: done against the emulators, for existing people's pages. An editor changes a page as text with a live preview; each save is a revision and a change-log entry in one transaction. Stale saves are refused and show the other person's change. History, compare, restore, recent changes and "Add a memory" all work, and viewers are refused every write.
+
+Not yet built, and needed before a family can really use it:
+
+- Adding a new person, and removing one.
+- Editing partnerships, which are separate records.
+- A formatted editor. Today the facts at the top of a page are edited as raw text.
 
 - A TypeScript editor for a page: raw markdown with a live preview. A formatted editor can replace it later.
 - Saving writes a revision and a change-log entry; the page updates at once.

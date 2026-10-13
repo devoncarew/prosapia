@@ -86,6 +86,7 @@ tree/
 
 - **Only the server touches the database.** The store sits behind one interface in the server, with two implementations: Firestore in production, files for development and tests. Changing the store later is a contained change.
 - **Every save writes a revision**: the full text, the author, the time and a one-line summary. Nothing is overwritten.
+- **A page has one text form**: its facts as a short block, then markdown. The editor edits that text, a revision stores it, and the export writes it to a file, so all three always agree.
 - **Every change is logged.** The change log lists who changed which pages and why. It drives the recent-changes view and the export.
 - **Direct links only.** A child lists its parents; a partnership is its own record. Children, siblings and descendants are derived, not stored.
 - **The server caches the tree in memory.** On start it loads the tree and builds the search index, as it does from files today. Each tree carries a version number; a server instance that sees a newer one reloads. This is enough for any near or medium-term size.

@@ -6,6 +6,7 @@ import 'package:google_cloud_firestore/google_cloud_firestore.dart';
 import 'package:google_cloud_storage/google_cloud_storage.dart' as gcs;
 import 'package:path/path.dart' as p;
 
+import 'page_source.dart';
 import 'store.dart';
 import 'tree.dart';
 
@@ -15,9 +16,11 @@ import 'tree.dart';
 /// ```
 /// trees/{tree}                 name, version
 ///   members/{email}            role, name
-///   people/{id}                structured fields, body, directory
+///   people/{id}                structured fields, body, directory, revision
+///     revisions/{number}       every saved version: source, author, summary, at
 ///   unions/{id}
 ///   media/{key}                what each file says about itself
+///   changes/{auto}             the log: author, summary, at, pages
 /// ```
 class FirestoreStore extends TreeStore {
   FirestoreStore(this.app, this.treeId, {required this.bucketName, required this.cacheDir});
@@ -71,11 +74,7 @@ class FirestoreStore extends TreeStore {
     }
 
     each(results[0], (data) {
-      final fields = {...data}
-        ..remove('body')
-        ..remove('directory');
-      final person = Person.fromMap(
-          fields, data['body'] as String? ?? '', data['directory'] as String? ?? data['id'] as String);
+      final person = _person(data);
       tree.people[person.id] = person;
     });
     each(results[1], (data) {
@@ -103,21 +102,116 @@ class FirestoreStore extends TreeStore {
     return file;
   }
 
+  static Person _person(Map<String, Object?> data) {
+    final fields = {...data}
+      ..remove('body')
+      ..remove('directory')
+      ..remove('revision');
+    return Person.fromMap(
+        fields, data['body'] as String? ?? '', data['directory'] as String? ?? data['id'] as String)
+      ..revision = data['revision'] as int? ?? 0;
+  }
+
+  static Map<String, Object?> _personDoc(Person person, int revision) => _plain(
+      {...person.toMap(), 'body': person.body, 'directory': person.directory, 'revision': revision});
+
+  // ---------------------------------------------------------------- editing
+
+  @override
+  bool get editable => true;
+
+  @override
+  Future<SaveResult> savePerson(Person person,
+      {required int basedOn, required Member author, required String summary}) {
+    final ref = _tree.collection('people').doc(person.id);
+    // The page, its revision, the log entry and the tree's version change
+    // together or not at all.
+    return _db.runTransaction((tx) async {
+      final current = (await tx.get(ref)).data();
+      final revision = current?['revision'] as int? ?? 0;
+      if (revision != basedOn) return SaveResult.conflict(revision);
+      final next = revision + 1;
+      final stamp = {
+        'author': author.email,
+        'authorName': ?author.name,
+        'summary': summary,
+        'at': FieldValue.serverTimestamp,
+      };
+      tx.set(ref, _personDoc(person, next));
+      tx.set(ref.collection('revisions').doc('$next'), {'number': next, 'source': personSource(person), ...stamp});
+      tx.set(_tree.collection('changes').doc(), {'pages': {person.id: next}, ...stamp});
+      tx.update(_tree, {'version': const FieldValue.increment(1)});
+      return SaveResult.saved(next);
+    });
+  }
+
+  @override
+  Future<List<Revision>> history(String personId) async {
+    final snapshot = await _tree
+        .collection('people').doc(personId).collection('revisions')
+        .orderBy('number', descending: true)
+        .get();
+    return [for (final doc in snapshot.docs) _revision(doc.data())];
+  }
+
+  @override
+  Future<Revision?> revision(String personId, int number) async {
+    final data = (await _tree.collection('people').doc(personId).collection('revisions').doc('$number').get()).data();
+    return data == null ? null : _revision(data);
+  }
+
+  @override
+  Future<List<Change>> recentChanges({int limit = 100}) async {
+    final snapshot = await _tree.collection('changes').orderBy('at', descending: true).limit(limit).get();
+    return [
+      for (final doc in snapshot.docs)
+        Change(
+          author: doc.data()['author'] as String,
+          authorName: doc.data()['authorName'] as String?,
+          summary: doc.data()['summary'] as String,
+          at: _time(doc.data()['at']),
+          pages: ((doc.data()['pages'] as Map?) ?? const {}).cast<String, int>(),
+        ),
+    ];
+  }
+
+  @override
+  Future<void> rememberName(Member member, String name) =>
+      _tree.collection('members').doc(member.email).update({'name': name});
+
+  static Revision _revision(Map<String, Object?> data) => Revision(
+        data['number'] as int,
+        data['source'] as String,
+        author: data['author'] as String,
+        authorName: data['authorName'] as String?,
+        summary: data['summary'] as String,
+        at: _time(data['at']),
+      );
+
+  static DateTime _time(Object? value) =>
+      value is Timestamp ? value.toDate() : DateTime.fromMillisecondsSinceEpoch(0);
+
   // ----------------------------------------------------------------- writes
 
   /// Replaces the tree's records with [tree] and uploads its media, reading
   /// each original through [source]. Used to load a tree from files.
   ///
-  /// Files larger than [maxMediaBytes] are recorded but not uploaded.
+  /// Earlier revisions and log entries are not cleared; this is for setting
+  /// a tree up, not for routine use. Files larger than [maxMediaBytes] are
+  /// skipped.
   Future<({int records, int uploaded, int skipped})> replaceWith(Tree tree, TreeStore source,
-      {int maxMediaBytes = 50 * 1000 * 1000, void Function(String)? progress}) async {
+      {int maxMediaBytes = 50 * 1000 * 1000, String loadedBy = 'loader', void Function(String)? progress}) async {
     final writes = <(DocumentReference<Map<String, Object?>>, Map<String, Object?>)>[];
+    final stamp = {'author': loadedBy, 'summary': 'Loaded from files', 'at': FieldValue.serverTimestamp};
     for (final person in tree.people.values) {
-      writes.add((
-        _tree.collection('people').doc(person.id),
-        _plain({...person.toMap(), 'body': person.body, 'directory': person.directory}),
-      ));
+      final ref = _tree.collection('people').doc(person.id);
+      writes.add((ref, _personDoc(person, 1)));
+      writes.add((ref.collection('revisions').doc('1'), {'number': 1, 'source': personSource(person), ...stamp}));
     }
+    writes.add((
+      _tree.collection('changes').doc(),
+      {'pages': {for (final id in tree.people.keys) id: 1}, ...stamp},
+    ));
     for (final union in tree.unions.values) {
       writes.add((_tree.collection('unions').doc(union.id), _plain(union.toMap())));
     }

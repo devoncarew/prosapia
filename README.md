@@ -49,7 +49,7 @@ dart run loom data/tree
 This is how production works, run locally against Firebase's emulators. It also needs the Firebase command-line tools, Java and Node.
 
 ```
-(cd web && npm install && npm run build)        # the browser-side sign-in code
+(cd web && npm install && npm run build)        # the browser-side code: sign-in and the editor
 firebase emulators:start --import=.emulator_data --export-on-exit=.emulator_data
 ```
 
@@ -61,7 +61,7 @@ dart run loom:load --tree carew --owner you@example.com data/tree
 dart run loom --tree carew
 ```
 
-`loom:load` copies a tree from files into Firestore and Cloud Storage and names its members. Open http://localhost:8080 and sign in; the emulator shows a stand-in for Google's account chooser, where you add an account with the owner's email address. Anyone not on the member list is refused.
+`loom:load` copies a tree from files into Firestore and Cloud Storage and names its members. Open http://localhost:8080 and sign in; the emulator shows a stand-in for Google's account chooser, where you add an account with the owner's email address. Anyone not on the member list is refused. Owners and editors can edit pages; add `--editor` and `--viewer` addresses to `loom:load` to try the other roles.
 
 Resized images and files fetched from storage go in `.loom_cache/`, which can be deleted at any time.
 

@@ -64,6 +64,16 @@ Photos and other large files are stored in Cloud Storage, as they are, with thei
 
 The nightly export copies photos into the exported repository under `media/`, using the names above. Very large files, such as video, are listed there but not copied.
 
+### Video
+
+Proposed: Loom stores short clips and links to long videos.
+
+- **A short clip is stored like a photo**, up to a size limit. The working limit is 50 MB, roughly a minute of phone video.
+- **A longer video is a link** to wherever it is hosted, such as YouTube or a shared drive, with a title, a date and the people in it recorded in Loom.
+- **Common video formats cannot carry embedded text reliably**, so for video the database record is the authority, not the file.
+
+The sample tree's one video is 259 MB and was skipped on load under this rule. Open: the exact limit, and whether Loom should offer to make a short excerpt of a long video.
+
 ### Display copies
 
 Display copies are never stored as originals. The server makes them on demand when serving a page: resized versions, and a JPEG version of each HEIC, since most browsers do not display HEIC. They are cached, and the cache can be deleted at any time.
@@ -94,5 +104,5 @@ The image-format spike packaged one photo, a 1949 snapshot with a written back, 
 
 - Do documents (letters, certificates, census pages) follow the same rules as photos? The sample import brought in 13 PDFs alongside 122 JPEGs. Metadata could be written into the PDFs too.
 - Size. The 122 sample JPEGs total 244 MB, about 2 MB each. That is no problem for Cloud Storage, but it may be too much to copy into the GitHub export in full.
-- Audio and video recordings of relatives: in scope, and with what metadata? The sample has one 260 MB video. Its format cannot take embedded metadata, and it is too large to include in the GitHub export.
+- Audio recordings of relatives: in scope, and with what metadata?
 - Should face regions be suggested automatically, and if so, does that run locally only?

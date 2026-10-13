@@ -109,9 +109,16 @@ class Sessions {
       return refuse(HttpStatus.forbidden, 'That Google account has no verified email address.');
     }
     _members.remove(email);
-    if (await _member(email) == null) {
+    final member = await _member(email);
+    if (member == null) {
       return refuse(HttpStatus.forbidden,
           '$email has not been invited to this tree. Ask the tree\'s owner to add that address.');
+    }
+    // Keep the name Google gives, so histories read "Ann Hughes", not an address.
+    final name = token.claims['name'];
+    if (name is String && name.isNotEmpty && name != member.name) {
+      await store.rememberName(member, name);
+      _members.remove(email);
     }
     final cookie = await auth.createSessionCookie(
         idToken, SessionCookieOptions(expiresIn: _lifetime.inMilliseconds));

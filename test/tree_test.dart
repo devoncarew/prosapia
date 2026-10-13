@@ -1,4 +1,4 @@
-import 'package:loom/src/file_store.dart';
+import 'package:loom/src/page_source.dart';
 import 'package:loom/src/tree.dart';
 import 'package:test/test.dart';
 

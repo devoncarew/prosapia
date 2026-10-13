@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:markdown/markdown.dart' as md;
 
 import 'dates.dart';
+import 'diff.dart';
 import 'index.dart';
 import 'store.dart';
 import 'tree.dart';
@@ -10,13 +11,18 @@ import 'tree.dart';
 /// Turns the tree into HTML pages. Nothing here is stored: every page is
 /// computed from the repository and the index.
 class Renderer {
-  Renderer(this.tree, this.index, {this.viewer});
+  Renderer(this.tree, this.index, {this.viewer, this.editable = false});
 
   final Tree tree;
   final Index index;
 
   /// The signed-in member the page is for, when the tree requires sign-in.
   final Member? viewer;
+
+  /// Whether the store keeps history and accepts edits.
+  final bool editable;
+
+  bool get _canEdit => editable && (viewer?.role.canEdit ?? false);
 
   static String esc(String? s) => htmlEscape.convert(s ?? '');
 
@@ -32,7 +38,7 @@ class Renderer {
 <body>
 <header>
   <a class="site" href="/">${esc(tree.name)}</a>
-  <nav><a href="/">People</a> <a href="/media">Photos</a></nav>
+  <nav><a href="/">People</a> <a href="/media">Photos</a>${editable ? ' <a href="/changes">Recent changes</a>' : ''}</nav>
   <form action="/search"><input type="search" name="q" value="${esc(query)}" placeholder="Search" aria-label="Search"></form>
   ${viewer == null ? '' : '<form class="account" method="post" action="/sign-out"><span title="${esc(viewer!.email)} · ${viewer!.role.name}">${esc(viewer!.name ?? viewer!.email)}</span> <button>Sign out</button></form>'}
 </header>
@@ -83,6 +89,20 @@ $body
   // ---------------------------------------------------------------- person
 
   String person(Person p) {
+    final actions = [
+      if (_canEdit) '<a href="/people/${p.id}/edit">Edit</a>',
+      if (_canEdit) '<a href="/people/${p.id}/memory">Add a memory</a>',
+      if (editable) '<a href="/people/${p.id}/history">History</a>',
+    ];
+    return page(
+        p.name,
+        '${actions.isEmpty ? '' : '<p class="actions">${actions.join(' ')}</p>'}'
+        '${personArticle(p)}');
+  }
+
+  /// The body of a person's page. Also used for the editor's live preview,
+  /// where [p] is the text being typed and not yet part of the tree.
+  String personArticle(Person p, {bool withMedia = true}) {
     final sb = StringBuffer();
     sb.write('<article class="person">');
     sb.write(_infobox(p));
@@ -111,12 +131,12 @@ $body
       sb.write('</ul>');
     }
 
-    final media = [for (final key in index.mediaOf(p.id)) tree.media[key]!];
+    final media = withMedia ? [for (final key in index.mediaOf(p.id)) tree.media[key]!] : const <Media>[];
     if (media.isNotEmpty) {
       sb.write('<h2>Photos and documents</h2>${gallery(media)}');
     }
     sb.write('</article>');
-    return page(p.name, sb.toString());
+    return sb.toString();
   }
 
   String _infobox(Person p) {
@@ -284,6 +304,167 @@ $body
     return page('Search', sb.toString(), query: query);
   }
 
+  // --------------------------------------------------------------- editing
+
+  /// The editor: the page's text on the left, a live preview on the right.
+  ///
+  /// [conflict] is shown when someone else saved first; it describes their
+  /// change so this editor can reapply their own on top of it.
+  String editPerson(Person p,
+      {required String source, required int basedOn, String summary = '', String? error, String? conflict}) {
+    return page(
+        'Edit ${p.name}',
+        '''
+<h1>Edit: ${esc(p.name)}</h1>
+${conflict ?? ''}
+${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
+<form class="editor" method="post" action="/people/${p.id}/edit" data-preview="/people/${p.id}/preview">
+  <input type="hidden" name="based_on" value="$basedOn">
+  <div class="panes">
+    <div class="pane">
+      <label for="source">Page text. Facts go between the dashed lines at the top; the story goes below, in <a href="https://commonmark.org/help/" target="_blank" rel="noopener">markdown</a>.</label>
+      <textarea id="source" name="source" spellcheck="true" required>${esc(source)}</textarea>
+    </div>
+    <div class="pane">
+      <span class="label">Preview</span>
+      <div id="preview" class="preview">${personArticle(p, withMedia: false)}</div>
+    </div>
+  </div>
+  <div class="save">
+    <label for="summary">What did you change?</label>
+    <input id="summary" name="summary" value="${esc(summary)}" maxlength="200" required placeholder="Added her years in Wales">
+    <button class="primary">Save</button>
+    <a href="/people/${p.id}">Cancel</a>
+  </div>
+</form>
+<script type="module" src="/assets/editor.js"></script>
+''');
+  }
+
+  /// Explains a save that was refused because the page had moved on.
+  String conflictNotice(Revision theirs, String before) => '''
+<div class="conflict" role="alert">
+<p><strong>${esc(theirs.by)} saved a change to this page while you were editing</strong> (“${esc(theirs.summary)}”). Your text is still below and has not been saved.</p>
+<p>Their change is shown here. Work it into your text, then save again; saving now will replace their version with yours.</p>
+${diff(before, theirs.source)}
+</div>''';
+
+  String memoryForm(Person p, {String title = '', String date = '', String text = '', String? error}) => page(
+      'Add a memory of ${p.name}',
+      '''
+<h1>Add a memory of ${esc(p.name)}</h1>
+<p class="lead">A story, a trip, something you remember. It is added to the end of the page as its own section; nothing else on the page changes.</p>
+${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
+<form class="memory" method="post" action="/people/${p.id}/memory">
+  <label for="title">Title</label>
+  <input id="title" name="title" value="${esc(title)}" required maxlength="120" placeholder="Trip to Wales">
+  <label for="date">When, if you know. A year is enough.</label>
+  <input id="date" name="date" value="${esc(date)}" maxlength="40" placeholder="1923">
+  <label for="text">The memory</label>
+  <textarea id="text" name="text" required spellcheck="true">${esc(text)}</textarea>
+  <div class="save"><button class="primary">Add</button> <a href="/people/${p.id}">Cancel</a></div>
+</form>
+''');
+
+  String history(Person p, List<Revision> revisions) {
+    final sb = StringBuffer('<h1>History: ${personLink(p.id)}</h1>');
+    if (revisions.isEmpty) {
+      sb.write('<p class="lead">No versions have been recorded for this page.</p>');
+      return page('History of ${p.name}', sb.toString());
+    }
+    sb.write('<p class="lead">${revisions.length} saved ${revisions.length == 1 ? 'version' : 'versions'}, newest first. Pick two to compare.</p>');
+    sb.write('<form action="/people/${p.id}/compare"><table class="history">');
+    for (final (i, r) in revisions.indexed) {
+      sb.write('<tr>'
+          '<td><input type="radio" name="from" value="${r.number}" aria-label="Compare from version ${r.number}"${i == 1 || revisions.length == 1 ? ' checked' : ''}></td>'
+          '<td><input type="radio" name="to" value="${r.number}" aria-label="Compare to version ${r.number}"${i == 0 ? ' checked' : ''}></td>'
+          '<td><a href="/people/${p.id}/revisions/${r.number}">${time(r.at)}</a></td>'
+          '<td>${esc(r.by)}</td>'
+          '<td>${esc(r.summary)}${i == 0 ? ' <span class="years">(current)</span>' : ''}</td>'
+          '</tr>');
+    }
+    sb.write('</table>${revisions.length > 1 ? '<p><button>Compare</button></p>' : ''}</form>');
+    return page('History of ${p.name}', sb.toString());
+  }
+
+  String revision(Person p, Revision r, {required bool isCurrent}) => page(
+      '${p.name}, version ${r.number}',
+      '''
+<h1>${personLink(p.id)}: version ${r.number}</h1>
+<p class="lead">Saved ${time(r.at)} by ${esc(r.by)}: “${esc(r.summary)}”. <a href="/people/${p.id}/history">All versions</a></p>
+${isCurrent ? '<p class="lead">This is the current version.</p>' : _canEdit ? '<form method="post" action="/people/${p.id}/restore"><input type="hidden" name="number" value="${r.number}"><button>Restore this version</button> <span class="years">The current text is kept in the history.</span></form>' : ''}
+<pre class="source">${esc(r.source)}</pre>
+''');
+
+  String compare(Person p, Revision from, Revision to) => page(
+      'Compare versions of ${p.name}',
+      '''
+<h1>${personLink(p.id)}: version ${from.number} to ${to.number}</h1>
+<p class="lead">${from.number == 0 ? 'From before the page existed' : 'From <a href="/people/${p.id}/revisions/${from.number}">${time(from.at)}</a> by ${esc(from.by)}'}, to <a href="/people/${p.id}/revisions/${to.number}">${time(to.at)}</a> by ${esc(to.by)}. <a href="/people/${p.id}/history">All versions</a></p>
+${diff(from.source, to.source)}
+''');
+
+  /// A line-by-line comparison, with unchanged stretches folded away.
+  String diff(String before, String after) {
+    final lines = diffLines(before, after);
+    if (lines.every((l) => l.kind == DiffKind.same)) return '<p class="lead">The two versions are identical.</p>';
+    // Keep two lines of context around each change.
+    final keep = List.filled(lines.length, false);
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].kind == DiffKind.same) continue;
+      for (var j = i - 2; j <= i + 2; j++) {
+        if (j >= 0 && j < lines.length) keep[j] = true;
+      }
+    }
+    final sb = StringBuffer('<div class="diff">');
+    var skipping = false;
+    for (final (i, line) in lines.indexed) {
+      if (!keep[i]) {
+        if (!skipping) sb.write('<div class="skip">⋯</div>');
+        skipping = true;
+        continue;
+      }
+      skipping = false;
+      final (cls, mark) = switch (line.kind) {
+        DiffKind.same => ('same', ' '),
+        DiffKind.removed => ('removed', '−'),
+        DiffKind.added => ('added', '+'),
+      };
+      sb.write('<div class="$cls"><span class="mark">$mark</span>${esc(line.text)}</div>');
+    }
+    sb.write('</div>');
+    return sb.toString();
+  }
+
+  String changes(List<Change> changes) {
+    final sb = StringBuffer('<h1>Recent changes</h1>');
+    if (changes.isEmpty) {
+      sb.write('<p class="lead">Nothing has changed yet.</p>');
+    } else {
+      sb.write('<p class="lead">Every change to the tree, newest first.</p><table class="history">');
+      for (final c in changes) {
+        final pages = c.pages.length > 5
+            ? '${c.pages.length} pages'
+            : c.pages.entries
+                .map((e) => '${personLink(e.key)} <a class="years" href="/people/${e.key}/compare?from=${e.value - 1}&amp;to=${e.value}">(what changed)</a>')
+                .join(', ');
+        sb.write('<tr><td>${time(c.at)}</td><td>${esc(c.by)}</td><td>${esc(c.summary)}</td><td>$pages</td></tr>');
+      }
+      sb.write('</table>');
+    }
+    return page('Recent changes', sb.toString());
+  }
+
+  static const _monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  /// `12 Oct 2026, 20:46`, in the server's time zone.
+  static String time(DateTime at) {
+    final t = at.toLocal();
+    return '${t.day} ${_monthNames[t.month - 1]} ${t.year}, ${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+  }
+
+  String forbidden(String what) => page('Not allowed', '<h1>Not allowed</h1><p class="lead">${esc(what)}</p>');
+
   /// The page shown to someone who is not signed in. [config] is handed to
   /// the browser-side sign-in code.
   static String signIn(String treeName, Map<String, Object?> config) => '''
@@ -373,6 +554,39 @@ mark { background: var(--mark); color: inherit; }
 .media img { max-width: 100%; max-height: 80vh; border: 1px solid var(--line); border-radius: 4px; }
 .description { white-space: pre-line; }
 .problems { font: 14px/1.4 system-ui, sans-serif; margin-bottom: 16px; }
+.actions { display: flex; gap: 16px; margin: 0 0 12px; font: 14px system-ui, sans-serif; }
+.editor .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+.editor label, .editor .label, .memory label { display: block; font: 13px/1.4 system-ui, sans-serif;
+  color: var(--muted); margin-bottom: 6px; min-height: 2.8em; }
+.memory label { min-height: 0; margin-top: 14px; }
+textarea, .save input, .memory input { font: 14px/1.5 ui-monospace, Menlo, monospace;
+  width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--surface); color: var(--text); }
+.memory input, .memory textarea, .save input { font: 16px/1.5 Georgia, serif; }
+.editor textarea { height: 70vh; resize: vertical; tab-size: 2; }
+.memory textarea { height: 30vh; }
+.memory { max-width: 640px; }
+.preview { height: 70vh; overflow: auto; padding: 16px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--bg); font-size: 15px; }
+.preview .infobox { width: 220px; font-size: 12.5px; }
+.preview.stale { opacity: 0.55; }
+.save { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 16px;
+  font: 14px system-ui, sans-serif; }
+.save label { margin: 0; min-height: 0; }
+.save input { flex: 1; min-width: 240px; }
+.conflict { border: 1px solid #b3261e; border-radius: 6px; padding: 4px 16px 16px; margin: 12px 0;
+  font: 15px/1.5 system-ui, sans-serif; }
+.history { border-collapse: collapse; font: 14px/1.5 system-ui, sans-serif; width: 100%; }
+.history td { padding: 6px 12px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.source, .diff { font: 13px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
+.diff > div { padding: 0 6px; }
+.diff .mark { display: inline-block; width: 1.5em; color: var(--muted); user-select: none; }
+.diff .added { background: rgba(46, 160, 67, 0.2); }
+.diff .removed { background: rgba(218, 54, 51, 0.2); }
+.diff .skip { color: var(--muted); text-align: center; }
+main:has(.editor) { max-width: 1400px; }
+@media (max-width: 900px) { .editor .panes { grid-template-columns: 1fr; } .editor textarea, .preview { height: 45vh; } }
 .account { display: flex; align-items: center; gap: 10px; color: var(--muted); }
 button { font: inherit; padding: 5px 12px; border: 1px solid var(--line); border-radius: 6px;
          background: var(--surface); color: var(--text); cursor: pointer; }

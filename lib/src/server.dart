@@ -8,6 +8,7 @@ import 'auth.dart';
 import 'firestore_store.dart' show contentTypes;
 import 'images.dart';
 import 'index.dart';
+import 'page_source.dart';
 import 'render.dart';
 import 'store.dart';
 import 'tree.dart';
@@ -39,17 +40,20 @@ class Site {
     });
   }
 
-  Future<void> _refresh() async {
+  /// Reloads now. Called after this server saves, so the person who saved
+  /// sees their change at once.
+  Future<void> reload() => _refresh(force: true);
+
+  Future<void> _refresh({bool force = false}) async {
     _checked = DateTime.now();
     final version = await store.version();
-    if (version == _version) return;
+    if (version == _version && !force) return;
     final tree = await store.load();
     final old = index;
     this.tree = tree;
     index = Index.build(tree);
     _version = version;
     old.close();
-    stdout.writeln('Reloaded the tree at version $version.');
   }
 }
 
@@ -58,7 +62,8 @@ class Site {
 Handler siteHandler(Site site, DisplayCopies copies, {Sessions? sessions, String assets = 'web/dist'}) {
   final router = Router();
 
-  Renderer render(Request r) => Renderer(site.tree, site.index, viewer: Sessions.memberOf(r));
+  Renderer render(Request r) => Renderer(site.tree, site.index,
+      viewer: Sessions.memberOf(r), editable: site.store.editable);
   Response html(String body, {int status = 200}) => Response(status,
       body: body, headers: {'content-type': 'text/html; charset=utf-8'});
   Response missing(Request r, String what) => html(render(r).notFound(what), status: 404);
@@ -86,6 +91,141 @@ Handler siteHandler(Site site, DisplayCopies copies, {Sessions? sessions, String
     final person = site.tree.people[id];
     return person == null ? missing(r, 'No person has the id $id.') : html(render(r).person(person));
   });
+
+  // ---------------------------------------------------------------- editing
+
+  Response seeOther(String location) => Response.seeOther(location);
+  Future<Map<String, String>> form(Request r) async => Uri.splitQueryString(await r.readAsString());
+
+  /// Runs [action] for a member who may edit [id]; otherwise answers for it.
+  Future<Response> editing(Request r, String id, Future<Response> Function(Person, Member) action) async {
+    final person = site.tree.people[id];
+    if (person == null) return missing(r, 'No person has the id $id.');
+    final member = Sessions.memberOf(r);
+    if (!site.store.editable || member == null || !member.role.canEdit) {
+      return html(render(r).forbidden('You can read this tree but not change it. Ask its owner if you would like to edit.'), status: 403);
+    }
+    return action(person, member);
+  }
+
+  router.get('/people/<id>/edit', (Request r, String id) => editing(r, id, (person, member) async =>
+      html(render(r).editPerson(person, source: personSource(person), basedOn: person.revision))));
+
+  router.post('/people/<id>/preview', (Request r, String id) => editing(r, id, (person, member) async {
+        try {
+          final draft = parsePersonSource(await r.readAsString(), id: id, directory: person.directory);
+          return html(render(r).personArticle(draft, withMedia: false));
+        } on FormatException catch (e) {
+          return html('<p class="message">${Renderer.esc(e.message)}</p>', status: 422);
+        }
+      }));
+
+  router.post('/people/<id>/edit', (Request r, String id) => editing(r, id, (person, member) async {
+        final fields = await form(r);
+        final source = (fields['source'] ?? '').replaceAll('\r\n', '\n');
+        final summary = (fields['summary'] ?? '').trim();
+        final basedOn = int.tryParse(fields['based_on'] ?? '') ?? person.revision;
+        Response again(String error) => html(
+            render(r).editPerson(person, source: source, basedOn: basedOn, summary: summary, error: error),
+            status: 422);
+
+        final Person draft;
+        try {
+          draft = parsePersonSource(source, id: id, directory: person.directory);
+        } on FormatException catch (e) {
+          return again(e.message);
+        }
+        if (summary.isEmpty) return again('Add a few words on what you changed.');
+        if (basedOn == person.revision && personSource(draft) == personSource(person)) {
+          return seeOther('/people/$id'); // nothing changed
+        }
+
+        final result = await site.store.savePerson(draft, basedOn: basedOn, author: member, summary: summary);
+        if (result.saved) {
+          await site.reload();
+          return seeOther('/people/$id');
+        }
+        // Someone else saved first. Show their change and keep this text.
+        final theirs = await site.store.revision(id, result.conflictWith!);
+        final base = await site.store.revision(id, basedOn);
+        return html(
+            render(r).editPerson(person,
+                source: source,
+                basedOn: result.conflictWith!,
+                summary: summary,
+                conflict: theirs == null ? null : render(r).conflictNotice(theirs, base?.source ?? '')),
+            status: 409);
+      }));
+
+  router.get('/people/<id>/memory', (Request r, String id) =>
+      editing(r, id, (person, member) async => html(render(r).memoryForm(person))));
+
+  router.post('/people/<id>/memory', (Request r, String id) => editing(r, id, (person, member) async {
+        final fields = await form(r);
+        final title = (fields['title'] ?? '').trim().replaceAll(RegExp(r'\s+'), ' ');
+        final date = (fields['date'] ?? '').trim();
+        final text = (fields['text'] ?? '').replaceAll('\r\n', '\n').trim();
+        if (title.isEmpty || text.isEmpty) {
+          return html(
+              render(r).memoryForm(person, title: title, date: date, text: text, error: 'A memory needs a title and some text.'),
+              status: 422);
+        }
+        final section = '## ${date.isEmpty ? '' : '$date: '}$title\n\n$text';
+        // Appending is safe to repeat: if someone else saved meanwhile, add
+        // the memory to their version instead.
+        for (var attempt = 0; attempt < 4; attempt++) {
+          final current = site.tree.people[id]!;
+          final draft = parsePersonSource(personSource(current), id: id, directory: current.directory)
+            ..body = current.body.isEmpty ? section : '${current.body}\n\n$section';
+          final result = await site.store.savePerson(draft,
+              basedOn: current.revision, author: member, summary: 'Add a memory: $title');
+          await site.reload();
+          if (result.saved) return seeOther('/people/$id');
+        }
+        return html(
+            render(r).memoryForm(person, title: title, date: date, text: text, error: 'The page is being edited by several people at once. Please try again.'),
+            status: 409);
+      }));
+
+  router.get('/people/<id>/history', (Request r, String id) async {
+    final person = site.tree.people[id];
+    if (person == null) return missing(r, 'No person has the id $id.');
+    return html(render(r).history(person, await site.store.history(id)));
+  });
+
+  router.get('/people/<id>/revisions/<number|[0-9]+>', (Request r, String id, String number) async {
+    final person = site.tree.people[id];
+    final revision = person == null ? null : await site.store.revision(id, int.parse(number));
+    if (person == null || revision == null) return missing(r, 'There is no such version.');
+    return html(render(r).revision(person, revision, isCurrent: revision.number == person.revision));
+  });
+
+  router.get('/people/<id>/compare', (Request r, String id) async {
+    final person = site.tree.people[id];
+    final from = int.tryParse(r.url.queryParameters['from'] ?? '');
+    final to = int.tryParse(r.url.queryParameters['to'] ?? '');
+    if (person == null || from == null || to == null) return missing(r, 'Pick two versions to compare.');
+    final a = await site.store.revision(id, from < to ? from : to);
+    final b = await site.store.revision(id, from < to ? to : from);
+    if (b == null) return missing(r, 'There is no such version.');
+    // Comparing the first version with "before it" shows the whole page as new.
+    final before = a ?? Revision(0, '', author: '', summary: '', at: b.at);
+    return html(render(r).compare(person, before, b));
+  });
+
+  router.post('/people/<id>/restore', (Request r, String id) => editing(r, id, (person, member) async {
+        final number = int.tryParse((await form(r))['number'] ?? '');
+        final old = number == null ? null : await site.store.revision(id, number);
+        if (old == null) return missing(r, 'There is no such version.');
+        final draft = parsePersonSource(old.source, id: id, directory: person.directory);
+        // Restoring is itself a new version, so nothing is ever lost.
+        final result = await site.store.savePerson(draft,
+            basedOn: person.revision, author: member, summary: 'Restore version $number');
+        await site.reload();
+        return seeOther(result.saved ? '/people/$id' : '/people/$id/history');
+      }));
+
+  router.get('/changes', (Request r) async => html(render(r).changes(await site.store.recentChanges())));
 
   router.get('/media', (Request r) => html(render(r).mediaIndex()));
   router.get('/media/<key>', (Request r, String key) {

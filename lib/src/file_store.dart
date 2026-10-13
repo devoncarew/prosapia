@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 
+import 'page_source.dart';
 import 'store.dart';
 import 'tree.dart';
 
@@ -112,12 +113,4 @@ class FileStore extends TreeStore {
         ? (d.listSync()..sort((a, b) => a.path.compareTo(b.path)))
         : const [];
   }
-}
-
-/// Splits a file into its structured block and its markdown body.
-(YamlMap, String) splitFrontMatter(String text) {
-  final m = RegExp(r'^---\r?\n(.*?)\r?\n---\r?\n?(.*)$', dotAll: true)
-      .firstMatch(text);
-  if (m == null) throw const FormatException('no front matter');
-  return (loadYaml(m[1]!) as YamlMap, m[2]!.trim());
 }
