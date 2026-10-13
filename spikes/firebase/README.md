@@ -1,12 +1,15 @@
 # Firebase spike
 
-The first step of milestone 3 in [docs/plan.md](../../docs/plan.md): can a Dart server do what Loom needs from Firebase?
+The first step of milestone 3 in [docs/plan.md](../../docs/plan.md): can a Dart server
+do what Loom needs from Firebase?
 
 ```
 firebase emulators:exec "dart run spikes/firebase/spike.dart"
 ```
 
-Result: yes. Every check passes against the local emulators using `firebase_admin_sdk`, the official Firebase Admin SDK for Dart, with `google_cloud_firestore` and `google_cloud_storage`.
+Result: yes. Every check passes against the local emulators using `firebase_admin_sdk`,
+the official Firebase Admin SDK for Dart, with `google_cloud_firestore` and
+`google_cloud_storage`.
 
 | Area | Checked |
 | --- | --- |
@@ -14,4 +17,5 @@ Result: yes. Every check passes against the local emulators using `firebase_admi
 | Sign-in | Verifying a Google sign-in; reading the email and provider; creating and verifying a session cookie; rejecting a malformed token; looking a user up by email |
 | Cloud Storage | Uploading a photo and downloading identical bytes, so embedded metadata survives |
 
-Not checked here: rejecting a token with a forged signature. The emulator issues unsigned tokens, so that needs a real project and belongs to milestone 5.
+Not checked here: rejecting a token with a forged signature. The emulator issues
+unsigned tokens, so that needs a real project and belongs to milestone 5.

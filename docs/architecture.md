@@ -2,7 +2,8 @@
 
 ## System overview
 
-Loom is a hosted web app: a server sits between the people using it and a database, and everything a reader sees is computed from that database.
+Loom is a hosted web app: a server sits between the people using it and a database, and
+everything a reader sees is computed from that database.
 
 ```mermaid
 flowchart TD
@@ -24,7 +25,9 @@ flowchart TD
     server -- "export" --> backup
 ```
 
-Only the server reads and writes the database. The browser talks to Google directly for two things: signing in, and uploading photos, so large files do not pass through the server.
+Only the server reads and writes the database. The browser talks to Google directly for
+two things: signing in, and uploading photos, so large files do not pass through the
+server.
 
 ## Technology stack
 
@@ -44,13 +47,22 @@ Direction set:
 | Backup | Firestore's scheduled backups, plus a nightly export to a private GitHub repository |
 | Local development | Firebase's emulators, or a tree loaded from files |
 
-Dart on the server was the known risk, and a spike retired it: Firebase publishes an official Admin SDK for Dart (`firebase_admin_sdk`), and Firestore, sign-in verification, session cookies and Cloud Storage all worked from it against the local emulators. See [spikes/firebase](../spikes/firebase/README.md). The SDK is young (version 0.5), so the fallback remains TypeScript for both server and browser.
+Dart on the server was the known risk, and a spike retired it: Firebase publishes an
+official Admin SDK for Dart (`firebase_admin_sdk`), and Firestore, sign-in verification,
+session cookies and Cloud Storage all worked from it against the local emulators. See
+[spikes/firebase](../spikes/firebase/README.md). The SDK is young (version 0.5), so the
+fallback remains TypeScript for both server and browser.
 
-A billing account is required: Cloud Run and Cloud Storage need the pay-as-you-go plan. One family's usage should sit within the free allowances or cost very little.
+A billing account is required: Cloud Run and Cloud Storage need the pay-as-you-go plan.
+One family's usage should sit within the free allowances or cost very little.
 
 ## Storage and versioning
 
-Direction set: the database is the record. Each tree's people, partnerships, sources and rolls are Firestore documents; photos and large files are objects in Cloud Storage. Git and GitHub are no longer the store: most relatives have a Google account and no GitHub account, and Loom would have had to build its own sign-in and editing screens in any case.
+Direction set: the database is the record. Each tree's people, partnerships, sources and
+rolls are Firestore documents; photos and large files are objects in Cloud Storage. Git
+and GitHub are no longer the store: most relatives have a Google account and no GitHub
+account, and Loom would have had to build its own sign-in and editing screens in any
+case.
 
 ```
 trees/{tree}
@@ -66,7 +78,9 @@ trees/{tree}
 
 ### The file layout remains, as the import and export format
 
-The markdown layout designed earlier is still Loom's portable form. It is what the nightly export writes, what an import reads, and what the server loads in local development and tests.
+The markdown layout designed earlier is still Loom's portable form. It is what the
+nightly export writes, what an import reads, and what the server loads in local
+development and tests.
 
 ```
 tree/
@@ -84,50 +98,79 @@ tree/
 
 ### Decisions
 
-- **Only the server touches the database.** The store sits behind one interface in the server, with two implementations: Firestore in production, files for development and tests. Changing the store later is a contained change.
-- **Every save writes a revision**: the full text, the author, the time and a one-line summary. Nothing is overwritten.
-- **A page has one text form**: its facts as a short block, then markdown. The editor edits that text, a revision stores it, and the export writes it to a file, so all three always agree.
-- **Every change is logged.** The change log lists who changed which pages and why. It drives the recent-changes view and the export.
-- **Direct links only.** A child lists its parents; a partnership is its own record. Children, siblings and descendants are derived, not stored.
-- **The server caches the tree in memory.** On start it loads the tree and builds the search index, as it does from files today. Each tree carries a version number; a server instance that sees a newer one reloads. This is enough for any near or medium-term size.
-- **Photos live in Cloud Storage**, stored as they are with their metadata embedded. The browser uploads directly; the server then writes the metadata into the file.
-- **Display copies are derived and never stored as originals.** The server makes resized web copies on demand. Cloud Run has no lasting disk, so they are cached by Firebase Hosting or in a cache folder in the bucket.
+- **Only the server touches the database.** The store sits behind one interface in the
+  server, with two implementations: Firestore in production, files for development and
+  tests. Changing the store later is a contained change.
+- **Every save writes a revision**: the full text, the author, the time and a one-line
+  summary. Nothing is overwritten.
+- **A page has one text form**: its facts as a short block, then markdown. The editor
+  edits that text, a revision stores it, and the export writes it to a file, so all
+  three always agree.
+- **Every change is logged.** The change log lists who changed which pages and why. It
+  drives the recent-changes view and the export.
+- **Direct links only.** A child lists its parents; a partnership is its own record.
+  Children, siblings and descendants are derived, not stored.
+- **The server caches the tree in memory.** On start it loads the tree and builds the
+  search index, as it does from files today. Each tree carries a version number; a
+  server instance that sees a newer one reloads. This is enough for any near or
+  medium-term size.
+- **Photos live in Cloud Storage**, stored as they are with their metadata embedded. The
+  browser uploads directly; the server then writes the metadata into the file.
+- **Display copies are derived and never stored as originals.** The server makes resized
+  web copies on demand. Cloud Run has no lasting disk, so they are cached by Firebase
+  Hosting or in a cache folder in the bucket.
 
 ### Backup and export
 
 - **Firestore's scheduled backups** cover disaster recovery.
-- **A nightly export writes the tree, in the file layout above, to a private GitHub repository.** It is readable without Loom. Because every change is logged, the export writes one commit per change with its real author, so the history carries over.
-- **GEDCOM is produced alongside** for other genealogy tools. It loses too much prose to serve as the backup.
+- **A nightly export writes the tree, in the file layout above, to a private GitHub
+  repository.** It is readable without Loom. Because every change is logged, the export
+  writes one commit per change with its real author, so the history carries over.
+- **GEDCOM is produced alongside** for other genealogy tools. It loses too much prose to
+  serve as the backup.
 
-This keeps the original aim that a family's history outlives the software, by a different route: the files are a continuous export, not the live store.
+This keeps the original aim that a family's history outlives the software, by a
+different route: the files are a continuous export, not the live store.
 
 ### Open
 
-- **Removing something for good.** A living person who asks to be removed, or a secret published by mistake, must be deleted from the revisions and the change log, and from the exported repository's history. This needs a defined procedure.
-- **One tree or many.** If two cousins each keep a tree and share ancestors, are those the same person record, a link, or a copy?
-- **Large trees.** Loading a whole tree into memory stops working somewhere. Where, and what replaces it, can wait.
-- **Whether the export should run on every change** rather than nightly, so the files never lag.
+- **Removing something for good.** A living person who asks to be removed, or a secret
+  published by mistake, must be deleted from the revisions and the change log, and from
+  the exported repository's history. This needs a defined procedure.
+- **One tree or many.** If two cousins each keep a tree and share ancestors, are those
+  the same person record, a link, or a copy?
+- **Large trees.** Loading a whole tree into memory stops working somewhere. Where, and
+  what replaces it, can wait.
+- **Whether the export should run on every change** rather than nightly, so the files
+  never lag.
 
 ## Editing
 
-Direction set: editing feels like Wikipedia. Anyone with write access changes a page directly; there is no review step. Safety comes from the log: every edit is recorded, attributed and reversible.
+Direction set: editing feels like Wikipedia. Anyone with write access changes a page
+directly; there is no review step. Safety comes from the log: every edit is recorded,
+attributed and reversible.
 
 1. A signed-in editor presses Edit on a page.
 2. They change the page and write a one-line summary.
-3. Saving stores a new revision and adds an entry to the change log. The page updates at once.
-4. The page's history lists every revision with author, date and summary. Any two can be compared, and any earlier one restored.
+3. Saving stores a new revision and adds an entry to the change log. The page updates at
+   once.
+4. The page's history lists every revision with author, date and summary. Any two can be
+   compared, and any earlier one restored.
 
-Dropping review removes the hardest part of the design: proposals, a review screen, and merging a proposal against a page that has moved on. It can return later as an option for larger families.
+Dropping review removes the hardest part of the design: proposals, a review screen, and
+merging a proposal against a page that has moved on. It can return later as an option
+for larger families.
 
 ### Roles
 
-| Role | Can do |
-| --- | --- |
-| Owner | Everything, including inviting people and setting roles |
-| Editor | Edit any page, add photos, restore earlier versions |
-| Viewer | Read |
+| Role   | Can do                                                  |
+| ------ | ------------------------------------------------------- |
+| Owner  | Everything, including inviting people and setting roles |
+| Editor | Edit any page, add photos, restore earlier versions     |
+| Viewer | Read                                                    |
 
-People are invited by email address and sign in with Google. Loom keeps the member list; Google only confirms who someone is.
+People are invited by email address and sign in with Google. Loom keeps the member list;
+Google only confirms who someone is.
 
 ### Decided by the brief
 
@@ -146,19 +189,27 @@ People are invited by email address and sign in with Google. Loom keeps the memb
 | Citation needed | Uncited claims are marked, not blocked |
 | Watchlist | Follow a person and hear about changes to their page |
 
-- **Imports and bulk changes are previewed before they are applied**, and land as one logged change that can be undone as a whole.
-- **Adding an entry is the easy path.** "Add a memory" appends a dated section and photos without touching the rest of the page.
-- **A save checks the page has not changed underneath.** If someone else saved first, the editor is shown their change and asked to reapply, rather than silently overwriting it.
+- **Imports and bulk changes are previewed before they are applied**, and land as one
+  logged change that can be undone as a whole.
+- **Adding an entry is the easy path.** "Add a memory" appends a dated section and
+  photos without touching the rest of the page.
+- **A save checks the page has not changed underneath.** If someone else saved first,
+  the editor is shown their change and asked to reapply, rather than silently
+  overwriting it.
 
 ### Open
 
-- **The editing surface.** Raw markdown, a formatted editor that writes markdown, or both. Most relatives will not write markdown.
+- **The editing surface.** Raw markdown, a formatted editor that writes markdown, or
+  both. Most relatives will not write markdown.
 - **Whether some families will want review back**, at least for new members.
-- **Contributions from people who are not members**, such as a great-aunt replying to a link with a correction.
+- **Contributions from people who are not members**, such as a great-aunt replying to a
+  link with a correction.
 
 ## Derived views
 
-Nothing a reader sees beyond the page text is stored; it is computed from the tree. This is what lets a contributor add a loose entry and leave the system to work out where it shows up.
+Nothing a reader sees beyond the page text is stored; it is computed from the tree. This
+is what lets a contributor add a loose entry and leave the system to work out where it
+shows up.
 
 | View | Built from |
 | --- | --- |
@@ -173,15 +224,21 @@ Nothing a reader sees beyond the page text is stored; it is computed from the tr
 
 ### Decided by the brief
 
-- Incorporating loosely added information into fuller views is the responsibility of viewing and summary systems, not the person editing.
+- Incorporating loosely added information into fuller views is the responsibility of
+  viewing and summary systems, not the person editing.
 
 ### Proposed
 
-- **Views never write to the tree on their own.** A generated summary that should become part of a page is offered to an editor, who saves it as an ordinary edit under their name.
+- **Views never write to the tree on their own.** A generated summary that should become
+  part of a page is offered to an editor, who saves it as an ordinary edit under their
+  name.
 - **The index is disposable.** It is rebuilt whenever the server loads the tree.
 
 ### Open
 
-- **Generated summaries.** Whether a language model drafts a biography or suggests structured facts from prose, and how its output is labelled and cited.
-- **Static or live.** Public pages could be published as a static site; private ones need access checks on every request.
-- **Printing.** Family books and wall charts are a common end product; in scope or later?
+- **Generated summaries.** Whether a language model drafts a biography or suggests
+  structured facts from prose, and how its output is labelled and cited.
+- **Static or live.** Public pages could be published as a static site; private ones
+  need access checks on every request.
+- **Printing.** Family books and wall charts are a common end product; in scope or
+  later?

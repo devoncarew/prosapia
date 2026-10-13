@@ -2,7 +2,8 @@
 
 ## Open questions
 
-The questions that blocked other decisions are settled. The rest can wait until the area they belong to is built; each is listed in its own document.
+The questions that blocked other decisions are settled. The rest can wait until the area
+they belong to is built; each is listed in its own document.
 
 ### Settled
 
@@ -14,9 +15,16 @@ The questions that blocked other decisions are settled. The rest can wait until 
 
 ### Why not git
 
-The first design kept each tree in a GitHub repository and made changes through pull requests. It was dropped because most relatives have a Google account and no GitHub account, so Loom needed its own sign-in and editing screens anyway, and per-person visibility is hard on a store that is copied whole. Git survives as the export: a nightly copy of the tree as files in a private GitHub repository.
+The first design kept each tree in a GitHub repository and made changes through pull
+requests. It was dropped because most relatives have a Google account and no GitHub
+account, so Loom needed its own sign-in and editing screens anyway, and per-person
+visibility is hard on a store that is copied whole. Git survives as the export: a
+nightly copy of the tree as files in a private GitHub repository.
 
-Alternatives considered: a git repository owned by the server, a self-hosted forge, PostgreSQL, an existing wiki engine, and Google Drive. PostgreSQL fits family relationships better than Firestore and remains the fallback; Firestore was chosen for having no running cost and nothing to operate at one family's size.
+Alternatives considered: a git repository owned by the server, a self-hosted forge,
+PostgreSQL, an existing wiki engine, and Google Drive. PostgreSQL fits family
+relationships better than Firestore and remains the fallback; Firestore was chosen for
+having no running cost and nothing to operate at one family's size.
 
 ### Can wait
 

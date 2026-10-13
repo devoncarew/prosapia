@@ -1,10 +1,16 @@
 # Loom
 
-Loom is a family-history wiki: pages about people, written as markdown with images, served by a hosted web app that relatives sign in to with a Google account. Eight directions are set, one design is proposed for confirmation, and three questions are open. Two of the open questions, privacy tiers and access enforcement, are deferred: for now every member of a tree sees all of it.
+Loom is a family-history wiki: pages about people, written as markdown with images,
+served by a hosted web app that relatives sign in to with a Google account. Eight
+directions are set, one design is proposed for confirmation, and three questions are
+open. Two of the open questions, privacy tiers and access enforcement, are deferred: for
+now every member of a tree sees all of it.
 
 ## Status
 
-"Direction set" means you stated it in the brief. "Proposed" is a design this document suggests and you have not yet confirmed. "Open" has no answer yet. "Deferred" marks an open item set aside on purpose.
+"Direction set" means you stated it in the brief. "Proposed" is a design this document
+suggests and you have not yet confirmed. "Open" has no answer yet. "Deferred" marks an
+open item set aside on purpose.
 
 | Area | Status | Where it stands |
 | --- | --- | --- |
@@ -23,11 +29,16 @@ Loom is a family-history wiki: pages about people, written as markdown with imag
 
 ## Principles
 
-- **A family's history outlives the software.** The database is the live record, and the whole tree is continuously exported as plain markdown files and photos that need no Loom to read.
-- **Prose first, structure where it pays.** A contributor can add a story without filling in a form.
-- **Information travels with its artifact.** What is known about a photo lives inside the photo file, including which photo it is the back of.
+- **A family's history outlives the software.** The database is the live record, and the
+  whole tree is continuously exported as plain markdown files and photos that need no
+  Loom to read.
+- **Prose first, structure where it pays.** A contributor can add a story without
+  filling in a form.
+- **Information travels with its artifact.** What is known about a photo lives inside
+  the photo file, including which photo it is the back of.
 - **Every change is attributed, logged and reversible.**
-- **Private by default.** Only invited members can sign in. Wider sharing is designed later, deliberately.
+- **Private by default.** Only invited members can sign in. Wider sharing is designed
+  later, deliberately.
 - **Every claim can cite its source.**
 - **Standards at the edges.** GEDCOM 7.0 for trees, XMP and IPTC for image metadata.
 
@@ -37,7 +48,8 @@ The server needs Dart, `exiftool` and `libvips`.
 
 ### From files, with no sign-in
 
-The quickest way to look at a tree. The directory is a tree in Loom's file layout; `spikes/gedcom_import` can generate a sample one from a GEDCOM export.
+The quickest way to look at a tree. The directory is a tree in Loom's file layout;
+`spikes/gedcom_import` can generate a sample one from a GEDCOM export.
 
 ```
 dart pub get
@@ -46,14 +58,16 @@ dart run loom data/tree
 
 ### From Firestore, with Google sign-in
 
-This is how production works, run locally against Firebase's emulators. It also needs the Firebase command-line tools, Java and Node.
+This is how production works, run locally against Firebase's emulators. It also needs
+the Firebase command-line tools, Java and Node.
 
 ```
 (cd web && npm install && npm run build)        # the browser-side code: sign-in and the editor
 firebase emulators:start --import=.emulator_data --export-on-exit=.emulator_data
 ```
 
-Leave the emulators running. The first time, omit `--import`, since there is nothing to import yet. In a second terminal:
+Leave the emulators running. The first time, omit `--import`, since there is nothing to
+import yet. In a second terminal:
 
 ```
 source tool/emulator_env.sh
@@ -61,9 +75,14 @@ dart run loom:load --tree carew --owner you@example.com data/tree
 dart run loom --tree carew
 ```
 
-`loom:load` copies a tree from files into Firestore and Cloud Storage and names its members. Open http://localhost:8080 and sign in; the emulator shows a stand-in for Google's account chooser, where you add an account with the owner's email address. Anyone not on the member list is refused. Owners and editors can edit pages; add `--editor` and `--viewer` addresses to `loom:load` to try the other roles.
+`loom:load` copies a tree from files into Firestore and Cloud Storage and names its
+members. Open http://localhost:8080 and sign in; the emulator shows a stand-in for
+Google's account chooser, where you add an account with the owner's email address.
+Anyone not on the member list is refused. Owners and editors can edit pages; add
+`--editor` and `--viewer` addresses to `loom:load` to try the other roles.
 
-Resized images and files fetched from storage go in `.loom_cache/`, which can be deleted at any time.
+Resized images and files fetched from storage go in `.loom_cache/`, which can be deleted
+at any time.
 
 ## Design documents
 
