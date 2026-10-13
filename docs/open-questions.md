@@ -24,7 +24,6 @@ Alternatives considered: a git repository owned by the server, a self-hosted for
 - GEDCOM 5.5.1 support and re-import matching (GEDCOM 7.0 interchange).
 - Which research sites permit automated capture (Sources and citations).
 - The editing surface (Editing).
-- Whether Dart on the server holds up against Firebase's libraries (Technology stack).
 - Generated summaries (Derived views).
 - Consent and legal duties for living people (Privacy, sharing and trust).
 - Merging updates into the biography (Content model).

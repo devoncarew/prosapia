@@ -3,3 +3,7 @@ spikes/*/out/
 data/
 .dart_tool/
 .loom_cache/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+*-debug.log

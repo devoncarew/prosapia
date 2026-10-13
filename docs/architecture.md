@@ -44,7 +44,7 @@ Direction set:
 | Backup | Firestore's scheduled backups, plus a nightly export to a private GitHub repository |
 | Local development | Firebase's emulators, or a tree loaded from files |
 
-The known risk is Dart on the server. Firestore, sign-in checks and Cloud Storage have official server libraries for Node, Python, Go and Java; Dart may have to use Google's general API package or community packages. The decision is to stay with Dart until something forces a change. The fallback is TypeScript for both server and browser. Milestone 3 in the [plan](plan.md) starts with a spike on exactly this.
+Dart on the server was the known risk, and a spike retired it: Firebase publishes an official Admin SDK for Dart (`firebase_admin_sdk`), and Firestore, sign-in verification, session cookies and Cloud Storage all worked from it against the local emulators. See [spikes/firebase](../spikes/firebase/README.md). The SDK is young (version 0.5), so the fallback remains TypeScript for both server and browser.
 
 A billing account is required: Cloud Run and Cloud Storage need the pay-as-you-go plan. One family's usage should sit within the free allowances or cost very little.
 

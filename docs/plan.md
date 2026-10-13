@@ -51,7 +51,7 @@ Done when: the sample tree can be browsed and searched locally, and deleting the
 
 Move the working site from files onto Firebase, running locally against Firebase's emulators. This is where the choice of Dart is most at risk, so it starts with a spike.
 
-- **Spike first:** from Dart, read and write Firestore, verify a Google sign-in, and read a file from Cloud Storage, all against the emulators. Note which packages are official and which are community. If this is impractical, switch the server to TypeScript here.
+- **Spike first (done; Dart stays):** see [spikes/firebase](../spikes/firebase/README.md). Original aim: from Dart, read and write Firestore, verify a Google sign-in, and read a file from Cloud Storage, all against the emulators. Note which packages are official and which are community. If this is impractical, switch the server to TypeScript here.
 - A store interface in the server with two implementations: files, as today, and Firestore.
 - A loader that puts a tree in the file layout into Firestore and Cloud Storage. The sample tree goes in this way.
 - Sign in with Google, a session, and a member list with the roles owner, editor and viewer.

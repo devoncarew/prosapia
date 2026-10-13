@@ -1,0 +1,11 @@
+rules_version = '2';
+
+// Files are served through the Loom server. Direct uploads from the browser
+// will be opened up, narrowly, when photo upload is built.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
