@@ -33,17 +33,32 @@ Design decisions and their reasons live in the other documents, not here:
 
 ### Milestone 9: project name
 
-"Loom" is a working title and is widely used by other products. Pick a name before it is
-baked into a repository, a Firebase project and a web address, since the last two cannot
-be renamed.
+Chosen: **Prosapia**, Latin for lineage or family line, with a short subtitle to give
+context. "Loom" was a working title and is widely used by other products. The name needs
+settling before it is baked into a repository, a Firebase project and a web address,
+since the last two cannot be renamed.
 
-- Brainstorm candidates: short, relevant to family and ancestry, easy to say and spell.
-  Starting points are "Family Loom" and Latin words to do with ancestry or lineage.
-- Check each shortlisted name: other software with the same name, a free domain, a free
-  GitHub name, a free package name on pub.dev, and no obvious trademark.
-- Choose, and rename where the working title appears.
+Checked on 13 October 2026:
 
-Done when: a name is chosen and recorded here, with what was checked.
+<!-- prettier-ignore -->
+| What | Result |
+| --- | --- |
+| Domains | `prosapia.app`, `.dev`, `.family` and `.wiki` are not registered. `.com` (since 1999), `.net` and `.org` are taken; `.io` appears to be in use |
+| GitHub | The `prosapia` organization was created in February 2026 by someone else and holds one repository. `prosapia-app`, `prosapiaapp` and `getprosapia` are free |
+| Package names | `prosapia` is free on pub.dev |
+| Other uses | Prosapia Genetics, LLC, a Delaware company, sold DNA ancestry reports from about 2014. Whether it still trades is unknown. *Prosapia* is also a genus of insects, and still a word for lineage in Spanish, Italian and Portuguese |
+
+Still to do:
+
+- Search the trademark registers (the US Patent and Trademark Office, and the European
+  and international ones) for "Prosapia", and find out whether Prosapia Genetics is
+  still active. It is the one earlier use in the same field.
+- Choose the subtitle.
+- Register the domain and the GitHub name.
+- Rename where the working title appears: the Dart package, the commands, the documents.
+
+Done when: the checks above are complete and recorded here, and the name is in use in
+the repository.
 
 ### Milestone 10: GitHub project and continuous integration
 
