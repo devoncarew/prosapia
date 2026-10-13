@@ -84,6 +84,16 @@ Anyone not on the member list is refused. Owners and editors can edit pages; add
 Resized images and files fetched from storage go in `.loom_cache/`, which can be deleted
 at any time.
 
+## Working on it
+
+```
+dart format . && dart analyze && dart test
+npm install && npm run format:md
+```
+
+The second line wraps the repository's markdown at 88 columns; `npm run check:md` only
+checks. A person's page in a tree is the family's text and is never re-wrapped.
+
 ## Design documents
 
 | File | Covers |

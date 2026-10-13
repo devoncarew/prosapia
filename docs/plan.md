@@ -31,23 +31,6 @@ Design decisions and their reasons live in the other documents, not here:
 
 ## Planned milestones
 
-### Milestone 8: markdown formatter
-
-Wrap and format the project's own markdown consistently, so documents read well in a
-terminal and changes show up as small diffs.
-
-- Choose a formatter and a line width, 80 or 88 columns. Prettier is the likely choice,
-  since the project already uses Node for the browser code; it wraps prose and leaves
-  tables and code blocks alone.
-- One command that formats every markdown file in the repository, and one that only
-  checks.
-- Reformat the existing documents in a single commit of their own.
-- Leave tree content alone: a person's page is the family's text, and Loom does not
-  re-wrap it.
-
-Done when: every markdown file in the repository passes the check, and the check can be
-run by the continuous integration set up in milestone 10.
-
 ### Milestone 9: project name
 
 "Loom" is a working title and is widely used by other products. Pick a name before it is
@@ -71,7 +54,7 @@ Depends on milestone 9 for the repository's name.
 - Confirm nothing private is in the history first: the sample photo and its text are
   committed today.
 - Continuous integration on every pull request: Dart formatting, analysis and tests; the
-  TypeScript type check and build; the markdown check from milestone 8.
+  TypeScript type check and build; the markdown check, `npm run check:md`.
 - Linting standards: a stricter Dart analysis configuration, and a linter and formatter
   for the TypeScript.
 - Decide whether the emulator-based checks, such as the Firebase spike, run in
@@ -240,6 +223,10 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 
 Newest first.
 
+- **Milestone 8, markdown formatter.** `npm run format:md` wraps the repository's
+  markdown at 88 columns using Prettier, with a small script on top that keeps tables
+  too wide for the line compact rather than padded; `npm run check:md` verifies it, and
+  tree content is left alone.
 - **Milestone 4, editing.** Members with write access edit an existing person's page as
   text with a live preview; every save is a revision and a change-log entry, stale saves
   are refused, and history, compare, restore, recent changes and "Add a memory" work.
