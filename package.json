@@ -1,0 +1,12 @@
+{
+  "name": "loom-tools",
+  "private": true,
+  "description": "Repository tooling. The browser code has its own package in web/.",
+  "scripts": {
+    "format:md": "prettier --write \"**/*.md\"",
+    "check:md": "prettier --check \"**/*.md\""
+  },
+  "devDependencies": {
+    "prettier": "3.9.10"
+  }
+}

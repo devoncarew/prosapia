@@ -10,3 +10,4 @@ ui-debug.log
 web/node_modules/
 web/dist/
 .emulator_data/
+node_modules/
