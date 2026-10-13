@@ -1,6 +1,6 @@
 # Photos and media
 
-What is known about a photo is written into the photo file, using existing metadata standards, so a copy emailed to a cousin still says who is in it. The repository keeps the same facts in its index, but the file is the authority.
+What is known about a photo is written into the photo file, using existing metadata standards, so a copy emailed to a cousin still says who is in it. Loom keeps the same facts in its database for searching, but the file is the authority.
 
 The field names below are from memory and should be checked against the current specifications in milestone 5 of the [plan](plan.md).
 
@@ -41,7 +41,7 @@ media/
 - **The file names pair them.** Anyone can see the pairing; no software is needed.
 - **Each file embeds the photo id and its side**, so a renamed or separated file can be matched again.
 - **The front carries the transcription of the back**, so the words survive even if the back is lost.
-- **Loom keeps them together** when viewing, exporting and moving. The association is read from the names and the embedded ids, so the index can always be rebuilt from the repository.
+- **Loom keeps them together** when viewing, exporting and moving. The association is read from the names and the embedded ids, so the pairing can always be rebuilt from the files alone.
 
 This replaces the earlier requirement that the two sides be physically one file. The spike showed that every single-file option was either large, young, or lost the back when re-saved, while embedded text survived everywhere.
 
@@ -49,7 +49,7 @@ This replaces the earlier requirement that the two sides be physically one file.
 
 Direction set: photos may belong to a roll, a set of related images likely taken together. A roll is optional.
 
-- **A roll is a small record in the repository**, like a source: an id, a title, a rough date, notes, and its photos in order.
+- **A roll is a small record**, like a source: an id, a title, a rough date, notes, and its photos in order.
 - **A fact known for one frame can be suggested for the others**: the date, the place, the occasion.
 - **Frame order is evidence** for dating and for who was present.
 
@@ -58,9 +58,15 @@ rolls/
   r-8d2k5n.md
 ```
 
+### Where the files live
+
+Photos and other large files are stored in Cloud Storage, as they are, with their metadata embedded. The browser uploads directly to storage; the server then applies the rules above and writes the metadata into the file. The database keeps a small record per file so photos can be searched and listed without opening them.
+
+The nightly export copies photos into the exported repository under `media/`, using the names above. Very large files, such as video, are listed there but not copied.
+
 ### Display copies
 
-Display copies are never committed. The server makes them on the fly when serving a page: resized versions, and a JPEG version of each HEIC, since most browsers do not display HEIC. It may keep them in a local cache to avoid repeating the work. JPEGs display as they are, including on GitHub.
+Display copies are never stored as originals. The server makes them on demand when serving a page: resized versions, and a JPEG version of each HEIC, since most browsers do not display HEIC. They are cached, and the cache can be deleted at any time.
 
 ## Other decisions
 
@@ -87,6 +93,6 @@ The image-format spike packaged one photo, a 1949 snapshot with a written back, 
 ## Open
 
 - Do documents (letters, certificates, census pages) follow the same rules as photos? The sample import brought in 13 PDFs alongside 122 JPEGs. Metadata could be written into the PDFs too.
-- Size. The 122 sample JPEGs total 244 MB, about 2 MB each, which presses the question of where image bytes live.
-- Audio and video recordings of relatives: in scope, and with what metadata? The sample has one 260 MB video. It is over GitHub's 100 MB file limit, and its format cannot take embedded metadata.
+- Size. The 122 sample JPEGs total 244 MB, about 2 MB each. That is no problem for Cloud Storage, but it may be too much to copy into the GitHub export in full.
+- Audio and video recordings of relatives: in scope, and with what metadata? The sample has one 260 MB video. Its format cannot take embedded metadata, and it is too large to include in the GitHub export.
 - Should face regions be suggested automatically, and if so, does that run locally only?

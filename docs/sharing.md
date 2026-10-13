@@ -1,6 +1,6 @@
 # Privacy, sharing and trust
 
-Deferred: the sharing model is to be decided later. Until then the GitHub repository is private, signing in requires a GitHub account with access to it, and everyone with access can read everything. Pages carry no visibility field yet. The levels and roles below are a starting sketch for when sharing is designed.
+Deferred: the sharing model is to be decided later. Until then a tree has members, invited by email and signed in with Google, and every member can read everything. Pages carry no visibility field yet. The levels below are a starting sketch for when sharing is designed.
 
 | Level | Who can read | Default for |
 | --- | --- | --- |
@@ -12,8 +12,7 @@ Deferred: the sharing model is to be decided later. Until then the GitHub reposi
 | Role | Can do |
 | --- | --- |
 | Owner | Everything, including membership and visibility rules |
-| Editor | Edit directly and review others' proposals |
-| Contributor | Propose edits and add entries; an editor accepts them |
+| Editor | Edit any page directly; every edit is logged and reversible |
 | Viewer | Read what their circle allows |
 
 ## Decided by the brief
@@ -31,17 +30,11 @@ Deferred: the sharing model is to be decided later. Until then the GitHub reposi
 - **A private person still appears as a placeholder** ("living relative") in wider views, so the tree's shape is intact.
 - **Public pages link outward** to matching profiles on shared trees such as WikiTree and FamilySearch, rather than copying data in.
 
-## Open: enforcing this on git
+## Enforcing it
 
-Anyone who can clone a git repository gets every file and all of its history. Git has no per-file read permission. Three ways to reconcile that with per-page visibility:
+Only the server reads the database, so visibility is enforced in one place: the server decides, for each signed-in member, which people and photos they may see, and shows a placeholder for the rest. This was the hard problem when the store was a git repository that anyone with access could copy whole. It is now an ordinary feature to build, and it no longer blocks other work.
 
-| Approach | How it works | Cost |
-| --- | --- | --- |
-| Server in front | Only the server holds the repository; readers get rendered pages filtered by their access | No offline clone for viewers; needs a running service |
-| A repository per circle | Private, family and public content live in separate repositories | Moving a page between levels moves it between repositories; links cross boundaries |
-| Encrypted files | One repository; restricted files encrypted to the keys of those allowed | Key management for non-technical relatives; revocation does not reach old clones |
-
-With the store on GitHub, a server in front is the natural fit when sharing is designed: only the server and editors clone the repository, and readers see filtered, rendered pages. This no longer blocks other work.
+The nightly export needs the same care: an exported repository holds everything, so it stays private to the tree's owners.
 
 ## Also open
 

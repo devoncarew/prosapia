@@ -2,34 +2,29 @@
 
 ## Open questions
 
-Of the three questions that blocked other decisions, one is deferred, one is settled, and the first user has a working assumption. The rest can wait until the area they belong to is built; each is listed in its own section above.
+The questions that blocked other decisions are settled. The rest can wait until the area they belong to is built; each is listed in its own document.
 
-### Blocking
+### Settled
 
-| Question | Why it blocks | Working assumption |
-| --- | --- | --- |
-| How is per-page visibility enforced on a git store? | Decides whether Loom needs a server, and what viewers can hold offline | Deferred with the sharing model; the repository is private for now |
-| Where does Loom run, and on what stack? | Decides the technology stack, cost, and who can realistically operate it | Settled: a Dart server on a clone of a GitHub repository, TypeScript in the browser |
-| Who is the first user: one family's researcher, or many families on a service? | Decides how much of sharing, invitations and multi-tree linking is needed in version one | One family, one tree, a handful of invited relatives |
+| Question | Answer |
+| --- | --- |
+| Where does Loom run, and on what stack? | A hosted web app: a Dart server on Cloud Run behind Firebase Hosting, Firestore for records, Cloud Storage for photos, sign-in with Google, TypeScript in the browser |
+| Who is the first user? | One family, one tree, a handful of invited relatives. The simplifications this allows are removed step by step so the tool becomes general purpose |
+| How is per-page visibility enforced? | By the server, which is the only thing that reads the database. Designing the levels themselves is deferred |
 
-### Hosting options for the second question
+### Why not git
 
-| Option | Suits | Main drawback |
-| --- | --- | --- |
-| Local-first desktop app, syncing to any git remote | A single researcher; full ownership of the data | Relatives need an install; no fine-grained viewing |
-| Self-hosted web app | A technical family member running it for everyone | Someone must operate and back it up |
-| Hosted service | Non-technical families | Loom holds private family data; cost and trust |
-| Web app over an existing git host | Fast to build; reuses accounts, review and history | Every contributor needs an account there; access is per repository |
+The first design kept each tree in a GitHub repository and made changes through pull requests. It was dropped because most relatives have a Google account and no GitHub account, so Loom needed its own sign-in and editing screens anyway, and per-person visibility is hard on a store that is copied whole. Git survives as the export: a nightly copy of the tree as files in a private GitHub repository.
 
-Chosen: the last option, a web app over an existing git host, with GitHub as the host. Requiring a GitHub account is accepted for early versions.
+Alternatives considered: a git repository owned by the server, a self-hosted forge, PostgreSQL, an existing wiki engine, and Google Drive. PostgreSQL fits family relationships better than Firestore and remains the fallback; Firestore was chosen for having no running cost and nothing to operate at one family's size.
 
 ### Can wait
 
-- Where image bytes live (Storage and versioning).
 - Shared events, places and household pages (Content model).
 - GEDCOM 5.5.1 support and re-import matching (GEDCOM 7.0 interchange).
 - Which research sites permit automated capture (Sources and citations).
-- The editing surface and conflict handling (Editing and review).
+- The editing surface (Editing).
+- Whether Dart on the server holds up against Firebase's libraries (Technology stack).
 - Generated summaries (Derived views).
 - Consent and legal duties for living people (Privacy, sharing and trust).
 - Merging updates into the biography (Content model).

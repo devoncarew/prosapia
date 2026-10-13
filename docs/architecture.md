@@ -2,55 +2,71 @@
 
 ## System overview
 
-Everything that enters Loom becomes an attributed change to one repository, and everything a reader sees is computed from that repository.
+Loom is a hosted web app: a server sits between the people using it and a database, and everything a reader sees is computed from that database.
 
 ```mermaid
 flowchart TD
-    editor["Wiki editor<br/>markdown and images, edited in the browser"]
-    gedin["GEDCOM 7.0 import<br/>existing trees from other tools"]
-    capture["Research capture<br/>records and citations from research sites"]
-    pr["Pull request on GitHub<br/>attributed to its author, reviewed, merged"]
-    subgraph repo["GitHub repository: the only place facts are stored"]
-        people["People pages<br/>one markdown file per person"]
-        sources["Sources<br/>a record per source, with its evidence image"]
-        media["Media<br/>photos and scans with embedded metadata"]
-    end
-    index["Derived index on the server's clone<br/>search, relationships, timelines; safe to delete and rebuild"]
-    access["Sign-in with GitHub<br/>per-page visibility deferred"]
-    pages["Person pages"]
-    trees["Trees and timelines"]
-    gedout["GEDCOM 7.0 export"]
-    editor --> pr
-    gedin --> pr
-    capture --> pr
-    pr -- merge --> repo
-    repo -- "webhook, pull, rebuild" --> index
-    index --> access
-    access --> pages
-    access --> trees
-    access --> gedout
+    browser["Browser<br/>server-rendered pages, the editor, Google sign-in"]
+    hosting["Firebase Hosting<br/>domain, HTTPS, caching"]
+    server["Loom server on Cloud Run<br/>Dart; holds the tree and a search index in memory"]
+    auth["Firebase Authentication<br/>sign-in with Google"]
+    firestore[("Firestore<br/>people, partnerships, sources, rolls,<br/>revisions, members, change log")]
+    storage[("Cloud Storage<br/>photos and large files,<br/>metadata embedded in each file")]
+    job["Nightly export<br/>started by Cloud Scheduler"]
+    backup["Private GitHub repository<br/>the tree as markdown files, one commit per change"]
+    browser --> hosting --> server
+    browser -. "signs in" .-> auth
+    browser -. "uploads photos directly" .-> storage
+    server -- "checks sign-in" --> auth
+    server <--> firestore
+    server <--> storage
+    job --> server
+    server -- "export" --> backup
 ```
 
-The repository is a GitHub repository, and the server works on a clone of it. Early versions require a GitHub account with access to the repository, and everyone with access sees everything. Per-page visibility is deferred with the sharing model.
+Only the server reads and writes the database. The browser talks to Google directly for two things: signing in, and uploading photos, so large files do not pass through the server.
 
 ## Technology stack
 
-Direction set: the server is written in Dart and the browser code in TypeScript. If Dart's libraries prove too thin, the fallback is TypeScript for both.
+Direction set:
 
 | Part | Choice |
 | --- | --- |
-| Server | Dart. Renders pages as HTML, works on the clone, talks to GitHub |
+| Server | Dart, in a container on Cloud Run. Renders pages as HTML. Scales to zero when idle |
+| Front door | Firebase Hosting: custom domain, HTTPS, caching; forwards page requests to the server |
 | Browser | TypeScript. Pages are server-rendered HTML; the editor is the one substantial browser-side component |
-| Derived index | SQLite, with its built-in full-text search |
-| Git | The `git` command line, run on the clone |
-| Image encoding and metadata | Command-line tools run by the server: `exiftool` for metadata, an image tool for JPEG encoding and display copies |
-| GEDCOM 7.0 | Loom's own reader and writer |
+| Sign-in | Firebase Authentication with Google accounts |
+| Records | Firestore |
+| Photos and large files | Cloud Storage for Firebase |
+| Search and relationship lookups | An in-memory SQLite index with full-text search, built when the server loads the tree |
+| Image encoding and metadata | Command-line tools in the server's container: `exiftool` for metadata, `libvips` for JPEG encoding and display copies |
+| GEDCOM | Loom's own reader and writer |
+| Backup | Firestore's scheduled backups, plus a nightly export to a private GitHub repository |
+| Local development | Firebase's emulators, or a tree loaded from files |
 
-Known risks of Dart on the server, to test early: GitHub sign-in, pull requests and webhooks need more hand-written code than in TypeScript, and an edit must change only the lines the person touched, which needs source-preserving markdown edits. Both are exercised by milestone 3 in the [plan](plan.md).
+The known risk is Dart on the server. Firestore, sign-in checks and Cloud Storage have official server libraries for Node, Python, Go and Java; Dart may have to use Google's general API package or community packages. The decision is to stay with Dart until something forces a change. The fallback is TypeScript for both server and browser. Milestone 3 in the [plan](plan.md) starts with a spike on exactly this.
+
+A billing account is required: Cloud Run and Cloud Storage need the pay-as-you-go plan. One family's usage should sit within the free allowances or cost very little.
 
 ## Storage and versioning
 
-Direction set: the store is a GitHub repository, one per family tree. The Loom server and editor run on a clone of it; changes go upstream as pull requests, are reviewed, and are merged. Git already provides history, authorship, branching, review and offline copies, and a tree stays readable with no Loom software at all.
+Direction set: the database is the record. Each tree's people, partnerships, sources and rolls are Firestore documents; photos and large files are objects in Cloud Storage. Git and GitHub are no longer the store: most relatives have a Google account and no GitHub account, and Loom would have had to build its own sign-in and editing screens in any case.
+
+```
+trees/{tree}
+  members/{google account}     role: owner, editor or viewer
+  people/{p-7k2m9x}            structured facts and the page's markdown
+    revisions/{revision}       every saved version: text, author, time, summary
+  unions/{u-2b6n4c}
+  sources/{s-1900-census}
+  rolls/{r-8d2k5n}
+  media/{m-5t1q8z}             where the file is, and what it says about itself
+  changes/{change}             the log: who changed what, when, and why
+```
+
+### The file layout remains, as the import and export format
+
+The markdown layout designed earlier is still Loom's portable form. It is what the nightly export writes, what an import reads, and what the server loads in local development and tests.
 
 ```
 tree/
@@ -66,70 +82,82 @@ tree/
   loom.yaml  (tree name and settings)
 ```
 
-### Decided by the brief
+### Decisions
 
-- Every change is versioned and attributed to a person.
-- Incoming changes can be reviewed before they are accepted.
+- **Only the server touches the database.** The store sits behind one interface in the server, with two implementations: Firestore in production, files for development and tests. Changing the store later is a contained change.
+- **Every save writes a revision**: the full text, the author, the time and a one-line summary. Nothing is overwritten.
+- **Every change is logged.** The change log lists who changed which pages and why. It drives the recent-changes view and the export.
+- **Direct links only.** A child lists its parents; a partnership is its own record. Children, siblings and descendants are derived, not stored.
+- **The server caches the tree in memory.** On start it loads the tree and builds the search index, as it does from files today. Each tree carries a version number; a server instance that sees a newer one reloads. This is enough for any near or medium-term size.
+- **Photos live in Cloud Storage**, stored as they are with their metadata embedded. The browser uploads directly; the server then writes the metadata into the file.
+- **Display copies are derived and never stored as originals.** The server makes resized web copies on demand. Cloud Run has no lasting disk, so they are cached by Firebase Hosting or in a cache folder in the bucket.
 
-### Proposed
+### Backup and export
 
-- **Contributors never see git.** The editor turns a save into a branch and a pull request on GitHub; an editor's own change can be merged at once.
-- **Commits carry the real contributor** as author, even when a server writes them.
-- **A derived index sits beside the repository**: search, relationship lookups and timelines. It holds nothing original and can be deleted and rebuilt.
-- **One file per person keeps merges small.** Two relatives editing different people never conflict.
-- **Contributors sign in with GitHub.** Early versions require a GitHub account with access to the repository. The server opens each pull request on behalf of the signed-in person.
-- **The clone follows upstream.** A webhook tells the server when a pull request merges, so it pulls and rebuilds the index.
-- **Display copies are derived and never committed.** The server makes resized web copies on the fly when serving a page, and converts the few stored formats browsers cannot show. Any cache of them is local and can be deleted.
+- **Firestore's scheduled backups** cover disaster recovery.
+- **A nightly export writes the tree, in the file layout above, to a private GitHub repository.** It is readable without Loom. Because every change is logged, the export writes one commit per change with its real author, so the history carries over.
+- **GEDCOM is produced alongside** for other genealogy tools. It loses too much prose to serve as the backup.
+
+This keeps the original aim that a family's history outlives the software, by a different route: the files are a continuous export, not the live store.
 
 ### Open
 
-- **Where image bytes live.** Scans are large and git handles large binaries poorly. Candidates are Git LFS, git-annex, or a content-addressed store beside the repository with only hashes in git. GitHub caps single files at 100 MB and meters LFS storage and bandwidth, and even compressed scans add up.
-- **Removing something from history.** Git keeps everything. A living person who asks to be removed, or a mistakenly published secret, needs a history rewrite. This needs a defined procedure. On GitHub it is harder still: pull request refs keep old commits reachable, so full removal may need GitHub support.
+- **Removing something for good.** A living person who asks to be removed, or a secret published by mistake, must be deleted from the revisions and the change log, and from the exported repository's history. This needs a defined procedure.
 - **One tree or many.** If two cousins each keep a tree and share ancestors, are those the same person record, a link, or a copy?
+- **Large trees.** Loading a whole tree into memory stops working somewhere. Where, and what replaces it, can wait.
+- **Whether the export should run on every change** rather than nightly, so the files never lag.
 
-## Editing and review
+## Editing
 
-Direction set: editing feels like Wikipedia and is recorded on GitHub. A relative presses Edit, changes the page, writes a one-line summary and saves. What happens next depends on their role.
+Direction set: editing feels like Wikipedia. Anyone with write access changes a page directly; there is no review step. Safety comes from the log: every edit is recorded, attributed and reversible.
 
-1. The editor opens a page as formatted text with an Edit button, not as raw files.
-2. Saving asks for a short summary of the change.
-3. An editor's save becomes a pull request they can merge at once.
-4. A contributor's save becomes a pull request that waits for an editor.
-5. An editor reads the proposal as a before-and-after comparison, then accepts, amends or declines it with a note.
-6. Accepted changes appear in the page's history with author, date and summary.
+1. A signed-in editor presses Edit on a page.
+2. They change the page and write a one-line summary.
+3. Saving stores a new revision and adds an entry to the change log. The page updates at once.
+4. The page's history lists every revision with author, date and summary. Any two can be compared, and any earlier one restored.
+
+Dropping review removes the hardest part of the design: proposals, a review screen, and merging a proposal against a page that has moved on. It can return later as an option for larger families.
+
+### Roles
+
+| Role | Can do |
+| --- | --- |
+| Owner | Everything, including inviting people and setting roles |
+| Editor | Edit any page, add photos, restore earlier versions |
+| Viewer | Read |
+
+People are invited by email address and sign in with Google. Loom keeps the member list; Google only confirms who someone is.
 
 ### Decided by the brief
 
 - It is always possible to see what changed and who changed it.
-- Incoming changes can be reviewed.
-- Practices are borrowed from Wikipedia and GitHub where they fit.
+- Practices are borrowed from Wikipedia where they fit.
 
 ### Proposed
 
-| Borrowed from | Feature | In Loom |
-| --- | --- | --- |
-| Wikipedia | Page history | Every page lists its changes; any two versions can be compared |
-| Wikipedia | Revert | An editor can undo one change without losing later ones |
-| Wikipedia | Talk page | A discussion thread per person, for questions such as "is this the right Thomas?" |
-| Wikipedia | Citation needed | Uncited claims are marked, not blocked |
-| Wikipedia | Watchlist | Follow a person and hear about changes to their page |
-| GitHub | Pull request | A contributor's edit waits as a proposal with a comparison view |
-| GitHub | Review comments | An editor can comment on a specific line of a proposal |
-| GitHub | Blame | For any sentence or fact: who added it, when, and citing what |
+| Feature | In Loom |
+| --- | --- |
+| Page history | Every page lists its revisions; any two can be compared |
+| Restore | An editor can bring back an earlier version; that is itself a new revision |
+| Recent changes | One list of every edit across the tree, newest first |
+| Blame | For any sentence or fact: who added it and when |
+| Talk page | A discussion thread per person, for questions such as "is this the right Thomas?" |
+| Citation needed | Uncited claims are marked, not blocked |
+| Watchlist | Follow a person and hear about changes to their page |
 
-- **Imports and bulk changes always go through review**, whoever makes them.
+- **Imports and bulk changes are previewed before they are applied**, and land as one logged change that can be undone as a whole.
 - **Adding an entry is the easy path.** "Add a memory" appends a dated section and photos without touching the rest of the page.
+- **A save checks the page has not changed underneath.** If someone else saved first, the editor is shown their change and asked to reapply, rather than silently overwriting it.
 
 ### Open
 
 - **The editing surface.** Raw markdown, a formatted editor that writes markdown, or both. Most relatives will not write markdown.
-- **Edit conflicts.** Two people editing the same page at once: merge automatically, warn, or lock.
-- **Who reviews when the owner is unavailable**, and whether stale proposals expire.
-- **Contributions without a GitHub account**, such as a great-aunt replying to a link with a correction. Not supported in early versions.
+- **Whether some families will want review back**, at least for new members.
+- **Contributions from people who are not members**, such as a great-aunt replying to a link with a correction.
 
 ## Derived views
 
-Nothing a reader sees beyond the page text is stored; it is computed from the repository. This is what lets a contributor add a loose entry and leave the system to work out where it shows up.
+Nothing a reader sees beyond the page text is stored; it is computed from the tree. This is what lets a contributor add a loose entry and leave the system to work out where it shows up.
 
 | View | Built from |
 | --- | --- |
@@ -139,8 +167,8 @@ Nothing a reader sees beyond the page text is stored; it is computed from the re
 | Photo gallery per person | Names embedded in image metadata |
 | Sources list and "needs source" report | Citations on facts and footnotes |
 | Search | Page text, names, places and image metadata |
-| Recent changes | Repository history |
-| GEDCOM 7.0 export | Structured facts, sources and media |
+| Recent changes | The change log |
+| GEDCOM export | Structured facts, sources and media |
 
 ### Decided by the brief
 
@@ -148,8 +176,8 @@ Nothing a reader sees beyond the page text is stored; it is computed from the re
 
 ### Proposed
 
-- **Views never write to the repository on their own.** A generated summary that should become part of a page is submitted as a proposed change and reviewed.
-- **The index is disposable.** Any view can be regenerated from a fresh clone.
+- **Views never write to the tree on their own.** A generated summary that should become part of a page is offered to an editor, who saves it as an ordinary edit under their name.
+- **The index is disposable.** It is rebuilt whenever the server loads the tree.
 
 ### Open
 
