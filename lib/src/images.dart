@@ -15,16 +15,16 @@ class DisplayCopies {
 
   final _inProgress = <String, Future<File?>>{};
 
-  /// A JPEG of [media] no wider than the nearest allowed width to [width],
+  /// A JPEG of [media], made from its [original] file, no wider than the nearest allowed width to [width],
   /// or null if it cannot be made.
-  Future<File?> get(Media media, int width) {
+  Future<File?> get(Media media, File original, int width) {
     final w = widths.firstWhere((x) => x >= width, orElse: () => widths.last);
-    final stamp = File(media.path).lastModifiedSync().millisecondsSinceEpoch;
+    final stamp = original.lastModifiedSync().millisecondsSinceEpoch;
     final out = p.join(cacheDir, '${media.key}-$w-$stamp.jpg');
     if (File(out).existsSync()) return Future.value(File(out));
     // The callback must not return the removed future: whenComplete would
     // wait on it, and it is this same future.
-    return _inProgress[out] ??= _make(media.path, out, w).whenComplete(() {
+    return _inProgress[out] ??= _make(original.path, out, w).whenComplete(() {
       _inProgress.remove(out);
     });
   }

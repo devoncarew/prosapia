@@ -1,3 +1,4 @@
+import 'package:loom/src/file_store.dart';
 import 'package:loom/src/tree.dart';
 import 'package:test/test.dart';
 
@@ -17,7 +18,7 @@ parents:
 
 Margaret grew up above the store.
 ''');
-    final person = Person.fromYaml(yaml, body, 'hughes-margaret-ellen-7k2m9x');
+    final person = Person.fromMap(yaml, body, 'hughes-margaret-ellen-7k2m9x');
     expect(person.name, 'Margaret Ellen Hughes');
     expect(person.born!.date!.year, 1887, reason: 'a bare year is read as text');
     expect(person.parents.map((l) => l.id), ['p-3f8d1a', 'p-9c4e2b']);
@@ -26,13 +27,31 @@ Margaret grew up above the store.
     expect(person.body, 'Margaret grew up above the store.');
   });
 
+  test('a person survives a round trip through its structured fields', () {
+    final fields = {
+      'id': 'p-7k2m9x',
+      'name': 'Margaret Ellen Hughes',
+      'surname': 'Hughes',
+      'born': {'date': '1887-03-14', 'place': 'Scranton', 'coordinates': [41.4, -75.6]},
+      'parents': [
+        {'id': 'p-3f8d1a', 'relationship': 'adopted'},
+        'p-9c4e2b',
+      ],
+      'facts': [
+        {'type': 'occupation', 'value': 'Teacher', 'date': 'ABT 1910'},
+      ],
+      'gedcom_id': 'I5',
+    };
+    expect(Person.fromMap(fields, '', 'dir').toMap(), fields);
+  });
+
   test('a file without front matter is rejected', () {
     expect(() => splitFrontMatter('just prose'), throwsFormatException);
   });
 
   test('media file names give the id and the side', () {
-    expect(Media.idPattern.firstMatch('m-5t1q8z.jpg')![2], isNull);
-    expect(Media.idPattern.firstMatch('m-5t1q8z-back.jpg')![2], '-back');
-    expect(Media.idPattern.firstMatch('notes.txt'), isNull);
+    expect(Media.namePattern.firstMatch('m-5t1q8z.jpg')![2], isNull);
+    expect(Media.namePattern.firstMatch('m-5t1q8z-back.jpg')![2], '-back');
+    expect(Media.namePattern.firstMatch('notes.txt'), isNull);
   });
 }

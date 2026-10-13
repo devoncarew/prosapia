@@ -7,3 +7,6 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 *-debug.log
+web/node_modules/
+web/dist/
+.emulator_data/

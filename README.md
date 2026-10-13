@@ -33,14 +33,37 @@ Loom is a family-history wiki: pages about people, written as markdown with imag
 
 ## Running it
 
-The read-only server needs Dart, `exiftool` and `libvips`.
+The server needs Dart, `exiftool` and `libvips`.
+
+### From files, with no sign-in
+
+The quickest way to look at a tree. The directory is a tree in Loom's file layout; `spikes/gedcom_import` can generate a sample one from a GEDCOM export.
 
 ```
 dart pub get
 dart run loom data/tree
 ```
 
-It serves the tree at http://localhost:8080. The directory is a tree in Loom's file layout; `spikes/gedcom_import` can generate a sample one from a GEDCOM export. This file-backed mode is for development; production will read from Firestore. The index and resized images go in `.loom_cache/`, which can be deleted at any time.
+### From Firestore, with Google sign-in
+
+This is how production works, run locally against Firebase's emulators. It also needs the Firebase command-line tools, Java and Node.
+
+```
+(cd web && npm install && npm run build)        # the browser-side sign-in code
+firebase emulators:start --import=.emulator_data --export-on-exit=.emulator_data
+```
+
+Leave the emulators running. The first time, omit `--import`, since there is nothing to import yet. In a second terminal:
+
+```
+source tool/emulator_env.sh
+dart run loom:load --tree carew --owner you@example.com data/tree
+dart run loom --tree carew
+```
+
+`loom:load` copies a tree from files into Firestore and Cloud Storage and names its members. Open http://localhost:8080 and sign in; the emulator shows a stand-in for Google's account chooser, where you add an account with the owner's email address. Anyone not on the member list is refused.
+
+Resized images and files fetched from storage go in `.loom_cache/`, which can be deleted at any time.
 
 ## Design documents
 

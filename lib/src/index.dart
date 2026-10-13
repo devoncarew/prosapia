@@ -1,21 +1,16 @@
-import 'dart:io';
-
 import 'package:sqlite3/sqlite3.dart';
 
 import 'tree.dart';
 
-/// Search and relationship lookups over a [Tree]. It holds nothing original:
-/// delete the file and it is rebuilt from the repository on the next start.
+/// Search and relationship lookups over a [Tree]. It holds nothing original
+/// and lives in memory: it is rebuilt whenever the tree is loaded.
 class Index {
   Index._(this._db);
 
   final Database _db;
 
-  static Index build(Tree tree, String path) {
-    final file = File(path);
-    if (file.existsSync()) file.deleteSync();
-    file.parent.createSync(recursive: true);
-    final db = sqlite3.open(path);
+  static Index build(Tree tree) {
+    final db = sqlite3.openInMemory();
     db.execute('''
       create table person (id text primary key, name text, surname text, born integer);
       create table parent (child text, parent text);

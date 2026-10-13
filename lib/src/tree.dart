@@ -1,135 +1,47 @@
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:path/path.dart' as p;
-import 'package:yaml/yaml.dart';
-
 import 'dates.dart';
 
-/// A family tree read from a clone of its repository. Nothing here is stored
-/// anywhere else: the files are the record.
+/// A family tree held in memory. It is loaded through a `TreeStore`, from
+/// files or from Firestore, and everything a reader sees is computed from it.
 class Tree {
-  Tree._(this.root, this.name);
+  Tree(this.name);
 
-  final String root;
   final String name;
   final people = <String, Person>{};
   final unions = <String, Union>{};
   final media = <String, Media>{};
 
-  /// Files that could not be read, with the reason.
+  /// Records that could not be read, with the reason.
   final problems = <String>[];
-
-  static Future<Tree> load(String root) async {
-    final settings = File(p.join(root, 'loom.yaml'));
-    final name = settings.existsSync()
-        ? (loadYaml(settings.readAsStringSync()) as Map)['name'] as String?
-        : null;
-    final tree = Tree._(root, name ?? p.basename(root));
-
-    for (final dir in _list(p.join(root, 'people')).whereType<Directory>()) {
-      final file = File(p.join(dir.path, 'index.md'));
-      if (!file.existsSync()) continue;
-      tree._read(file, (yaml, body) {
-        final person = Person.fromYaml(yaml, body, p.basename(dir.path));
-        tree.people[person.id] = person;
-      });
-    }
-    for (final file in _list(p.join(root, 'unions')).whereType<File>()) {
-      if (!file.path.endsWith('.md')) continue;
-      tree._read(file, (yaml, body) {
-        final union = Union.fromYaml(yaml);
-        tree.unions[union.id] = union;
-      });
-    }
-    await tree._loadMedia();
-    return tree;
-  }
-
-  void _read(File file, void Function(YamlMap yaml, String body) use) {
-    try {
-      final (yaml, body) = splitFrontMatter(file.readAsStringSync());
-      use(yaml, body);
-    } catch (e) {
-      problems.add('${p.relative(file.path, from: root)}: $e');
-    }
-  }
-
-  /// Reads what each media file says about itself. The embedded metadata is
-  /// the authority for facts about an image.
-  Future<void> _loadMedia() async {
-    final dir = p.join(root, 'media');
-    final files = _list(dir).whereType<File>().toList();
-    if (files.isEmpty) return;
-
-    final embedded = <String, Map<String, dynamic>>{};
-    final result = await Process.run('exiftool', [
-      '-json', '-struct', '-q', '-XMP-dc:Title', '-XMP-dc:Description',
-      '-XMP-iptcExt:PersonInImageWDetails', '-ImageWidth', '-ImageHeight', dir,
-    ], stdoutEncoding: utf8);
-    if ((result.stdout as String).trim().isNotEmpty) {
-      for (final entry in jsonDecode(result.stdout as String) as List) {
-        embedded[p.basename(entry['SourceFile'] as String)] =
-            entry as Map<String, dynamic>;
-      }
-    }
-
-    for (final file in files) {
-      final m = Media.idPattern.firstMatch(p.basename(file.path));
-      if (m == null) continue;
-      final item = Media(m[1]!, isBack: m[2] != null, path: file.path);
-      final meta = embedded[p.basename(file.path)] ?? const {};
-      item.title = _text(meta['Title']);
-      item.description = _text(meta['Description']);
-      item.width = meta['ImageWidth'] as int?;
-      item.height = meta['ImageHeight'] as int?;
-      for (final person in (meta['PersonInImageWDetails'] as List?) ?? const []) {
-        final ids = (person as Map)['PersonId'];
-        for (final id in ids is List ? ids : [ids]) {
-          if (id is String && id.startsWith('loom:')) {
-            item.people.add(id.substring(5));
-          }
-        }
-      }
-      media[item.key] = item;
-    }
-  }
-
-  static String? _text(Object? value) => value?.toString();
-
-  static List<FileSystemEntity> _list(String dir) {
-    final d = Directory(dir);
-    return d.existsSync()
-        ? (d.listSync()..sort((a, b) => a.path.compareTo(b.path)))
-        : const [];
-  }
-}
-
-/// Splits a file into its structured block and its markdown body.
-(YamlMap, String) splitFrontMatter(String text) {
-  final m = RegExp(r'^---\r?\n(.*?)\r?\n---\r?\n?(.*)$', dotAll: true)
-      .firstMatch(text);
-  if (m == null) throw const FormatException('no front matter');
-  return (loadYaml(m[1]!) as YamlMap, m[2]!.trim());
 }
 
 class Event {
-  Event({this.date, this.place, this.note});
+  Event({this.date, this.place, this.note, this.coordinates});
 
-  static Event? fromYaml(Object? yaml) {
-    if (yaml is! Map) return null;
-    final date = yaml['date'];
+  static Event? fromMap(Object? map) {
+    if (map is! Map) return null;
+    final date = map['date'];
     return Event(
       // YAML reads a bare year as a number.
       date: date == null ? null : LoomDate(date.toString()),
-      place: yaml['place'] as String?,
-      note: yaml['note'] as String?,
+      place: map['place'] as String?,
+      note: map['note'] as String?,
+      coordinates: (map['coordinates'] as List?)?.cast<num>().toList(),
     );
   }
 
   final LoomDate? date;
   final String? place;
   final String? note;
+
+  /// Latitude and longitude of [place], when known.
+  final List<num>? coordinates;
+
+  Map<String, Object?> toMap() => {
+        if (note != null) 'note': note,
+        if (date != null) 'date': date!.raw,
+        if (place != null) 'place': place,
+        if (coordinates != null) 'coordinates': coordinates,
+      };
 }
 
 /// Something known about a person beyond birth and death: an occupation, a
@@ -140,6 +52,9 @@ class Fact {
   final String type;
   final String? value;
   final Event event;
+
+  Map<String, Object?> toMap() =>
+      {'type': type, if (value != null) 'value': value, ...event.toMap()..remove('note')};
 }
 
 class ParentLink {
@@ -154,32 +69,43 @@ class ParentLink {
 class Person {
   Person(this.id, this.name, this.directory);
 
-  factory Person.fromYaml(YamlMap yaml, String body, String directory) {
-    final person = Person(yaml['id'] as String, yaml['name'] as String, directory)
-      ..surname = yaml['surname'] as String?
-      ..sex = yaml['sex'] as String?
-      ..born = Event.fromYaml(yaml['born'])
-      ..died = Event.fromYaml(yaml['died'])
-      ..photo = yaml['photo'] as String?
+  /// Reads a person from its structured fields, which have the same shape in
+  /// a file's front matter and in a Firestore document.
+  factory Person.fromMap(Map<dynamic, dynamic> map, String body, String directory) {
+    final person = Person(map['id'] as String, map['name'] as String, directory)
+      ..surname = map['surname'] as String?
+      ..sex = map['sex'] as String?
+      ..born = Event.fromMap(map['born'])
+      ..died = Event.fromMap(map['died'])
+      ..photo = map['photo'] as String?
       ..body = body;
     person.alsoKnownAs
-        .addAll(((yaml['also_known_as'] as List?) ?? const []).cast<String>());
-    for (final parent in (yaml['parents'] as List?) ?? const []) {
+        .addAll(((map['also_known_as'] as List?) ?? const []).cast<String>());
+    for (final parent in (map['parents'] as List?) ?? const []) {
       person.parents.add(parent is Map
           ? ParentLink(parent['id'] as String, parent['relationship'] as String?)
           : ParentLink(parent as String));
     }
-    for (final fact in (yaml['facts'] as List?) ?? const []) {
+    for (final fact in (map['facts'] as List?) ?? const []) {
       person.facts.add(Fact((fact as Map)['type'] as String,
-          fact['value']?.toString(), Event.fromYaml(fact)!));
+          fact['value']?.toString(), Event.fromMap(fact)!));
+    }
+    for (final key in map.keys) {
+      if (!_known.contains(key)) person.extra[key as String] = map[key];
     }
     return person;
   }
 
+  static const _known = {
+    'id', 'name', 'surname', 'also_known_as', 'sex', 'born', 'died', //
+    'parents', 'photo', 'facts',
+  };
+
   final String id;
   final String name;
 
-  /// The person's directory under `people/`. Only its trailing id is relied on.
+  /// The person's directory in the file layout: a readable name ending in
+  /// the id. Only the trailing id is relied on.
   final String directory;
   String? surname;
   String? sex;
@@ -190,6 +116,31 @@ class Person {
   final alsoKnownAs = <String>[];
   final parents = <ParentLink>[];
   final facts = <Fact>[];
+
+  /// Fields this version of Loom does not interpret. They are kept so a
+  /// record survives a round trip unchanged.
+  final extra = <String, Object?>{};
+
+  /// The structured fields, in the order they are written.
+  Map<String, Object?> toMap() => {
+        'id': id,
+        'name': name,
+        if (surname != null) 'surname': surname,
+        if (alsoKnownAs.isNotEmpty) 'also_known_as': alsoKnownAs,
+        if (sex != null) 'sex': sex,
+        if (born != null) 'born': born!.toMap(),
+        if (died != null) 'died': died!.toMap(),
+        if (parents.isNotEmpty)
+          'parents': [
+            for (final link in parents)
+              link.relationship == null
+                  ? link.id
+                  : {'id': link.id, 'relationship': link.relationship},
+          ],
+        if (photo != null) 'photo': photo,
+        if (facts.isNotEmpty) 'facts': [for (final f in facts) f.toMap()],
+        ...extra,
+      };
 
   /// `1911–1987`, `born 1950`, `died 1987`, or empty.
   String get years {
@@ -204,31 +155,78 @@ class Person {
 class Union {
   Union(this.id, this.partners, this.married);
 
-  factory Union.fromYaml(YamlMap yaml) => Union(yaml['id'] as String,
-      (yaml['partners'] as List).cast<String>(), Event.fromYaml(yaml['married']));
+  factory Union.fromMap(Map<dynamic, dynamic> map) {
+    final union = Union(map['id'] as String,
+        (map['partners'] as List).cast<String>().toList(), Event.fromMap(map['married']));
+    for (final key in map.keys) {
+      if (!const {'id', 'partners', 'married'}.contains(key)) {
+        union.extra[key as String] = map[key];
+      }
+    }
+    return union;
+  }
 
   final String id;
   final List<String> partners;
   final Event? married;
+  final extra = <String, Object?>{};
+
+  Map<String, Object?> toMap() => {
+        'id': id,
+        'partners': partners,
+        if (married != null) 'married': married!.toMap(),
+        ...extra,
+      };
 }
 
 class Media {
-  Media(this.id, {required this.isBack, required this.path});
+  Media(this.id, {required this.isBack, required this.extension, required this.location});
+
+  factory Media.fromMap(Map<dynamic, dynamic> map) =>
+      Media(map['id'] as String,
+          isBack: map['back'] as bool? ?? false,
+          extension: map['extension'] as String,
+          location: map['location'] as String)
+        ..title = map['title'] as String?
+        ..description = map['description'] as String?
+        ..width = map['width'] as int?
+        ..height = map['height'] as int?
+        ..size = map['size'] as int?
+        ..people.addAll(((map['people'] as List?) ?? const []).cast<String>());
 
   /// `m-5t1q8z.jpg` is a front, `m-5t1q8z-back.jpg` its back.
-  static final idPattern = RegExp(r'^(m-[a-z0-9]+)(-back)?\.\w+$');
+  static final namePattern = RegExp(r'^(m-[a-z0-9]+)(-back)?\.(\w+)$');
 
   final String id;
   final bool isBack;
-  final String path;
+  final String extension;
+
+  /// Where the store keeps the file: a path on disk, or an object name in
+  /// Cloud Storage. Only the store interprets it.
+  final String location;
   String? title;
   String? description;
-  int? width, height;
+  int? width, height, size;
 
   /// Ids of the people shown, from the file's embedded metadata.
   final people = <String>[];
 
   String get key => isBack ? '$id-back' : id;
-  String get extension => p.extension(path).substring(1).toLowerCase();
+  String get fileName => '$key.$extension';
   bool get isImage => const {'jpg', 'jpeg', 'heic', 'png'}.contains(extension);
+
+  /// What the database keeps about a file so it can be listed and searched
+  /// without opening it. The file's embedded metadata remains the authority.
+  Map<String, Object?> toMap({String? location}) => {
+        'id': id,
+        'back': isBack,
+        'extension': extension,
+        'location': location ?? this.location,
+        if (title != null) 'title': title,
+        if (description != null) 'description': description,
+        if (width != null) 'width': width,
+        if (height != null) 'height': height,
+        if (size != null) 'size': size,
+        'people': people,
+      };
 }

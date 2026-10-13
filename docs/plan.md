@@ -1,13 +1,13 @@
 # Plan
 
-Eight milestones take Loom from design to a deployed site a family can edit. Milestones 0, 1 and 2 are done. The rest build on each other.
+Eight milestones take Loom from design to a deployed site a family can edit. Milestones 0 to 3 are done. The rest build on each other.
 
 | # | Milestone | Settles | Depends on |
 | --- | --- | --- | --- |
 | 0 | Sample tree (done, generated) | The content model and file layout | Nothing |
 | 1 | Image-format spike (done) | How a photo is stored | Nothing |
 | 2 | Read-only server (done) | Dart for rendering, the index, display copies | 0 |
-| 3 | Firebase foundation | Dart with Firebase; the store interface; sign-in and members | 2 |
+| 3 | Firebase foundation (done) | Dart with Firebase; the store interface; sign-in and members | 2 |
 | 4 | Editing | The TypeScript editor; revisions, history and restore | 3 |
 | 5 | Deploy and backup | Hosting on Cloud Run; the nightly export to GitHub | 4 |
 | 6 | Photos in the app | Upload, pairing, tagging and rolls | 1, 4 |
@@ -49,6 +49,8 @@ Done when: the sample tree can be browsed and searched locally, and deleting the
 
 ## Milestone 3: Firebase foundation
 
+Status: done against the emulators. The sample tree loads into Firestore and Cloud Storage with `dart run loom:load`, and `dart run loom --tree carew` serves it to signed-in members only. Membership, session cookies, refusal of non-members, photos from storage and reloading on a version change are all exercised. The first TypeScript is the sign-in page in `web/`. Verifying a real Google sign-in, as opposed to the emulator's stand-in, waits for milestone 5.
+
 Move the working site from files onto Firebase, running locally against Firebase's emulators. This is where the choice of Dart is most at risk, so it starts with a spike.
 
 - **Spike first (done; Dart stays):** see [spikes/firebase](../spikes/firebase/README.md). Original aim: from Dart, read and write Firestore, verify a Google sign-in, and read a file from Cloud Storage, all against the emulators. Note which packages are official and which are community. If this is impractical, switch the server to TypeScript here.
@@ -56,7 +58,7 @@ Move the working site from files onto Firebase, running locally against Firebase
 - A loader that puts a tree in the file layout into Firestore and Cloud Storage. The sample tree goes in this way.
 - Sign in with Google, a session, and a member list with the roles owner, editor and viewer.
 - The server caches the tree in memory and reloads when the tree's version number changes.
-- Display copies served without a local disk.
+- Display copies made from originals fetched out of storage into scratch space, which on Cloud Run is memory.
 
 Done when: the milestone 2 site serves the sample tree from the emulators to a signed-in member, and refuses anyone who is not a member.
 

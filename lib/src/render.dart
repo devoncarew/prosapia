@@ -4,15 +4,19 @@ import 'package:markdown/markdown.dart' as md;
 
 import 'dates.dart';
 import 'index.dart';
+import 'store.dart';
 import 'tree.dart';
 
 /// Turns the tree into HTML pages. Nothing here is stored: every page is
 /// computed from the repository and the index.
 class Renderer {
-  Renderer(this.tree, this.index);
+  Renderer(this.tree, this.index, {this.viewer});
 
   final Tree tree;
   final Index index;
+
+  /// The signed-in member the page is for, when the tree requires sign-in.
+  final Member? viewer;
 
   static String esc(String? s) => htmlEscape.convert(s ?? '');
 
@@ -30,6 +34,7 @@ class Renderer {
   <a class="site" href="/">${esc(tree.name)}</a>
   <nav><a href="/">People</a> <a href="/media">Photos</a></nav>
   <form action="/search"><input type="search" name="q" value="${esc(query)}" placeholder="Search" aria-label="Search"></form>
+  ${viewer == null ? '' : '<form class="account" method="post" action="/sign-out"><span title="${esc(viewer!.email)} · ${viewer!.role.name}">${esc(viewer!.name ?? viewer!.email)}</span> <button>Sign out</button></form>'}
 </header>
 <main>
 $body
@@ -279,6 +284,30 @@ $body
     return page('Search', sb.toString(), query: query);
   }
 
+  /// The page shown to someone who is not signed in. [config] is handed to
+  /// the browser-side sign-in code.
+  static String signIn(String treeName, Map<String, Object?> config) => '''
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · ${esc(treeName)}</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main class="sign-in">
+<h1>${esc(treeName)}</h1>
+<p class="lead">This family tree is private. Sign in with the Google account you were invited with.</p>
+<p><button id="sign-in" class="primary">Sign in with Google</button></p>
+<p id="message" class="message" role="alert"></p>
+</main>
+<script id="config" type="application/json">${jsonEncode(config).replaceAll('<', r'\u003c')}</script>
+<script type="module" src="/assets/sign_in.js"></script>
+</body>
+</html>
+''';
+
   String notFound(String what) => page('Not found', '<h1>Not found</h1><p class="lead">${esc(what)}</p>');
 }
 
@@ -344,6 +373,13 @@ mark { background: var(--mark); color: inherit; }
 .media img { max-width: 100%; max-height: 80vh; border: 1px solid var(--line); border-radius: 4px; }
 .description { white-space: pre-line; }
 .problems { font: 14px/1.4 system-ui, sans-serif; margin-bottom: 16px; }
+.account { display: flex; align-items: center; gap: 10px; color: var(--muted); }
+button { font: inherit; padding: 5px 12px; border: 1px solid var(--line); border-radius: 6px;
+         background: var(--surface); color: var(--text); cursor: pointer; }
+button.primary { font: 600 16px system-ui, sans-serif; padding: 10px 20px; }
+button:disabled { opacity: 0.6; cursor: default; }
+.sign-in { max-width: 520px; padding-top: 12vh; }
+.message { font: 15px/1.5 system-ui, sans-serif; color: #b3261e; min-height: 1.5em; }
 @media (max-width: 640px) {
   .infobox { float: none; width: auto; margin: 0 0 16px; }
   main { padding: 16px 16px 48px; }
