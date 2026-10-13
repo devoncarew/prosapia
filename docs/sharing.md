@@ -5,6 +5,7 @@ invited by email and signed in with Google, and every member can read everything
 carry no visibility field yet. The levels below are a starting sketch for when sharing
 is designed.
 
+<!-- prettier-ignore -->
 | Level | Who can read | Default for |
 | --- | --- | --- |
 | Private | The tree's editors only | Living people |

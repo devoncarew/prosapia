@@ -107,6 +107,7 @@ A typical update is a short story from a relative: a trip the person took, when 
 happened, who went, and a few photos. The writer rarely knows where it belongs in a long
 biography and should not have to decide.
 
+<!-- prettier-ignore -->
 | Option | How it works | For | Against |
 | --- | --- | --- | --- |
 | Separate entry | Appended as its own dated section, exactly as written | Lossless; no judgment needed; easy to review | A long page becomes a pile of fragments that never reads as one story |
@@ -163,6 +164,7 @@ Sheet 4B, line 62. Lists Margaret, age 13, in the household of Thomas Hughes.
 
 ### Getting data in from research tools
 
+<!-- prettier-ignore -->
 | Route | What it gives | Notes |
 | --- | --- | --- |
 | GEDCOM import | A whole tree exported from another tool | Works with any tool that exports GEDCOM; see the next section |
@@ -193,6 +195,7 @@ accepted.
 The tag names below are from memory of the 7.0 specification and should be confirmed
 when the importer is built.
 
+<!-- prettier-ignore -->
 | Loom | GEDCOM 7.0 | Round-trips? |
 | --- | --- | --- |
 | Person and structured facts | `INDI` with `NAME`, `BIRT`, `DEAT` and other events | Yes |

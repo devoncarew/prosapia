@@ -7,6 +7,7 @@ facts in its database for searching, but the file is the authority.
 The field names below are from memory and should be checked against the current
 specifications in milestone 6 of the [plan](plan.md).
 
+<!-- prettier-ignore -->
 | What we know | Where it goes in the file |
 | --- | --- |
 | When it was taken, possibly only a year | XMP `photoshop:DateCreated`, which accepts a year or year and month; EXIF `DateTimeOriginal` only when the full date is known |
@@ -24,6 +25,7 @@ Direction set: every image is one ordinary file in a long-lived format, with its
 information embedded. A front and a back are two files tied together by name and by
 embedded id.
 
+<!-- prettier-ignore -->
 | What arrives | Stored as |
 | --- | --- |
 | A JPEG, from a camera, phone or scanner | That file as it is. The pixels are never re-compressed; Loom adds metadata beside what the camera wrote |

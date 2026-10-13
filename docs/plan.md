@@ -177,7 +177,6 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 - Talk pages: a discussion thread per person.
 - Watchlist: follow a person and hear about changes.
 - Blame: for any sentence or fact, who added it and when.
-- Weaving loose memories into a person's biography.
 - Contributions from people who are not members, such as a correction sent by email.
 - Optional review of edits, for families that want it.
 
@@ -186,8 +185,35 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 - Source records and citations: create a source, cite it from a fact or from prose, and
   mark uncited claims.
 - Capture a record from a research site as a draft source.
-- Language-model help: draft a biography, or suggest facts from prose, offered to an
-  editor to save.
+
+### Language-model assistance
+
+Loom can call a language model, Claude or Gemini, to help write the record. Three rules
+shape every use:
+
+- **Never when serving a page.** A model runs when a member asks for it, or in a batch
+  an owner starts, never as part of showing content. This keeps cost bounded and pages
+  fast.
+- **Nothing a model writes enters the record without a person choosing it.** The model
+  produces a draft; a member reads it, edits it if they wish, and saves it as an edit
+  under their own name.
+- **The record says so.** A revision that began as a model's draft is marked as such,
+  with the model's name, so anyone reading the history can tell.
+
+Possible uses, none scheduled:
+
+- Authoring: draft a biography from a person's facts, memories and photo captions.
+- Integrating: weave loose memories into the biography, as discussed in
+  [content-model.md](content-model.md).
+- Rewriting: tidy or shorten a passage, or make an imported note read as prose.
+- Structuring: suggest facts, dates and people from a story someone has typed.
+- Transcribing: read the handwriting on the back of a photo, or a scanned letter or
+  certificate.
+- Describing: suggest a caption, a rough date or a place for a photo.
+- Checking: point out conflicts, such as a child born after a parent's death.
+
+Open: which model for which job, what it costs per tree, and whether an owner must
+switch the feature on, since using it sends family data to the model's provider.
 
 ### Photos and media
 
@@ -224,9 +250,9 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 Newest first.
 
 - **Milestone 8, markdown formatter.** `npm run format:md` wraps the repository's
-  markdown at 88 columns using Prettier, with a small script on top that keeps tables
-  too wide for the line compact rather than padded; `npm run check:md` verifies it, and
-  tree content is left alone.
+  markdown at 88 columns using Prettier, and `npm run check:md` verifies it; tables too
+  wide for the line are marked `<!-- prettier-ignore -->` and kept compact, and tree
+  content is left alone.
 - **Milestone 4, editing.** Members with write access edit an existing person's page as
   text with a live preview; every save is a revision and a change-log entry, stale saves
   are refused, and history, compare, restore, recent changes and "Add a memory" work.

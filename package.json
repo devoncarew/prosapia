@@ -3,11 +3,10 @@
   "private": true,
   "description": "Repository tooling. The browser code has its own package in web/.",
   "scripts": {
-    "format:md": "node tool/format_md.mjs",
-    "check:md": "node tool/format_md.mjs --check"
+    "format:md": "prettier --write \"**/*.md\"",
+    "check:md": "prettier --check \"**/*.md\""
   },
   "devDependencies": {
     "prettier": "3.9.10"
-  },
-  "type": "module"
+  }
 }

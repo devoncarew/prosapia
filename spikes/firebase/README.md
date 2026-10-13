@@ -11,6 +11,7 @@ Result: yes. Every check passes against the local emulators using `firebase_admi
 the official Firebase Admin SDK for Dart, with `google_cloud_firestore` and
 `google_cloud_storage`.
 
+<!-- prettier-ignore -->
 | Area | Checked |
 | --- | --- |
 | Firestore | Nested documents; a save that writes the page, a revision and a change-log entry in one transaction; refusing a save based on a stale revision; ordered queries; a 500-document batch write and whole-collection read (under 200 ms each); querying children by parent id |

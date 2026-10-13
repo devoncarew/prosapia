@@ -7,6 +7,7 @@ they belong to is built; each is listed in its own document.
 
 ### Settled
 
+<!-- prettier-ignore -->
 | Question | Answer |
 | --- | --- |
 | Where does Loom run, and on what stack? | A hosted web app: a Dart server on Cloud Run behind Firebase Hosting, Firestore for records, Cloud Storage for photos, sign-in with Google, TypeScript in the browser |

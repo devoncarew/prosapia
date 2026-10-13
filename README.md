@@ -12,6 +12,7 @@ now every member of a tree sees all of it.
 suggests and you have not yet confirmed. "Open" has no answer yet. "Deferred" marks an
 open item set aside on purpose.
 
+<!-- prettier-ignore -->
 | Area | Status | Where it stands |
 | --- | --- | --- |
 | Viewing and editing | Direction set | Wikipedia-like pages: text, light formatting, images |
@@ -91,11 +92,16 @@ dart format . && dart analyze && dart test
 npm install && npm run format:md
 ```
 
-The second line wraps the repository's markdown at 88 columns; `npm run check:md` only
-checks. A person's page in a tree is the family's text and is never re-wrapped.
+The second line wraps the repository's markdown at 88 columns with Prettier;
+`npm run check:md` only checks. Prettier pads tables so their columns line up, which
+suits small tables. A table with long cells gets `<!-- prettier-ignore -->` on the line
+above it and is written compactly, one space around each cell; otherwise it becomes
+lines hundreds of characters wide. A person's page in a tree is the family's text and is
+never re-wrapped.
 
 ## Design documents
 
+<!-- prettier-ignore -->
 | File | Covers |
 | --- | --- |
 | [docs/architecture.md](docs/architecture.md) | System overview, technology stack, storage and versioning, editing, derived views |

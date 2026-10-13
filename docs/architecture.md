@@ -33,6 +33,7 @@ server.
 
 Direction set:
 
+<!-- prettier-ignore -->
 | Part | Choice |
 | --- | --- |
 | Server | Dart, in a container on Cloud Run. Renders pages as HTML. Scales to zero when idle |
@@ -179,6 +180,7 @@ Google only confirms who someone is.
 
 ### Proposed
 
+<!-- prettier-ignore -->
 | Feature | In Loom |
 | --- | --- |
 | Page history | Every page lists its revisions; any two can be compared |
@@ -211,16 +213,16 @@ Nothing a reader sees beyond the page text is stored; it is computed from the tr
 is what lets a contributor add a loose entry and leave the system to work out where it
 shows up.
 
-| View | Built from |
-| --- | --- |
-| Person page | The markdown body, with an infobox from the structured facts |
-| Life timeline | Structured events plus dated entry headings |
-| Family tree and descendant charts | Parent links and partnership records |
-| Photo gallery per person | Names embedded in image metadata |
-| Sources list and "needs source" report | Citations on facts and footnotes |
-| Search | Page text, names, places and image metadata |
-| Recent changes | The change log |
-| GEDCOM export | Structured facts, sources and media |
+| View                                   | Built from                                                   |
+| -------------------------------------- | ------------------------------------------------------------ |
+| Person page                            | The markdown body, with an infobox from the structured facts |
+| Life timeline                          | Structured events plus dated entry headings                  |
+| Family tree and descendant charts      | Parent links and partnership records                         |
+| Photo gallery per person               | Names embedded in image metadata                             |
+| Sources list and "needs source" report | Citations on facts and footnotes                             |
+| Search                                 | Page text, names, places and image metadata                  |
+| Recent changes                         | The change log                                               |
+| GEDCOM export                          | Structured facts, sources and media                          |
 
 ### Decided by the brief
 
