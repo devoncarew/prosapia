@@ -1,99 +1,40 @@
 # Plan
 
-Eight milestones take Loom from design to a deployed site a family can edit. Milestones 0 to 4 are done, with gaps noted under milestone 4. The rest build on each other.
+## How to use this document
 
-| # | Milestone | Settles | Depends on |
-| --- | --- | --- | --- |
-| 0 | Sample tree (done, generated) | The content model and file layout | Nothing |
-| 1 | Image-format spike (done) | How a photo is stored | Nothing |
-| 2 | Read-only server (done) | Dart for rendering, the index, display copies | 0 |
-| 3 | Firebase foundation (done) | Dart with Firebase; the store interface; sign-in and members | 2 |
-| 4 | Editing (done for existing pages) | The TypeScript editor; revisions, history and restore | 3 |
-| 5 | Deploy and backup | Hosting on Cloud Run; the nightly export to GitHub | 4 |
-| 6 | Photos in the app | Upload, pairing, tagging and rolls | 1, 4 |
-| 7 | GEDCOM import | The GEDCOM mapping; older-version support | 4 |
+This is the working list of what Loom is building, what it might build, and what it has built. It has three parts:
 
-Not planned yet: the sharing model, weaving entries into biographies, research capture and generated summaries.
+- **Planned milestones** are scheduled and detailed: each says what will be built and how we will know it is done. They are worked in order unless one says otherwise.
+- **Known future work** is everything we know is needed or wanted but have not scheduled or detailed. One line each.
+- **Completed milestones** is a changelog: about one sentence per finished milestone, newest first.
 
-## Milestone 0: sample tree
+Keeping it current:
 
-Status: a sample tree of 203 people is generated from a real GEDCOM export by the script in [spikes/gedcom_import](../spikes/gedcom_import/README.md). It is sample data only, kept out of the repository in `data/tree/`. Findings are in [content-model.md](content-model.md#what-the-sample-import-showed). The export already holds all the prose the source tree has, so no hand enrichment is planned; sources and loose updates get sample content when later milestones need them.
+- **When work is discovered** that is not part of the milestone in hand, add a line to Known future work. Do not widen the current milestone.
+- **When work is scheduled**, move it out of Known future work into a new planned milestone, with its tasks and a "Done when".
+- **When a milestone is completed**, delete its section and add a summary line to Completed milestones. Anything it left unfinished goes to Known future work.
+- **Milestone numbers are never reused**, so a number in a commit message or another document always means the same thing.
 
-The original aim: a small real tree as files, to find where the content model does not fit.
+Design decisions and their reasons live in the other documents, not here: [architecture.md](architecture.md), [content-model.md](content-model.md), [media.md](media.md), [sharing.md](sharing.md) and [open-questions.md](open-questions.md).
 
-- Create a tree in the file layout from [architecture.md](architecture.md).
-- Write ten real people across three generations, their partnerships, and three or four sources.
-- Add a few loose updates, like the trip example, as dated entries.
-- Read the result as plain files.
+## Planned milestones
 
-Done when: the tree exists, and [content-model.md](content-model.md) is updated with whatever did not fit. This is the place to answer the open questions on shared events, places and conflicting claims, at least provisionally.
+### Milestone 5: deploy and backup
 
-## Milestone 1: image-format spike
-
-Done. One photo was packaged sixteen ways with the script in [spikes/image_format](../spikes/image_format/README.md) and measured for size, quality, and whether the back and the text survived.
-
-Outcome, recorded in [media.md](media.md): JPEGs and HEICs are stored as they are, uncompressed scans become JPEG, and a front and back are two files paired by name and embedded id rather than one combined file.
-
-## Milestone 2: read-only server
-
-Status: done. `dart run loom data/tree` serves the sample tree: person pages with infobox, timeline and photos, a people list, a photo gallery, media pages and full-text search. The index and display copies live in `.loom_cache/` and are rebuilt after deletion. It loads 203 people and 136 media files in under a second. No browser-side code was needed yet; TypeScript starts with the editor in milestone 4.
-
-A Dart server that reads the sample tree from files and serves it as a website.
-
-- Person pages rendered from markdown, with an infobox from the structured facts, working links between people, and footnote citations.
-- A SQLite index built from the tree: names, relationships, full-text search.
-- One derived view beyond the page: a timeline from structured events and dated entry headings.
-- Display copies of images, made on the fly when a page is served.
-
-Done when: the sample tree can be browsed and searched locally, and deleting the index and cache then restarting rebuilds both.
-
-## Milestone 3: Firebase foundation
-
-Status: done against the emulators. The sample tree loads into Firestore and Cloud Storage with `dart run loom:load`, and `dart run loom --tree carew` serves it to signed-in members only. Membership, session cookies, refusal of non-members, photos from storage and reloading on a version change are all exercised. The first TypeScript is the sign-in page in `web/`. Verifying a real Google sign-in, as opposed to the emulator's stand-in, waits for milestone 5.
-
-Move the working site from files onto Firebase, running locally against Firebase's emulators. This is where the choice of Dart is most at risk, so it starts with a spike.
-
-- **Spike first (done; Dart stays):** see [spikes/firebase](../spikes/firebase/README.md). Original aim: from Dart, read and write Firestore, verify a Google sign-in, and read a file from Cloud Storage, all against the emulators. Note which packages are official and which are community. If this is impractical, switch the server to TypeScript here.
-- A store interface in the server with two implementations: files, as today, and Firestore.
-- A loader that puts a tree in the file layout into Firestore and Cloud Storage. The sample tree goes in this way.
-- Sign in with Google, a session, and a member list with the roles owner, editor and viewer.
-- The server caches the tree in memory and reloads when the tree's version number changes.
-- Display copies made from originals fetched out of storage into scratch space, which on Cloud Run is memory.
-
-Done when: the milestone 2 site serves the sample tree from the emulators to a signed-in member, and refuses anyone who is not a member.
-
-## Milestone 4: editing
-
-Status: done against the emulators, for existing people's pages. An editor changes a page as text with a live preview; each save is a revision and a change-log entry in one transaction. Stale saves are refused and show the other person's change. History, compare, restore, recent changes and "Add a memory" all work, and viewers are refused every write.
-
-Not yet built, and needed before a family can really use it:
-
-- Adding a new person, and removing one.
-- Editing partnerships, which are separate records.
-- A formatted editor. Today the facts at the top of a page are edited as raw text.
-
-- A TypeScript editor for a page: raw markdown with a live preview. A formatted editor can replace it later.
-- Saving writes a revision and a change-log entry; the page updates at once.
-- A save is refused if the page changed underneath, and the editor is shown the other change.
-- Page history: list revisions, compare any two, restore an earlier one.
-- Recent changes across the tree.
-- "Add a memory" appends a dated entry without touching the rest of the page.
-
-Done when: an edit made under one account appears at once, shows in the page history with its author and summary, and can be restored by another editor.
-
-## Milestone 5: deploy and backup
+Put the site on the internet for one family, with a real Firebase project.
 
 - The server in a container on Cloud Run, behind Firebase Hosting, with real Google sign-in.
-- Invite members by email address.
+- Confirm that a sign-in with a forged signature is refused. The emulators cannot test this.
+- Invite members by email address, and change or remove them, from the site.
 - A nightly export of the tree, in the file layout, to a private GitHub repository: one commit per logged change, with its author.
 - Firestore's scheduled backups switched on.
 
 Done when: invited relatives can sign in at a real address and edit, and the exported repository, loaded by the server in file mode, renders the same site.
 
-## Milestone 6: photos in the app
+### Milestone 6: photos in the app
 
 - Upload a front, an optional back and the related text, from the browser straight to Cloud Storage. The server stores JPEGs and HEICs as they are, encodes uncompressed scans to JPEG, names the pair, and writes the metadata into each file.
-- Verify the XMP and IPTC field names in [media.md](media.md) against the specifications, and define Loom's own fields for photo id and side.
+- Verify the XMP and IPTC field names in [media.md](media.md) against the specifications, and define Loom's own field for which side a file is.
 - Choose the JPEG quality for scans using a real full-resolution scanner output.
 - Front and back shown together wherever the photo appears.
 - Rolls: create one, add photos in order, and suggest a frame's date or place to the rest.
@@ -101,7 +42,7 @@ Done when: invited relatives can sign in at a real address and edit, and the exp
 
 Done when: a photo added through the app shows on the right people's pages with its back, and both files downloaded from storage still carry their names, date, transcription and pairing.
 
-## Milestone 7: GEDCOM import
+### Milestone 7: GEDCOM import
 
 The spike in [spikes/gedcom_import](../spikes/gedcom_import/README.md) already converts a real GEDCOM 5.5.1 export into the file layout. This milestone makes it part of the app.
 
@@ -111,3 +52,71 @@ The spike in [spikes/gedcom_import](../spikes/gedcom_import/README.md) already c
 - GEDCOM export.
 
 Done when: a real export imports through the app, a second import of the same file changes nothing, and the mapping table is confirmed or corrected.
+
+## Known future work
+
+Not yet scheduled or detailed. Roughly grouped; the order means nothing.
+
+### People and relationships
+
+- Add a person: a child, a parent, a partner, or someone unconnected.
+- Remove a person, and merge two records that turn out to be the same person.
+- Edit partnerships, which are separate records with no editor yet.
+- A page for a shared event (a wedding, a reunion) or a household, if the content model adopts them.
+- Places as records with coordinates and historical names.
+- Record ids from other systems (FamilySearch, WikiTree) on a person, and link out to them.
+
+### Editing
+
+- A friendlier editor for the facts at the top of a page, which are raw text today.
+- A formatted editor for the story, for relatives who will not write markdown.
+- Talk pages: a discussion thread per person.
+- Watchlist: follow a person and hear about changes.
+- Blame: for any sentence or fact, who added it and when.
+- Weaving loose memories into a person's biography.
+- Contributions from people who are not members, such as a correction sent by email.
+- Optional review of edits, for families that want it.
+
+### Sources and research
+
+- Source records and citations: create a source, cite it from a fact or from prose, and mark uncited claims.
+- Capture a record from a research site as a draft source.
+- Language-model help: draft a biography, or suggest facts from prose, offered to an editor to save.
+
+### Photos and media
+
+- Documents (letters, certificates, census pages): previews and metadata for PDFs.
+- Video: store short clips, link to long ones, as proposed in [media.md](media.md).
+- Audio recordings.
+- Suggesting where faces are in a photo.
+- Check that embedded text survives email, photo services and messaging apps.
+
+### Views
+
+- Family tree and descendant charts.
+- A "needs source" report.
+- Printing: family books and wall charts.
+
+### Sharing and privacy
+
+- The sharing model: visibility levels per person, and treating living people as private by default.
+- Removing something for good, from revisions, the change log and the exported repository.
+- Consent and legal duties for data about living people.
+- Linking trees that share ancestors.
+
+### Running it
+
+- Reload only what changed after a save, not the whole tree.
+- Export on every change, not nightly.
+- More than one tree on one server.
+- Decide when a tree is too large to hold in memory, and what replaces that.
+
+## Completed milestones
+
+Newest first.
+
+- **Milestone 4, editing.** Members with write access edit an existing person's page as text with a live preview; every save is a revision and a change-log entry, stale saves are refused, and history, compare, restore, recent changes and "Add a memory" work.
+- **Milestone 3, Firebase foundation.** A spike showed Dart works with Firebase's official Admin SDK ([spikes/firebase](../spikes/firebase/README.md)); the server now reads a tree through a store interface, from files or from Firestore and Cloud Storage, and serves it only to members signed in with Google.
+- **Milestone 2, read-only server.** A Dart server renders the sample tree as a site: person pages with infobox, timeline and photos, a people list, a gallery, and full-text search over an in-memory index.
+- **Milestone 1, image-format spike.** One photo was packaged sixteen ways ([spikes/image_format](../spikes/image_format/README.md)); the outcome is that JPEGs and HEICs are stored as they are, scans become JPEG, and a front and back are two files paired by name and embedded id.
+- **Milestone 0, sample tree.** A script ([spikes/gedcom_import](../spikes/gedcom_import/README.md)) generates a 203-person sample tree in the file layout from a real GEDCOM 5.5.1 export, which tested the content model and shaped several changes to it.

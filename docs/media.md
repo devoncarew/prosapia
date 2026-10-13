@@ -2,7 +2,7 @@
 
 What is known about a photo is written into the photo file, using existing metadata standards, so a copy emailed to a cousin still says who is in it. Loom keeps the same facts in its database for searching, but the file is the authority.
 
-The field names below are from memory and should be checked against the current specifications in milestone 5 of the [plan](plan.md).
+The field names below are from memory and should be checked against the current specifications in milestone 6 of the [plan](plan.md).
 
 | What we know | Where it goes in the file |
 | --- | --- |

@@ -31,4 +31,4 @@ Alternatives considered: a git repository owned by the server, a self-hosted for
 
 ## Next steps
 
-The prototypes and spikes that settle these questions are laid out as milestones in the [plan](plan.md).
+Scheduled work, and work known but not yet scheduled, is in the [plan](plan.md).

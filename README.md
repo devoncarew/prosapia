@@ -74,4 +74,4 @@ Resized images and files fetched from storage go in `.loom_cache/`, which can be
 | [docs/media.md](docs/media.md) | Photos, embedded metadata, front-and-back scan format |
 | [docs/sharing.md](docs/sharing.md) | Privacy, sharing and trust (deferred) |
 | [docs/open-questions.md](docs/open-questions.md) | Open questions |
-| [docs/plan.md](docs/plan.md) | Milestones: the prototypes and spikes that settle the open decisions |
+| [docs/plan.md](docs/plan.md) | Planned milestones, known future work, and a changelog of completed milestones |
