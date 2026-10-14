@@ -112,3 +112,7 @@ never re-wrapped.
 | [docs/sharing.md](docs/sharing.md) | Privacy, sharing and trust (deferred) |
 | [docs/open-questions.md](docs/open-questions.md) | Open questions |
 | [docs/plan.md](docs/plan.md) | Planned milestones, known future work, and a changelog of completed milestones |
+
+## License
+
+BSD 3-Clause; see [LICENSE](LICENSE).

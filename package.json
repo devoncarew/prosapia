@@ -8,5 +8,6 @@
   },
   "devDependencies": {
     "prettier": "3.9.10"
-  }
+  },
+  "license": "BSD-3-Clause"
 }
