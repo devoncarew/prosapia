@@ -78,9 +78,8 @@ class FileStore extends TreeStore {
       '-XMP-iptcExt:PersonInImageWDetails', '-ImageWidth', '-ImageHeight', dir,
     ], stdoutEncoding: utf8);
     if ((result.stdout as String).trim().isNotEmpty) {
-      for (final entry in jsonDecode(result.stdout as String) as List) {
-        embedded[p.basename(entry['SourceFile'] as String)] =
-            entry as Map<String, dynamic>;
+      for (final entry in (jsonDecode(result.stdout as String) as List).cast<Map<String, dynamic>>()) {
+        embedded[p.basename(entry['SourceFile'] as String)] = entry;
       }
     }
 

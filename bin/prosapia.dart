@@ -3,13 +3,13 @@ import 'dart:io';
 
 import 'package:args/args.dart';
 import 'package:firebase_admin_sdk/firebase_admin_sdk.dart';
+import 'package:path/path.dart' as p;
 import 'package:prosapia/src/auth.dart';
 import 'package:prosapia/src/file_store.dart';
 import 'package:prosapia/src/firestore_store.dart';
 import 'package:prosapia/src/images.dart';
 import 'package:prosapia/src/server.dart';
 import 'package:prosapia/src/store.dart';
-import 'package:path/path.dart' as p;
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
 
