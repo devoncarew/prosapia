@@ -5,8 +5,8 @@ _Genealogy, in prose._
 Prosapia is a family-history wiki. Each person in a family has a page: their story
 written as prose, with the facts that matter (dates, places, parents, partners), their
 photos, and the sources behind what is known. Relatives sign in with a Google account to
-read and edit, every change is recorded and can be undone, and the whole tree can always
-be exported as plain files that need no special software to read.
+read and edit. Every change is recorded and can be undone, and the whole tree is kept
+exportable as plain files that need no special software to read.
 
 _Prosapia_ is Latin for lineage, or family line.
 
@@ -29,8 +29,9 @@ Working today:
 
 ## Principles
 
-- **A family's history outlives the software.** The whole tree is continuously exported
-  as plain markdown files and photos that need no Prosapia to read.
+- **A family's history outlives the software.** The whole tree is exported as plain
+  markdown files and photos that need no Prosapia to read. (The export is not built
+  yet.)
 - **Prose first, structure where it pays.** A relative can add a story without filling
   in a form.
 - **Information travels with its artifact.** What is known about a photo, including who
