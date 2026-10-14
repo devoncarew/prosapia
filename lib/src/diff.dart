@@ -7,12 +7,17 @@ enum DiffKind { same, removed, added }
 /// longest-common-subsequence table is fast enough.
 List<DiffLine> diffLines(String before, String after) {
   final a = before.split('\n'), b = after.split('\n');
-  final table = List.generate(a.length + 1, (_) => List.filled(b.length + 1, 0));
+  final table = List.generate(
+    a.length + 1,
+    (_) => List.filled(b.length + 1, 0),
+  );
   for (var i = a.length - 1; i >= 0; i--) {
     for (var j = b.length - 1; j >= 0; j--) {
       table[i][j] = a[i] == b[j]
           ? table[i + 1][j + 1] + 1
-          : (table[i + 1][j] >= table[i][j + 1] ? table[i + 1][j] : table[i][j + 1]);
+          : (table[i + 1][j] >= table[i][j + 1]
+                ? table[i + 1][j]
+                : table[i][j + 1]);
     }
   }
   final out = <DiffLine>[];

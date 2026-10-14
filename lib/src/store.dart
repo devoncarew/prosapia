@@ -29,9 +29,12 @@ abstract class TreeStore {
   /// [basedOn] is the revision the editor started from. If the page has
   /// moved on since, nothing is written and the result says so: one
   /// person's edit never silently overwrites another's.
-  Future<SaveResult> savePerson(Person person,
-          {required int basedOn, required Member author, required String summary}) =>
-      throw UnsupportedError('This store is read-only.');
+  Future<SaveResult> savePerson(
+    Person person, {
+    required int basedOn,
+    required Member author,
+    required String summary,
+  }) => throw UnsupportedError('This store is read-only.');
 
   /// Every saved version of a person's page, newest first.
   Future<List<Revision>> history(String personId) async => const [];
@@ -79,7 +82,14 @@ class SaveResult {
 
 /// One saved version of a page: its full text, and who saved it, when and why.
 class Revision {
-  Revision(this.number, this.source, {required this.author, this.authorName, required this.summary, required this.at});
+  Revision(
+    this.number,
+    this.source, {
+    required this.author,
+    this.authorName,
+    required this.summary,
+    required this.at,
+  });
 
   final int number;
   final String source;
@@ -93,7 +103,13 @@ class Revision {
 
 /// An entry in the tree's change log.
 class Change {
-  Change({required this.author, this.authorName, required this.summary, required this.at, required this.pages});
+  Change({
+    required this.author,
+    this.authorName,
+    required this.summary,
+    required this.at,
+    required this.pages,
+  });
 
   final String author;
   final String? authorName;

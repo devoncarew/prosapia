@@ -24,29 +24,10 @@ Keeping it current:
 - **Milestone numbers are never reused**, so a number in a commit message or another
   document always means the same thing.
 
-Design decisions and their reasons live in the other documents, not here:
-[architecture.md](architecture.md), [content-model.md](content-model.md),
-[media.md](media.md), [sharing.md](sharing.md) and
-[open-questions.md](open-questions.md).
+Design decisions and their reasons live in [design.md](design.md) and the documents it
+links to, not here.
 
 ## Planned milestones
-
-### Milestone 10: GitHub project and continuous integration
-
-- Create the GitHub repository, `devoncarew/prosapia`, and push the history. From then
-  on, work happens on branches and merges through pull requests.
-- Confirm nothing private is in the history first: the sample photo and its text are
-  committed today.
-- Continuous integration on every pull request: Dart formatting, analysis and tests; the
-  TypeScript type check and build; the markdown check, `npm run check:md`.
-- Linting standards: a stricter Dart analysis configuration, and a linter and formatter
-  for the TypeScript.
-- Decide whether the emulator-based checks, such as the Firebase spike, run in
-  continuous integration.
-- A licence and a short contributing note, if the repository is to be public.
-
-Done when: a pull request that breaks formatting, analysis or a test is marked as
-failing, and the main branch is green.
 
 ### Milestone 11: Firebase project
 
@@ -55,8 +36,9 @@ mind; `prosapia` itself may be taken.
 
 - Reserve `prosapia.app` with the registrar already in use (Squarespace). Until it is
   attached, the site runs at Firebase Hosting's own address, `<project-id>.web.app`.
-- Create the Firebase project and attach a billing account on the pay-as-you-go plan,
-  with a budget alert.
+- Create the Firebase project. Done: its id is `prosapia-ea818`, known to the Firebase
+  tools as `prod` (`firebase use prod`); the emulators stay on `demo-prosapia`.
+- Attach a billing account on the pay-as-you-go plan, with a budget alert.
 - Choose the region for Firestore and Cloud Storage. This cannot be changed later.
 - Switch on Firestore, Cloud Storage and sign-in with Google.
 - Register the web app and record its settings where the server reads them.
@@ -231,6 +213,10 @@ switch the feature on, since using it sends family data to the model's provider.
 - Export on every change, not nightly.
 - Search the European and international trademark registers for "Prosapia" before any
   commercial launch. The US register showed no conflict.
+- Run the Firebase emulator checks in continuous integration, so sign-in and storage are
+  tested on every change.
+- Require the continuous integration checks to pass before a pull request can merge (a
+  GitHub repository setting).
 - More than one tree on one server.
 - Decide when a tree is too large to hold in memory, and what replaces that.
 
@@ -238,14 +224,19 @@ switch the feature on, since using it sends family data to the model's provider.
 
 Newest first.
 
+- **Milestone 10, GitHub project and continuous integration.** The code is public at
+  `devoncarew/prosapia` under the BSD 3-Clause licence; every pull request runs Dart
+  formatting, strict analysis and tests, the browser code's type check, lint and build,
+  and Prettier checks, and the README now introduces the project, with setup moved to
+  CONTRIBUTING.md.
 - **Milestone 9, project name.** The project is named Prosapia, Latin for lineage or
   family line, with the subtitle "Genealogy, in prose"; `prosapia.app` was unregistered,
   and the US trademark register held only an unrelated application for agave spirits, so
   Loom, the working title, was renamed throughout.
-- **Milestone 8, markdown formatter.** `npm run format:md` wraps the repository's
-  markdown at 88 columns using Prettier, and `npm run check:md` verifies it; tables too
-  wide for the line are marked `<!-- prettier-ignore -->` and kept compact, and tree
-  content is left alone.
+- **Milestone 8, markdown formatter.** `npm run format` wraps the repository's markdown
+  at 88 columns using Prettier, and `npm run check` verifies it; tables too wide for the
+  line are marked `<!-- prettier-ignore -->` and kept compact, and tree content is left
+  alone.
 - **Milestone 4, editing.** Members with write access edit an existing person's page as
   text with a live preview; every save is a revision and a change-log entry, stale saves
   are refused, and history, compare, restore, recent changes and "Add a memory" work.

@@ -23,7 +23,12 @@ import 'tree.dart';
 ///   changes/{auto}             the log: author, summary, at, pages
 /// ```
 class FirestoreStore extends TreeStore {
-  FirestoreStore(this.app, this.treeId, {required this.bucketName, required this.cacheDir});
+  FirestoreStore(
+    this.app,
+    this.treeId, {
+    required this.bucketName,
+    required this.cacheDir,
+  });
 
   final FirebaseApp app;
   final String treeId;
@@ -33,8 +38,9 @@ class FirestoreStore extends TreeStore {
   final String cacheDir;
 
   late final Firestore _db = app.firestore();
-  late final DocumentReference<Map<String, Object?>> _tree =
-      _db.collection('trees').doc(treeId);
+  late final DocumentReference<Map<String, Object?>> _tree = _db
+      .collection('trees')
+      .doc(treeId);
 
   @override
   bool get requiresSignIn => true;
@@ -45,17 +51,25 @@ class FirestoreStore extends TreeStore {
 
   @override
   Future<Member?> member(String email) async {
-    final snapshot = await _tree.collection('members').doc(email.toLowerCase()).get();
+    final snapshot = await _tree
+        .collection('members')
+        .doc(email.toLowerCase())
+        .get();
     final data = snapshot.data();
     if (data == null) return null;
-    return Member(email.toLowerCase(), Role.values.byName(data['role'] as String),
-        name: data['name'] as String?);
+    return Member(
+      email.toLowerCase(),
+      Role.values.byName(data['role'] as String),
+      name: data['name'] as String?,
+    );
   }
 
   @override
   Future<Tree> load() async {
     final root = (await _tree.get()).data();
-    if (root == null) throw StateError('There is no tree named "$treeId" in the database.');
+    if (root == null) {
+      throw StateError('There is no tree named "$treeId" in the database.');
+    }
     final tree = Tree(root['name'] as String? ?? treeId);
 
     final results = await Future.wait([
@@ -63,7 +77,10 @@ class FirestoreStore extends TreeStore {
       _tree.collection('unions').get(),
       _tree.collection('media').get(),
     ]);
-    void each(QuerySnapshot<Map<String, Object?>> docs, void Function(Map<String, Object?>) use) {
+    void each(
+      QuerySnapshot<Map<String, Object?>> docs,
+      void Function(Map<String, Object?>) use,
+    ) {
       for (final doc in docs.docs) {
         try {
           use(doc.data());
@@ -92,7 +109,11 @@ class FirestoreStore extends TreeStore {
   Future<File> localFile(Media media) async {
     final file = File(p.join(cacheDir, 'originals', media.fileName));
     if (!file.existsSync()) {
-      final bytes = await app.storage().bucket(bucketName).storage.downloadObject(bucketName, media.location);
+      final bytes = await app
+          .storage()
+          .bucket(bucketName)
+          .storage
+          .downloadObject(bucketName, media.location);
       file.parent.createSync(recursive: true);
       // Write then rename, so a half-written file is never read.
       File('${file.path}.tmp')
@@ -108,12 +129,19 @@ class FirestoreStore extends TreeStore {
       ..remove('directory')
       ..remove('revision');
     return Person.fromMap(
-        fields, data['body'] as String? ?? '', data['directory'] as String? ?? data['id'] as String)
-      ..revision = data['revision'] as int? ?? 0;
+      fields,
+      data['body'] as String? ?? '',
+      data['directory'] as String? ?? data['id'] as String,
+    )..revision = data['revision'] as int? ?? 0;
   }
 
-  static Map<String, Object?> _personDoc(Person person, int revision) => _plain(
-      {...person.toMap(), 'body': person.body, 'directory': person.directory, 'revision': revision});
+  static Map<String, Object?> _personDoc(Person person, int revision) =>
+      _plain({
+        ...person.toMap(),
+        'body': person.body,
+        'directory': person.directory,
+        'revision': revision,
+      });
 
   // ---------------------------------------------------------------- editing
 
@@ -121,8 +149,12 @@ class FirestoreStore extends TreeStore {
   bool get editable => true;
 
   @override
-  Future<SaveResult> savePerson(Person person,
-      {required int basedOn, required Member author, required String summary}) {
+  Future<SaveResult> savePerson(
+    Person person, {
+    required int basedOn,
+    required Member author,
+    required String summary,
+  }) {
     final ref = _tree.collection('people').doc(person.id);
     // The page, its revision, the log entry and the tree's version change
     // together or not at all.
@@ -138,8 +170,15 @@ class FirestoreStore extends TreeStore {
         'at': FieldValue.serverTimestamp,
       };
       tx.set(ref, _personDoc(person, next));
-      tx.set(ref.collection('revisions').doc('$next'), {'number': next, 'source': personSource(person), ...stamp});
-      tx.set(_tree.collection('changes').doc(), {'pages': {person.id: next}, ...stamp});
+      tx.set(ref.collection('revisions').doc('$next'), {
+        'number': next,
+        'source': personSource(person),
+        ...stamp,
+      });
+      tx.set(_tree.collection('changes').doc(), {
+        'pages': {person.id: next},
+        ...stamp,
+      });
       tx.update(_tree, {'version': const FieldValue.increment(1)});
       return SaveResult.saved(next);
     });
@@ -148,7 +187,9 @@ class FirestoreStore extends TreeStore {
   @override
   Future<List<Revision>> history(String personId) async {
     final snapshot = await _tree
-        .collection('people').doc(personId).collection('revisions')
+        .collection('people')
+        .doc(personId)
+        .collection('revisions')
         .orderBy('number', descending: true)
         .get();
     return [for (final doc in snapshot.docs) _revision(doc.data())];
@@ -156,13 +197,24 @@ class FirestoreStore extends TreeStore {
 
   @override
   Future<Revision?> revision(String personId, int number) async {
-    final data = (await _tree.collection('people').doc(personId).collection('revisions').doc('$number').get()).data();
+    final data =
+        (await _tree
+                .collection('people')
+                .doc(personId)
+                .collection('revisions')
+                .doc('$number')
+                .get())
+            .data();
     return data == null ? null : _revision(data);
   }
 
   @override
   Future<List<Change>> recentChanges({int limit = 100}) async {
-    final snapshot = await _tree.collection('changes').orderBy('at', descending: true).limit(limit).get();
+    final snapshot = await _tree
+        .collection('changes')
+        .orderBy('at', descending: true)
+        .limit(limit)
+        .get();
     return [
       for (final doc in snapshot.docs)
         Change(
@@ -170,7 +222,8 @@ class FirestoreStore extends TreeStore {
           authorName: doc.data()['authorName'] as String?,
           summary: doc.data()['summary'] as String,
           at: _time(doc.data()['at']),
-          pages: ((doc.data()['pages'] as Map?) ?? const {}).cast<String, int>(),
+          pages: ((doc.data()['pages'] as Map?) ?? const {})
+              .cast<String, int>(),
         ),
     ];
   }
@@ -180,16 +233,17 @@ class FirestoreStore extends TreeStore {
       _tree.collection('members').doc(member.email).update({'name': name});
 
   static Revision _revision(Map<String, Object?> data) => Revision(
-        data['number'] as int,
-        data['source'] as String,
-        author: data['author'] as String,
-        authorName: data['authorName'] as String?,
-        summary: data['summary'] as String,
-        at: _time(data['at']),
-      );
+    data['number'] as int,
+    data['source'] as String,
+    author: data['author'] as String,
+    authorName: data['authorName'] as String?,
+    summary: data['summary'] as String,
+    at: _time(data['at']),
+  );
 
-  static DateTime _time(Object? value) =>
-      value is Timestamp ? value.toDate() : DateTime.fromMillisecondsSinceEpoch(0);
+  static DateTime _time(Object? value) => value is Timestamp
+      ? value.toDate()
+      : DateTime.fromMillisecondsSinceEpoch(0);
 
   // ----------------------------------------------------------------- writes
 
@@ -199,21 +253,40 @@ class FirestoreStore extends TreeStore {
   /// Earlier revisions and log entries are not cleared; this is for setting
   /// a tree up, not for routine use. Files larger than [maxMediaBytes] are
   /// skipped.
-  Future<({int records, int uploaded, int skipped})> replaceWith(Tree tree, TreeStore source,
-      {int maxMediaBytes = 50 * 1000 * 1000, String loadedBy = 'loader', void Function(String)? progress}) async {
-    final writes = <(DocumentReference<Map<String, Object?>>, Map<String, Object?>)>[];
-    final stamp = {'author': loadedBy, 'summary': 'Loaded from files', 'at': FieldValue.serverTimestamp};
+  Future<({int records, int uploaded, int skipped})> replaceWith(
+    Tree tree,
+    TreeStore source, {
+    int maxMediaBytes = 50 * 1000 * 1000,
+    String loadedBy = 'loader',
+    void Function(String)? progress,
+  }) async {
+    final writes =
+        <(DocumentReference<Map<String, Object?>>, Map<String, Object?>)>[];
+    final stamp = {
+      'author': loadedBy,
+      'summary': 'Loaded from files',
+      'at': FieldValue.serverTimestamp,
+    };
     for (final person in tree.people.values) {
       final ref = _tree.collection('people').doc(person.id);
       writes.add((ref, _personDoc(person, 1)));
-      writes.add((ref.collection('revisions').doc('1'), {'number': 1, 'source': personSource(person), ...stamp}));
+      writes.add((
+        ref.collection('revisions').doc('1'),
+        {'number': 1, 'source': personSource(person), ...stamp},
+      ));
     }
     writes.add((
       _tree.collection('changes').doc(),
-      {'pages': {for (final id in tree.people.keys) id: 1}, ...stamp},
+      {
+        'pages': {for (final id in tree.people.keys) id: 1},
+        ...stamp,
+      },
     ));
     for (final union in tree.unions.values) {
-      writes.add((_tree.collection('unions').doc(union.id), _plain(union.toMap())));
+      writes.add((
+        _tree.collection('unions').doc(union.id),
+        _plain(union.toMap()),
+      ));
     }
 
     final storage = app.storage().bucket(bucketName).storage;
@@ -223,12 +296,24 @@ class FirestoreStore extends TreeStore {
       final file = await source.localFile(media);
       if (file.lengthSync() > maxMediaBytes) {
         skipped++;
-        progress?.call('skipped ${media.fileName} (${file.lengthSync() ~/ 1000000} MB)');
+        progress?.call(
+          'skipped ${media.fileName} (${file.lengthSync() ~/ 1000000} MB)',
+        );
         continue;
       }
-      await storage.uploadObject(bucketName, object, file.readAsBytesSync(),
-          metadata: gcs.ObjectMetadata(contentType: contentTypes[media.extension] ?? 'application/octet-stream'));
-      writes.add((_tree.collection('media').doc(media.key), _plain(media.toMap(location: object))));
+      await storage.uploadObject(
+        bucketName,
+        object,
+        file.readAsBytesSync(),
+        metadata: gcs.ObjectMetadata(
+          contentType:
+              contentTypes[media.extension] ?? 'application/octet-stream',
+        ),
+      );
+      writes.add((
+        _tree.collection('media').doc(media.key),
+        _plain(media.toMap(location: object)),
+      ));
       uploaded++;
       if (uploaded % 25 == 0) progress?.call('uploaded $uploaded files');
     }
@@ -246,8 +331,10 @@ class FirestoreStore extends TreeStore {
     return (records: writes.length, uploaded: uploaded, skipped: skipped);
   }
 
-  Future<void> setMember(String email, Role role, {String? name}) =>
-      _tree.collection('members').doc(email.toLowerCase()).set({'role': role.name, 'name': ?name});
+  Future<void> setMember(String email, Role role, {String? name}) => _tree
+      .collection('members')
+      .doc(email.toLowerCase())
+      .set({'role': role.name, 'name': ?name});
 
   /// Records read from YAML use YAML's own map and list types; Firestore
   /// wants plain ones.

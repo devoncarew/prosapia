@@ -3,8 +3,8 @@
   "private": true,
   "description": "Repository tooling. The browser code has its own package in web/.",
   "scripts": {
-    "format:md": "prettier --write \"**/*.md\"",
-    "check:md": "prettier --check \"**/*.md\""
+    "format": "prettier --write \"**/*.md\" \"web/src/**/*.ts\"",
+    "check": "prettier --check \"**/*.md\" \"web/src/**/*.ts\""
   },
   "devDependencies": {
     "prettier": "3.9.10"

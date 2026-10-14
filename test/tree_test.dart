@@ -20,7 +20,11 @@ Margaret grew up above the store.
 ''');
     final person = Person.fromMap(yaml, body, 'hughes-margaret-ellen-7k2m9x');
     expect(person.name, 'Margaret Ellen Hughes');
-    expect(person.born!.date!.year, 1887, reason: 'a bare year is read as text');
+    expect(
+      person.born!.date!.year,
+      1887,
+      reason: 'a bare year is read as text',
+    );
     expect(person.parents.map((l) => l.id), ['p-3f8d1a', 'p-9c4e2b']);
     expect(person.parents.first.relationship, 'adopted');
     expect(person.years, 'born 1887');
@@ -32,7 +36,11 @@ Margaret grew up above the store.
       'id': 'p-7k2m9x',
       'name': 'Margaret Ellen Hughes',
       'surname': 'Hughes',
-      'born': {'date': '1887-03-14', 'place': 'Scranton', 'coordinates': [41.4, -75.6]},
+      'born': {
+        'date': '1887-03-14',
+        'place': 'Scranton',
+        'coordinates': [41.4, -75.6],
+      },
       'parents': [
         {'id': 'p-3f8d1a', 'relationship': 'adopted'},
         'p-9c4e2b',

@@ -66,8 +66,9 @@ class TreeDate {
 
   /// `7 AUG 1941` -> `7 Aug 1941`.
   static String _words(String gedcom) => gedcom.replaceAllMapped(
-      RegExp(r'[A-Z]{3}'),
-      (m) => _monthNumber(m[0]!) == 0 ? m[0]! : _months[_monthNumber(m[0]!) - 1]);
+    RegExp(r'[A-Z]{3}'),
+    (m) => _monthNumber(m[0]!) == 0 ? m[0]! : _months[_monthNumber(m[0]!) - 1],
+  );
 
   @override
   String toString() => raw;

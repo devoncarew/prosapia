@@ -37,11 +37,11 @@ class Event {
   final List<num>? coordinates;
 
   Map<String, Object?> toMap() => {
-        if (note != null) 'note': note,
-        if (date != null) 'date': date!.raw,
-        if (place != null) 'place': place,
-        if (coordinates != null) 'coordinates': coordinates,
-      };
+    if (note != null) 'note': note,
+    if (date != null) 'date': date!.raw,
+    if (place != null) 'place': place,
+    if (coordinates != null) 'coordinates': coordinates,
+  };
 }
 
 /// Something known about a person beyond birth and death: an occupation, a
@@ -53,8 +53,11 @@ class Fact {
   final String? value;
   final Event event;
 
-  Map<String, Object?> toMap() =>
-      {'type': type, if (value != null) 'value': value, ...event.toMap()..remove('note')};
+  Map<String, Object?> toMap() => {
+    'type': type,
+    if (value != null) 'value': value,
+    ...event.toMap()..remove('note'),
+  };
 }
 
 class ParentLink {
@@ -71,7 +74,11 @@ class Person {
 
   /// Reads a person from its structured fields, which have the same shape in
   /// a file's front matter and in a Firestore document.
-  factory Person.fromMap(Map<dynamic, dynamic> map, String body, String directory) {
+  factory Person.fromMap(
+    Map<dynamic, dynamic> map,
+    String body,
+    String directory,
+  ) {
     final person = Person(map['id'] as String, map['name'] as String, directory)
       ..surname = map['surname'] as String?
       ..sex = map['sex'] as String?
@@ -79,16 +86,27 @@ class Person {
       ..died = Event.fromMap(map['died'])
       ..photo = map['photo'] as String?
       ..body = body;
-    person.alsoKnownAs
-        .addAll(((map['also_known_as'] as List?) ?? const []).cast<String>());
+    person.alsoKnownAs.addAll(
+      ((map['also_known_as'] as List?) ?? const []).cast<String>(),
+    );
     for (final parent in (map['parents'] as List?) ?? const []) {
-      person.parents.add(parent is Map
-          ? ParentLink(parent['id'] as String, parent['relationship'] as String?)
-          : ParentLink(parent as String));
+      person.parents.add(
+        parent is Map
+            ? ParentLink(
+                parent['id'] as String,
+                parent['relationship'] as String?,
+              )
+            : ParentLink(parent as String),
+      );
     }
     for (final fact in (map['facts'] as List?) ?? const []) {
-      person.facts.add(Fact((fact as Map)['type'] as String,
-          fact['value']?.toString(), Event.fromMap(fact)!));
+      person.facts.add(
+        Fact(
+          (fact as Map)['type'] as String,
+          fact['value']?.toString(),
+          Event.fromMap(fact)!,
+        ),
+      );
     }
     for (final key in map.keys) {
       if (!_known.contains(key)) person.extra[key as String] = map[key];
@@ -127,24 +145,24 @@ class Person {
 
   /// The structured fields, in the order they are written.
   Map<String, Object?> toMap() => {
-        'id': id,
-        'name': name,
-        if (surname != null) 'surname': surname,
-        if (alsoKnownAs.isNotEmpty) 'also_known_as': alsoKnownAs,
-        if (sex != null) 'sex': sex,
-        if (born != null) 'born': born!.toMap(),
-        if (died != null) 'died': died!.toMap(),
-        if (parents.isNotEmpty)
-          'parents': [
-            for (final link in parents)
-              link.relationship == null
-                  ? link.id
-                  : {'id': link.id, 'relationship': link.relationship},
-          ],
-        if (photo != null) 'photo': photo,
-        if (facts.isNotEmpty) 'facts': [for (final f in facts) f.toMap()],
-        ...extra,
-      };
+    'id': id,
+    'name': name,
+    if (surname != null) 'surname': surname,
+    if (alsoKnownAs.isNotEmpty) 'also_known_as': alsoKnownAs,
+    if (sex != null) 'sex': sex,
+    if (born != null) 'born': born!.toMap(),
+    if (died != null) 'died': died!.toMap(),
+    if (parents.isNotEmpty)
+      'parents': [
+        for (final link in parents)
+          link.relationship == null
+              ? link.id
+              : {'id': link.id, 'relationship': link.relationship},
+      ],
+    if (photo != null) 'photo': photo,
+    if (facts.isNotEmpty) 'facts': [for (final f in facts) f.toMap()],
+    ...extra,
+  };
 
   /// `1911–1987`, `born 1950`, `died 1987`, or empty.
   String get years {
@@ -160,8 +178,11 @@ class Union {
   Union(this.id, this.partners, this.married);
 
   factory Union.fromMap(Map<dynamic, dynamic> map) {
-    final union = Union(map['id'] as String,
-        (map['partners'] as List).cast<String>().toList(), Event.fromMap(map['married']));
+    final union = Union(
+      map['id'] as String,
+      (map['partners'] as List).cast<String>().toList(),
+      Event.fromMap(map['married']),
+    );
     for (final key in map.keys) {
       if (!const {'id', 'partners', 'married'}.contains(key)) {
         union.extra[key as String] = map[key];
@@ -176,21 +197,28 @@ class Union {
   final extra = <String, Object?>{};
 
   Map<String, Object?> toMap() => {
-        'id': id,
-        'partners': partners,
-        if (married != null) 'married': married!.toMap(),
-        ...extra,
-      };
+    'id': id,
+    'partners': partners,
+    if (married != null) 'married': married!.toMap(),
+    ...extra,
+  };
 }
 
 class Media {
-  Media(this.id, {required this.isBack, required this.extension, required this.location});
+  Media(
+    this.id, {
+    required this.isBack,
+    required this.extension,
+    required this.location,
+  });
 
   factory Media.fromMap(Map<dynamic, dynamic> map) =>
-      Media(map['id'] as String,
+      Media(
+          map['id'] as String,
           isBack: map['back'] as bool? ?? false,
           extension: map['extension'] as String,
-          location: map['location'] as String)
+          location: map['location'] as String,
+        )
         ..title = map['title'] as String?
         ..description = map['description'] as String?
         ..width = map['width'] as int?
@@ -226,15 +254,15 @@ class Media {
   /// What the database keeps about a file so it can be listed and searched
   /// without opening it. The file's embedded metadata remains the authority.
   Map<String, Object?> toMap({String? location}) => {
-        'id': id,
-        'back': isBack,
-        'extension': extension,
-        'location': location ?? this.location,
-        if (title != null) 'title': title,
-        if (description != null) 'description': description,
-        if (width != null) 'width': width,
-        if (height != null) 'height': height,
-        if (size != null) 'size': size,
-        'people': people,
-      };
+    'id': id,
+    'back': isBack,
+    'extension': extension,
+    'location': location ?? this.location,
+    if (title != null) 'title': title,
+    if (description != null) 'description': description,
+    if (width != null) 'width': width,
+    if (height != null) 'height': height,
+    if (size != null) 'size': size,
+    'people': people,
+  };
 }

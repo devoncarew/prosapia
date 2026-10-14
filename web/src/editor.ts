@@ -32,7 +32,14 @@ source.addEventListener('input', () => {
 
 // Typing Tab in the facts block should indent, not leave the box.
 source.addEventListener('keydown', (event) => {
-  if (event.key !== 'Tab' || event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return;
+  if (
+    event.key !== 'Tab' ||
+    event.shiftKey ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.altKey
+  )
+    return;
   event.preventDefault();
   source.setRangeText('  ', source.selectionStart, source.selectionEnd, 'end');
   source.dispatchEvent(new Event('input'));

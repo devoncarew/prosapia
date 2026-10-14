@@ -74,28 +74,41 @@ class FileStore extends TreeStore {
 
     final embedded = <String, Map<String, dynamic>>{};
     final result = await Process.run('exiftool', [
-      '-json', '-struct', '-q', '-XMP-dc:Title', '-XMP-dc:Description',
-      '-XMP-iptcExt:PersonInImageWDetails', '-ImageWidth', '-ImageHeight', dir,
+      '-json',
+      '-struct',
+      '-q',
+      '-XMP-dc:Title',
+      '-XMP-dc:Description',
+      '-XMP-iptcExt:PersonInImageWDetails',
+      '-ImageWidth',
+      '-ImageHeight',
+      dir,
     ], stdoutEncoding: utf8);
     if ((result.stdout as String).trim().isNotEmpty) {
-      for (final entry in jsonDecode(result.stdout as String) as List) {
-        embedded[p.basename(entry['SourceFile'] as String)] =
-            entry as Map<String, dynamic>;
+      for (final entry
+          in (jsonDecode(result.stdout as String) as List)
+              .cast<Map<String, dynamic>>()) {
+        embedded[p.basename(entry['SourceFile'] as String)] = entry;
       }
     }
 
     for (final file in files) {
       final m = Media.namePattern.firstMatch(p.basename(file.path));
       if (m == null) continue;
-      final item = Media(m[1]!,
-          isBack: m[2] != null, extension: m[3]!.toLowerCase(), location: file.path);
+      final item = Media(
+        m[1]!,
+        isBack: m[2] != null,
+        extension: m[3]!.toLowerCase(),
+        location: file.path,
+      );
       final meta = embedded[p.basename(file.path)] ?? const {};
       item.title = meta['Title']?.toString();
       item.description = meta['Description']?.toString();
       item.width = meta['ImageWidth'] as int?;
       item.height = meta['ImageHeight'] as int?;
       item.size = file.lengthSync();
-      for (final person in (meta['PersonInImageWDetails'] as List?) ?? const []) {
+      for (final person
+          in (meta['PersonInImageWDetails'] as List?) ?? const []) {
         final ids = (person as Map)['PersonId'];
         for (final id in ids is List ? ids : [ids]) {
           if (id is String && id.startsWith(Media.idScheme)) {

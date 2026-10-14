@@ -20,7 +20,9 @@ interface Config {
   authEmulator?: string;
 }
 
-const config = JSON.parse(document.getElementById('config')!.textContent!) as Config;
+const config = JSON.parse(
+  document.getElementById('config')!.textContent,
+) as Config;
 const button = document.getElementById('sign-in') as HTMLButtonElement;
 const message = document.getElementById('message')!;
 
@@ -35,7 +37,7 @@ function destination(): string {
   return next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
 }
 
-button.addEventListener('click', async () => {
+async function signIn(): Promise<void> {
   button.disabled = true;
   message.textContent = '';
   try {
@@ -50,16 +52,23 @@ button.addEventListener('click', async () => {
       location.assign(destination());
       return;
     }
-    const body = (await response.json().catch(() => ({}))) as { error?: string };
+    const body = (await response.json().catch(() => ({}))) as {
+      error?: string;
+    };
     message.textContent = body.error ?? 'Sign-in failed. Please try again.';
     await signOut(auth);
   } catch (error) {
     const code = (error as { code?: string }).code;
     // Closing the Google window is not an error worth reporting.
-    if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
+    if (
+      code !== 'auth/popup-closed-by-user' &&
+      code !== 'auth/cancelled-popup-request'
+    ) {
       message.textContent = 'Sign-in failed. Please try again.';
       console.error(error);
     }
   }
   button.disabled = false;
-});
+}
+
+button.addEventListener('click', () => void signIn());
