@@ -3,15 +3,20 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit && esbuild src/sign_in.ts src/editor.ts --bundle --format=esm --target=es2022 --minify --outdir=dist",
-    "watch": "esbuild src/sign_in.ts src/editor.ts --bundle --format=esm --target=es2022 --outdir=dist --watch"
+    "build": "esbuild src/sign_in.ts src/editor.ts --bundle --format=esm --target=es2022 --minify --outdir=dist",
+    "watch": "esbuild src/sign_in.ts src/editor.ts --bundle --format=esm --target=es2022 --outdir=dist --watch",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "firebase": "^13.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "esbuild": "^0.28.2",
-    "typescript": "^7.0.2"
+    "eslint": "^10.12.0",
+    "typescript": "~6.0",
+    "typescript-eslint": "^8.71.2"
   },
   "license": "BSD-3-Clause"
 }
