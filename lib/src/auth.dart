@@ -14,8 +14,13 @@ import 'store.dart';
 /// checks it, checks membership, and sets a session cookie; every later
 /// request carries that cookie.
 class Sessions {
-  Sessions(this.auth, this.store,
-      {required this.treeName, required this.webConfig, required this.secureCookies});
+  Sessions(
+    this.auth,
+    this.store, {
+    required this.treeName,
+    required this.webConfig,
+    required this.secureCookies,
+  });
 
   final Auth auth;
   final TreeStore store;
@@ -36,14 +41,20 @@ class Sessions {
 
   /// The member for this request; present on every request the middleware
   /// lets through to a protected page.
-  static Member? memberOf(Request request) => request.context['member'] as Member?;
+  static Member? memberOf(Request request) =>
+      request.context['member'] as Member?;
 
-  Middleware get middleware => (inner) => (request) async {
+  Middleware get middleware =>
+      (inner) => (request) async {
         final path = request.url.path;
-        if (_open.contains(path) || path.startsWith('assets/')) return inner(request);
+        if (_open.contains(path) || path.startsWith('assets/')) {
+          return inner(request);
+        }
         final member = await _memberFor(request);
         if (member == null) {
-          return Response.found('/sign-in?next=${Uri.encodeQueryComponent('/${request.url}')}');
+          return Response.found(
+            '/sign-in?next=${Uri.encodeQueryComponent('/${request.url}')}',
+          );
         }
         return inner(request.change(context: {'member': member}));
       };
@@ -64,7 +75,8 @@ class Sessions {
   /// database read. Removing someone takes effect within that minute.
   Future<Member?> _member(String email) async {
     final cached = _members[email];
-    if (cached != null && DateTime.now().difference(cached.at) < const Duration(minutes: 1)) {
+    if (cached != null &&
+        DateTime.now().difference(cached.at) < const Duration(minutes: 1)) {
       return cached.member;
     }
     final member = await store.member(email);
@@ -75,7 +87,9 @@ class Sessions {
   static String? _cookie(Request request) {
     for (final part in (request.headers['cookie'] ?? '').split(';')) {
       final i = part.indexOf('=');
-      if (i > 0 && part.substring(0, i).trim() == cookieName) return part.substring(i + 1).trim();
+      if (i > 0 && part.substring(0, i).trim() == cookieName) {
+        return part.substring(i + 1).trim();
+      }
     }
     return null;
   }
@@ -84,35 +98,55 @@ class Sessions {
       '$cookieName=$value; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge.inSeconds}${secureCookies ? '; Secure' : ''}';
 
   Response signInPage(Request request) => Response.ok(
-      Renderer.signIn(treeName(), webConfig),
-      headers: {'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store'});
+    Renderer.signIn(treeName(), webConfig),
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'no-store',
+    },
+  );
 
   /// `POST /session` with `{"idToken": "..."}` from the browser.
   Future<Response> create(Request request) async {
-    Response refuse(int status, String message) => Response(status,
-        body: jsonEncode({'error': message}), headers: {'content-type': 'application/json'});
+    Response refuse(int status, String message) => Response(
+      status,
+      body: jsonEncode({'error': message}),
+      headers: {'content-type': 'application/json'},
+    );
 
     final String idToken;
     try {
-      idToken = (jsonDecode(await request.readAsString()) as Map)['idToken'] as String;
+      idToken =
+          (jsonDecode(await request.readAsString()) as Map)['idToken']
+              as String;
     } catch (_) {
-      return refuse(HttpStatus.badRequest, 'The sign-in request was not understood.');
+      return refuse(
+        HttpStatus.badRequest,
+        'The sign-in request was not understood.',
+      );
     }
     final DecodedIdToken token;
     try {
       token = await auth.verifyIdToken(idToken);
     } catch (_) {
-      return refuse(HttpStatus.unauthorized, 'Google sign-in could not be verified. Please try again.');
+      return refuse(
+        HttpStatus.unauthorized,
+        'Google sign-in could not be verified. Please try again.',
+      );
     }
     final email = token.email;
     if (email == null || token.emailVerified != true) {
-      return refuse(HttpStatus.forbidden, 'That Google account has no verified email address.');
+      return refuse(
+        HttpStatus.forbidden,
+        'That Google account has no verified email address.',
+      );
     }
     _members.remove(email);
     final member = await _member(email);
     if (member == null) {
-      return refuse(HttpStatus.forbidden,
-          '$email has not been invited to this tree. Ask the tree\'s owner to add that address.');
+      return refuse(
+        HttpStatus.forbidden,
+        '$email has not been invited to this tree. Ask the tree\'s owner to add that address.',
+      );
     }
     // Keep the name Google gives, so histories read "Ann Hughes", not an address.
     final name = token.claims['name'];
@@ -121,13 +155,20 @@ class Sessions {
       _members.remove(email);
     }
     final cookie = await auth.createSessionCookie(
-        idToken, SessionCookieOptions(expiresIn: _lifetime.inMilliseconds));
-    return Response.ok(jsonEncode({'ok': true}), headers: {
-      'content-type': 'application/json',
-      'set-cookie': _setCookie(cookie, _lifetime),
-    });
+      idToken,
+      SessionCookieOptions(expiresIn: _lifetime.inMilliseconds),
+    );
+    return Response.ok(
+      jsonEncode({'ok': true}),
+      headers: {
+        'content-type': 'application/json',
+        'set-cookie': _setCookie(cookie, _lifetime),
+      },
+    );
   }
 
-  Response signOut(Request request) =>
-      Response.found('/sign-in', headers: {'set-cookie': _setCookie('', Duration.zero)});
+  Response signOut(Request request) => Response.found(
+    '/sign-in',
+    headers: {'set-cookie': _setCookie('', Duration.zero)},
+  );
 }

@@ -36,7 +36,11 @@ She sailed in June.
 ''';
 
 void main() {
-  Person parse(String text) => parsePersonSource(text, id: 'p-7k2m9x', directory: 'hughes-margaret-ellen-7k2m9x');
+  Person parse(String text) => parsePersonSource(
+    text,
+    id: 'p-7k2m9x',
+    directory: 'hughes-margaret-ellen-7k2m9x',
+  );
 
   test('page text survives being read and written back', () {
     expect(personSource(parse(source)), source.trimLeft());
@@ -56,20 +60,60 @@ void main() {
   });
 
   test('mistakes are explained to the person editing', () {
-    expect(() => parse('Margaret grew up above the store.'),
-        throwsA(isA<FormatException>().having((e) => e.message, 'message', contains('three dashes'))));
-    expect(() => parse('---\nid: p-other\nname: Margaret\n---\n'),
-        throwsA(isA<FormatException>().having((e) => e.message, 'message', contains('id must stay'))));
-    expect(() => parse('---\nid: p-7k2m9x\n---\n'),
-        throwsA(isA<FormatException>().having((e) => e.message, 'message', contains('needs a name'))));
-    expect(() => parse('---\nid: p-7k2m9x\nname: [unclosed\n---\n'),
-        throwsA(isA<FormatException>().having((e) => e.message, 'message', contains('could not be read'))));
-    expect(() => parse('---\nid: p-7k2m9x\nname: Margaret\nparents: 7\n---\n'), throwsFormatException);
+    expect(
+      () => parse('Margaret grew up above the store.'),
+      throwsA(
+        isA<FormatException>().having(
+          (e) => e.message,
+          'message',
+          contains('three dashes'),
+        ),
+      ),
+    );
+    expect(
+      () => parse('---\nid: p-other\nname: Margaret\n---\n'),
+      throwsA(
+        isA<FormatException>().having(
+          (e) => e.message,
+          'message',
+          contains('id must stay'),
+        ),
+      ),
+    );
+    expect(
+      () => parse('---\nid: p-7k2m9x\n---\n'),
+      throwsA(
+        isA<FormatException>().having(
+          (e) => e.message,
+          'message',
+          contains('needs a name'),
+        ),
+      ),
+    );
+    expect(
+      () => parse('---\nid: p-7k2m9x\nname: [unclosed\n---\n'),
+      throwsA(
+        isA<FormatException>().having(
+          (e) => e.message,
+          'message',
+          contains('could not be read'),
+        ),
+      ),
+    );
+    expect(
+      () => parse('---\nid: p-7k2m9x\nname: Margaret\nparents: 7\n---\n'),
+      throwsFormatException,
+    );
   });
 
   test('a comparison marks only the lines that changed', () {
     final lines = diffLines('one\ntwo\nthree', 'one\n2\nthree\nfour');
-    expect(lines.map((l) => '${l.kind.name}:${l.text}'),
-        ['same:one', 'removed:two', 'added:2', 'same:three', 'added:four']);
+    expect(lines.map((l) => '${l.kind.name}:${l.text}'), [
+      'same:one',
+      'removed:two',
+      'added:2',
+      'same:three',
+      'added:four',
+    ]);
   });
 }

@@ -32,7 +32,12 @@ void main() {
   final lines = File(inText).readAsLinesSync();
   backText = lines.take(4).join('\n');
 
-  final size = sh('magick', ['identify', '-format', '%w %h', inFront]).split(' ');
+  final size = sh('magick', [
+    'identify',
+    '-format',
+    '%w %h',
+    inFront,
+  ]).split(' ');
   width = int.parse(size[0]);
   height = int.parse(size[1]);
 
@@ -61,20 +66,24 @@ void main() {
 
   final inputBytes = File(inFront).lengthSync() + File(inBack).lengthSync();
   final buf = StringBuffer()
-    ..writeln('| Candidate | Files | Size (kB) | vs input | Front PSNR (dB) '
-        '| Back PSNR (dB) | Input JPEGs recoverable exactly '
-        '| Back present after metadata write | Text read back by exiftool '
-        '| Text findable in raw bytes | macOS opens it '
-        '| After macOS re-save: back | After macOS re-save: text |')
+    ..writeln(
+      '| Candidate | Files | Size (kB) | vs input | Front PSNR (dB) '
+      '| Back PSNR (dB) | Input JPEGs recoverable exactly '
+      '| Back present after metadata write | Text read back by exiftool '
+      '| Text findable in raw bytes | macOS opens it '
+      '| After macOS re-save: back | After macOS re-save: text |',
+    )
     ..writeln('|${' --- |' * 13}');
   for (final r in results) {
-    buf.writeln('| ${r.name} | ${r.files.length} '
-        '| ${(r.bytes / 1000).toStringAsFixed(0)} '
-        '| ${(r.bytes / inputBytes * 100).toStringAsFixed(0)}% '
-        '| ${r.psnrFront} | ${r.psnrBack} | ${yn(r.exact)} '
-        '| ${yn(r.backAfterWrite)} | ${yn(r.textExiftool)} '
-        '| ${yn(r.textRaw)} | ${yn(r.sipsOpens)} '
-        '| ${r.resaveBack} | ${r.resaveText} |');
+    buf.writeln(
+      '| ${r.name} | ${r.files.length} '
+      '| ${(r.bytes / 1000).toStringAsFixed(0)} '
+      '| ${(r.bytes / inputBytes * 100).toStringAsFixed(0)}% '
+      '| ${r.psnrFront} | ${r.psnrBack} | ${yn(r.exact)} '
+      '| ${yn(r.backAfterWrite)} | ${yn(r.textExiftool)} '
+      '| ${yn(r.textRaw)} | ${yn(r.sipsOpens)} '
+      '| ${r.resaveBack} | ${r.resaveText} |',
+    );
   }
   File('results_table.md').writeAsStringSync(buf.toString());
   stdout.write(buf);
@@ -120,12 +129,16 @@ Result jpegMpf() {
   writeMeta(b);
   final path = '$out/mpf.jpg';
   File(path).writeAsBytesSync(
-      buildMpf(File(f).readAsBytesSync(), File(b).readAsBytesSync()));
+    buildMpf(File(f).readAsBytesSync(), File(b).readAsBytesSync()),
+  );
   final r = Result('JPEG with the back appended (MPF)', [path]);
 
   String? extractBack(String from, String to) {
-    final res = Process.runSync('exiftool', ['-b', '-MPImage2', from],
-        stdoutEncoding: null);
+    final res = Process.runSync('exiftool', [
+      '-b',
+      '-MPImage2',
+      from,
+    ], stdoutEncoding: null);
     final bytes = res.stdout as List<int>;
     if (bytes.isEmpty) return null;
     File(to).writeAsBytesSync(bytes);
@@ -138,15 +151,26 @@ Result jpegMpf() {
 
   // A later metadata edit by a standard tool: is the back still reachable?
   final edited = copy(path, '$out/mpf_edited.jpg');
-  sh('exiftool', ['-q', '-overwrite_original', '-XMP-dc:Rights=A later edit by another tool', '-IPTC:Caption-Abstract=Added later', '-EXIF:Artist=Someone', edited]);
+  sh('exiftool', [
+    '-q',
+    '-overwrite_original',
+    '-XMP-dc:Rights=A later edit by another tool',
+    '-IPTC:Caption-Abstract=Added later',
+    '-EXIF:Artist=Someone',
+    edited,
+  ]);
   final back2 = extractBack(edited, '$out/mpf_back_after_edit.jpg');
   r.backAfterWrite = back2 != null && sameBytes(back2, b);
 
   checkText(r, path);
   r.sipsOpens = sipsOpens(path);
-  resave(r, path, 'jpeg',
-      backCheck: (p) =>
-          extractBack(p, '$out/mpf_resave_back.jpg') == null ? 'lost' : 'kept');
+  resave(
+    r,
+    path,
+    'jpeg',
+    backCheck: (p) =>
+        extractBack(p, '$out/mpf_resave_back.jpg') == null ? 'lost' : 'kept',
+  );
   File(f).deleteSync();
   File(b).deleteSync();
   return r;
@@ -166,8 +190,12 @@ Result tiff(String name, List<String> compress) {
   r.backAfterWrite = pagesBefore == 2 && tiffPages(path) == 2;
   checkText(r, path);
   r.sipsOpens = sipsOpens(path);
-  resave(r, path, 'tiff',
-      backCheck: (p) => tiffPages(p) == 2 ? 'kept' : 'lost');
+  resave(
+    r,
+    path,
+    'tiff',
+    backCheck: (p) => tiffPages(p) == 2 ? 'kept' : 'lost',
+  );
   return r;
 }
 
@@ -188,14 +216,14 @@ Result heif(String name, List<String> args, String ext) {
   r.backAfterWrite = heifImages(path) == 2;
   checkText(r, path);
   r.sipsOpens = sipsOpens(path);
-  resave(r, path, ext,
-      backCheck: (p) => heifImages(p) == 2 ? 'kept' : 'lost');
+  resave(r, path, ext, backCheck: (p) => heifImages(p) == 2 ? 'kept' : 'lost');
   return r;
 }
 
-int heifImages(String path) => RegExp(r'^image:', multiLine: true)
-    .allMatches(Process.runSync('heif-info', [path]).stdout as String)
-    .length;
+int heifImages(String path) => RegExp(
+  r'^image:',
+  multiLine: true,
+).allMatches(Process.runSync('heif-info', [path]).stdout as String).length;
 
 /// Two JPEG XL files, each a lossless repack of its input JPEG. JPEG XL has
 /// no multi-page mode (only animation frames), so the pair stays two files.
@@ -212,7 +240,8 @@ Result jxlPair() {
   // The original JPEG file can be rebuilt from the JPEG XL file.
   sh('djxl', [f, '$out/jxl_front_rebuilt.jpg']);
   sh('djxl', [b, '$out/jxl_back_rebuilt.jpg']);
-  r.exact = sameBytes('$out/jxl_front_rebuilt.jpg', inFront) &&
+  r.exact =
+      sameBytes('$out/jxl_front_rebuilt.jpg', inFront) &&
       sameBytes('$out/jxl_back_rebuilt.jpg', inBack);
   r.backAfterWrite = null;
   checkText(r, f);
@@ -235,8 +264,20 @@ Result sideBySide(String name, String ext, List<String> args) {
   }
   writeMeta(path);
   final r = Result('Side by side ($name)', [path]);
-  sh('magick', [decoded, '-crop', '${width}x$height+0+0', '+repage', '$out/${name}_f.png']);
-  sh('magick', [decoded, '-crop', '${width}x$height+$width+0', '+repage', '$out/${name}_b.png']);
+  sh('magick', [
+    decoded,
+    '-crop',
+    '${width}x$height+0+0',
+    '+repage',
+    '$out/${name}_f.png',
+  ]);
+  sh('magick', [
+    decoded,
+    '-crop',
+    '${width}x$height+$width+0',
+    '+repage',
+    '$out/${name}_b.png',
+  ]);
   comparePixels(r, '$out/${name}_f.png', '$out/${name}_b.png');
   r.exact = false;
   r.backAfterWrite = true; // One image: the back cannot be dropped.
@@ -251,12 +292,14 @@ Result sideBySide(String name, String ext, List<String> args) {
 /// A two-page PDF with the input JPEGs embedded byte for byte.
 Result pdf() {
   final path = '$out/two_page.pdf';
-  File(path).writeAsBytesSync(buildPdf(
-      [File(inFront).readAsBytesSync(), File(inBack).readAsBytesSync()]));
+  File(path).writeAsBytesSync(
+    buildPdf([File(inFront).readAsBytesSync(), File(inBack).readAsBytesSync()]),
+  );
   writeMeta(path);
   final r = Result('Two-page PDF, JPEGs embedded', [path]);
   final bytes = File(path).readAsBytesSync();
-  final hasBoth = contains(bytes, File(inFront).readAsBytesSync()) &&
+  final hasBoth =
+      contains(bytes, File(inFront).readAsBytesSync()) &&
       contains(bytes, File(inBack).readAsBytesSync());
   r.psnrFront = r.psnrBack = hasBoth ? 'identical' : 'missing';
   r.exact = hasBoth;
@@ -303,11 +346,19 @@ void writeMeta(String path) {
 }
 
 void checkText(Result r, String path) {
-  final res = Process.runSync('exiftool', [
-    '-s3', '-sep', ';', '-XMP-iptcExt:PersonInImage',
-    '-XMP-photoshop:DateCreated', '-XMP-dc:Description', path,
-  ]).stdout as String;
-  r.textExiftool = res.contains(people.join(';')) &&
+  final res =
+      Process.runSync('exiftool', [
+            '-s3',
+            '-sep',
+            ';',
+            '-XMP-iptcExt:PersonInImage',
+            '-XMP-photoshop:DateCreated',
+            '-XMP-dc:Description',
+            path,
+          ]).stdout
+          as String;
+  r.textExiftool =
+      res.contains(people.join(';')) &&
       res.contains('1949:10') &&
       res.contains('with Grandma');
   r.textRaw = contains(File(path).readAsBytesSync(), utf8.encode(probe));
@@ -321,7 +372,14 @@ void comparePixels(Result r, String front, String? back) {
 /// Peak signal-to-noise ratio against the decoded input. Higher is closer;
 /// above about 40 dB differences are not visible.
 String psnr(String a, String b) {
-  final res = Process.runSync('magick', ['compare', '-metric', 'PSNR', a, b, 'null:']);
+  final res = Process.runSync('magick', [
+    'compare',
+    '-metric',
+    'PSNR',
+    a,
+    b,
+    'null:',
+  ]);
   final text = (res.stderr as String).trim().split(' ').first;
   final v = double.tryParse(text);
   // ImageMagick reports identical images as inf or as its 120 dB cap.
@@ -337,20 +395,37 @@ bool sipsOpens(String path) {
 
 /// Re-saves [path] with macOS's built-in image code, as Preview would, then
 /// checks whether the back and the text are still there.
-void resave(Result r, String path, String format,
-    {required String Function(String) backCheck}) {
+void resave(
+  Result r,
+  String path,
+  String format, {
+  required String Function(String) backCheck,
+}) {
   final ext = path.substring(path.lastIndexOf('.'));
   final to = path.replaceFirst(RegExp(r'\.\w+$'), '_resaved$ext');
-  final res = Process.runSync('sips', ['-s', 'format', format, path, '--out', to]);
+  final res = Process.runSync('sips', [
+    '-s',
+    'format',
+    format,
+    path,
+    '--out',
+    to,
+  ]);
   if (res.exitCode != 0 || !File(to).existsSync()) {
     r.resaveBack = r.resaveText = 'cannot save';
     return;
   }
   r.resaveBack = backCheck(to);
-  final names = Process.runSync(
-      'exiftool', ['-s3', '-XMP-iptcExt:PersonInImage', to]).stdout as String;
-  final desc = Process.runSync(
-      'exiftool', ['-s3', '-XMP-dc:Description', to]).stdout as String;
+  final names =
+      Process.runSync('exiftool', [
+            '-s3',
+            '-XMP-iptcExt:PersonInImage',
+            to,
+          ]).stdout
+          as String;
+  final desc =
+      Process.runSync('exiftool', ['-s3', '-XMP-dc:Description', to]).stdout
+          as String;
   final n = names.contains(people.first), d = desc.contains('Grandma');
   r.resaveText = n && d ? 'kept' : (n || d ? 'partly kept' : 'lost');
 }
@@ -394,7 +469,9 @@ Uint8List buildMpf(Uint8List front, Uint8List back) {
   // count from this segment, so a tool that later grows the metadata before
   // it (exiftool does not update MPF offsets) leaves the index valid.
   var pos = 2;
-  while (front[pos] == 0xFF && front[pos + 1] >= 0xE0 && front[pos + 1] <= 0xEF) {
+  while (front[pos] == 0xFF &&
+      front[pos + 1] >= 0xE0 &&
+      front[pos + 1] <= 0xEF) {
     pos += 2 + ((front[pos + 2] << 8) | front[pos + 3]);
   }
 
@@ -404,7 +481,8 @@ Uint8List buildMpf(Uint8List front, Uint8List back) {
 
   final d = BytesBuilder();
   void u16(int v) => d.add([v >> 8 & 0xFF, v & 0xFF]);
-  void u32(int v) => d.add([v >> 24 & 0xFF, v >> 16 & 0xFF, v >> 8 & 0xFF, v & 0xFF]);
+  void u32(int v) =>
+      d.add([v >> 24 & 0xFF, v >> 16 & 0xFF, v >> 8 & 0xFF, v & 0xFF]);
 
   d.add([0xFF, 0xE2]);
   u16(segmentLength);
@@ -412,14 +490,31 @@ Uint8List buildMpf(Uint8List front, Uint8List back) {
   d.add(ascii.encode('MM\x00*')); // big-endian TIFF-style header
   u32(8); // offset of the index IFD
   u16(3); // three entries
-  u16(0xB000); u16(7); u32(4); d.add(ascii.encode('0100')); // MPFVersion
-  u16(0xB001); u16(4); u32(1); u32(2); // NumberOfImages
-  u16(0xB002); u16(7); u32(32); u32(50); // MPEntry, two 16-byte records
+  u16(0xB000);
+  u16(7);
+  u32(4);
+  d.add(ascii.encode('0100')); // MPFVersion
+  u16(0xB001);
+  u16(4);
+  u32(1);
+  u32(2); // NumberOfImages
+  u16(0xB002);
+  u16(7);
+  u32(32);
+  u32(50); // MPEntry, two 16-byte records
   u32(0); // no further IFD
   // Entry 1: the front, flagged as the representative image.
-  u32(0x20030000); u32(firstSize); u32(0); u16(0); u16(0);
+  u32(0x20030000);
+  u32(firstSize);
+  u32(0);
+  u16(0);
+  u16(0);
   // Entry 2: the back.
-  u32(0x00000000); u32(back.length); u32(firstSize - mpStart); u16(0); u16(0);
+  u32(0x00000000);
+  u32(back.length);
+  u32(firstSize - mpStart);
+  u16(0);
+  u16(0);
 
   return (BytesBuilder()
         ..add(front.sublist(0, pos))
@@ -448,16 +543,23 @@ Uint8List buildPdf(List<Uint8List> jpegs) {
   final n = jpegs.length;
   // Objects: 1 catalog, 2 pages, then per page: page, image, content.
   obj('<< /Type /Catalog /Pages 2 0 R >>');
-  obj('<< /Type /Pages /Count $n /Kids [${[for (var i = 0; i < n; i++) '${3 + i * 3} 0 R'].join(' ')}] >>');
+  obj(
+    '<< /Type /Pages /Count $n /Kids [${[for (var i = 0; i < n; i++) '${3 + i * 3} 0 R'].join(' ')}] >>',
+  );
   for (var i = 0; i < n; i++) {
     final page = 3 + i * 3;
     final content = latin1.encode('q $width 0 0 $height 0 0 cm /Im0 Do Q');
-    obj('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 $width $height] '
-        '/Resources << /XObject << /Im0 ${page + 1} 0 R >> >> '
-        '/Contents ${page + 2} 0 R >>');
-    obj('<< /Type /XObject /Subtype /Image /Width $width /Height $height '
-        '/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode '
-        '/Length ${jpegs[i].length} >>', jpegs[i]);
+    obj(
+      '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 $width $height] '
+      '/Resources << /XObject << /Im0 ${page + 1} 0 R >> >> '
+      '/Contents ${page + 2} 0 R >>',
+    );
+    obj(
+      '<< /Type /XObject /Subtype /Image /Width $width /Height $height '
+      '/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode '
+      '/Length ${jpegs[i].length} >>',
+      jpegs[i],
+    );
     obj('<< /Length ${content.length} >>', content);
   }
   final xref = b.length;
@@ -465,7 +567,11 @@ Uint8List buildPdf(List<Uint8List> jpegs) {
   for (final o in offsets) {
     b.add(latin1.encode('${o.toString().padLeft(10, '0')} 00000 n \n'));
   }
-  b.add(latin1.encode('trailer\n<< /Size ${offsets.length + 1} /Root 1 0 R >>\n'
-      'startxref\n$xref\n%%EOF\n'));
+  b.add(
+    latin1.encode(
+      'trailer\n<< /Size ${offsets.length + 1} /Root 1 0 R >>\n'
+      'startxref\n$xref\n%%EOF\n',
+    ),
+  );
   return b.toBytes();
 }

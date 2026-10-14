@@ -26,7 +26,8 @@ class Renderer {
 
   static String esc(String? s) => htmlEscape.convert(s ?? '');
 
-  String page(String title, String body, {String query = ''}) => '''
+  String page(String title, String body, {String query = ''}) =>
+      '''
 <!doctype html>
 <html lang="en">
 <head>
@@ -52,7 +53,9 @@ $body
   String personLink(String id, {bool years = false}) {
     final p = tree.people[id];
     if (p == null) return '<span class="missing">unknown person ($id)</span>';
-    final suffix = years && p.years.isNotEmpty ? ' <span class="years">(${p.years})</span>' : '';
+    final suffix = years && p.years.isNotEmpty
+        ? ' <span class="years">(${p.years})</span>'
+        : '';
     return '<a href="/people/${p.id}">${esc(p.name)}</a>$suffix';
   }
 
@@ -66,9 +69,13 @@ $body
     }
     final sb = StringBuffer()
       ..write('<h1>${esc(tree.name)}</h1>')
-      ..write('<p class="lead">${tree.people.length} people, ${tree.unions.length} partnerships, ${tree.media.length} photos and documents.</p>');
+      ..write(
+        '<p class="lead">${tree.people.length} people, ${tree.unions.length} partnerships, ${tree.media.length} photos and documents.</p>',
+      );
     if (tree.problems.isNotEmpty) {
-      sb.write('<details class="problems"><summary>${tree.problems.length} files could not be read</summary><ul>');
+      sb.write(
+        '<details class="problems"><summary>${tree.problems.length} files could not be read</summary><ul>',
+      );
       for (final problem in tree.problems) {
         sb.write('<li>${esc(problem)}</li>');
       }
@@ -76,7 +83,9 @@ $body
     }
     sb.write('<div class="surnames">');
     groups.forEach((surname, people) {
-      sb.write('<section><h2>${esc(surname.isEmpty ? 'No surname recorded' : surname)}</h2><ul>');
+      sb.write(
+        '<section><h2>${esc(surname.isEmpty ? 'No surname recorded' : surname)}</h2><ul>',
+      );
       for (final p in people) {
         sb.write('<li>${personLink(p.id, years: true)}</li>');
       }
@@ -95,9 +104,10 @@ $body
       if (editable) '<a href="/people/${p.id}/history">History</a>',
     ];
     return page(
-        p.name,
-        '${actions.isEmpty ? '' : '<p class="actions">${actions.join(' ')}</p>'}'
-        '${personArticle(p)}');
+      p.name,
+      '${actions.isEmpty ? '' : '<p class="actions">${actions.join(' ')}</p>'}'
+      '${personArticle(p)}',
+    );
   }
 
   /// The body of a person's page. Also used for the editor's live preview,
@@ -112,7 +122,9 @@ $body
     if (p.body.isNotEmpty) {
       sb.write('<div class="prose">${markdown(p.body)}</div>');
     } else {
-      sb.write('<p class="empty">Nothing has been written about ${esc(p.name)} yet.</p>');
+      sb.write(
+        '<p class="empty">Nothing has been written about ${esc(p.name)} yet.</p>',
+      );
     }
 
     final (dated, undated) = _timeline(p);
@@ -131,7 +143,9 @@ $body
       sb.write('</ul>');
     }
 
-    final media = withMedia ? [for (final key in index.mediaOf(p.id)) tree.media[key]!] : const <Media>[];
+    final media = withMedia
+        ? [for (final key in index.mediaOf(p.id)) tree.media[key]!]
+        : const <Media>[];
     if (media.isNotEmpty) {
       sb.write('<h2>Photos and documents</h2>${gallery(media)}');
     }
@@ -147,32 +161,68 @@ $body
 
     String event(Event? e) => e == null
         ? ''
-        : [if (e.date != null) esc(e.date!.display), if (e.place != null) esc(e.place)].join('<br>');
+        : [
+            if (e.date != null) esc(e.date!.display),
+            if (e.place != null) esc(e.place),
+          ].join('<br>');
 
-    if (p.alsoKnownAs.isNotEmpty) row('Also known as', esc(p.alsoKnownAs.join(', ')));
+    if (p.alsoKnownAs.isNotEmpty) {
+      row('Also known as', esc(p.alsoKnownAs.join(', ')));
+    }
     row('Born', event(p.born));
     row('Died', event(p.died));
     row(
-        'Parents',
-        p.parents
-            .map((l) => personLink(l.id) + (l.relationship == null ? '' : ' <span class="years">(${esc(l.relationship)})</span>'))
-            .join('<br>'));
+      'Parents',
+      p.parents
+          .map(
+            (l) =>
+                personLink(l.id) +
+                (l.relationship == null
+                    ? ''
+                    : ' <span class="years">(${esc(l.relationship)})</span>'),
+          )
+          .join('<br>'),
+    );
     row(
-        'Partners',
-        index.partnershipsOf(p.id).map((uid) {
-          final u = tree.unions[uid]!;
-          final other = u.partners.firstWhere((x) => x != p.id, orElse: () => p.id);
-          final year = u.married?.date?.year;
-          return personLink(other) + (year == null ? '' : ' <span class="years">(married $year)</span>');
-        }).join('<br>'));
-    row('Children', index.childrenOf(p.id).map((id) => personLink(id, years: true)).join('<br>'));
-    row('Siblings', index.siblingsOf(p.id).map((id) => personLink(id, years: true)).join('<br>'));
+      'Partners',
+      index
+          .partnershipsOf(p.id)
+          .map((uid) {
+            final u = tree.unions[uid]!;
+            final other = u.partners.firstWhere(
+              (x) => x != p.id,
+              orElse: () => p.id,
+            );
+            final year = u.married?.date?.year;
+            return personLink(other) +
+                (year == null
+                    ? ''
+                    : ' <span class="years">(married $year)</span>');
+          })
+          .join('<br>'),
+    );
+    row(
+      'Children',
+      index
+          .childrenOf(p.id)
+          .map((id) => personLink(id, years: true))
+          .join('<br>'),
+    );
+    row(
+      'Siblings',
+      index
+          .siblingsOf(p.id)
+          .map((id) => personLink(id, years: true))
+          .join('<br>'),
+    );
 
     final photo = p.photo == null ? null : tree.media[p.photo];
     if (rows.isEmpty && photo == null) return '';
     final sb = StringBuffer('<aside class="infobox">');
     if (photo != null && photo.isImage) {
-      sb.write('<a href="/media/${photo.key}"><img src="/media/${photo.key}/display?w=480" alt="${esc(photo.title ?? p.name)}"></a>');
+      sb.write(
+        '<a href="/media/${photo.key}"><img src="/media/${photo.key}/display?w=480" alt="${esc(photo.title ?? p.name)}"></a>',
+      );
     }
     sb.write('<table>');
     for (final (label, html) in rows) {
@@ -189,33 +239,44 @@ $body
     final undated = <String>[];
     void add(TreeDate? date, String html) =>
         date == null ? undated.add(html) : dated.add((date: date, html: html));
-    String at(String? place) => place == null ? '' : ' <span class="place">${esc(place)}</span>';
+    String at(String? place) =>
+        place == null ? '' : ' <span class="place">${esc(place)}</span>';
 
     if (p.born?.date != null) add(p.born!.date, 'Born${at(p.born!.place)}');
     for (final f in p.facts) {
       final label = f.type[0].toUpperCase() + f.type.substring(1);
-      add(f.event.date, '<span class="kind">$label</span>${f.value == null ? '' : ' ${esc(f.value)}'}${at(f.event.place)}');
+      add(
+        f.event.date,
+        '<span class="kind">$label</span>${f.value == null ? '' : ' ${esc(f.value)}'}${at(f.event.place)}',
+      );
     }
     for (final uid in index.partnershipsOf(p.id)) {
       final u = tree.unions[uid]!;
       if (u.married == null) continue;
       final other = u.partners.firstWhere((x) => x != p.id, orElse: () => p.id);
-      add(u.married!.date, 'Married ${personLink(other)}${at(u.married!.place)}');
+      add(
+        u.married!.date,
+        'Married ${personLink(other)}${at(u.married!.place)}',
+      );
     }
     for (final id in index.childrenOf(p.id)) {
       final child = tree.people[id]!;
-      if (child.born?.date != null) add(child.born!.date, 'Birth of ${personLink(id)}');
+      if (child.born?.date != null) {
+        add(child.born!.date, 'Birth of ${personLink(id)}');
+      }
     }
-    for (final m in RegExp(r'^##\s+((?:\d{1,2} )?(?:[A-Za-z]{3,9} )?\d{4})\s*[:–-]\s*(.+)$', multiLine: true).allMatches(p.body)) {
+    for (final m in RegExp(
+      r'^##\s+((?:\d{1,2} )?(?:[A-Za-z]{3,9} )?\d{4})\s*[:–-]\s*(.+)$',
+      multiLine: true,
+    ).allMatches(p.body)) {
       final year = RegExp(r'\d{4}').firstMatch(m[1]!)![0]!;
       add(TreeDate(year), esc(m[2]));
     }
     if (p.died?.date != null) add(p.died!.date, 'Died${at(p.died!.place)}');
 
     // A stable sort keeps birth first and death last among equal dates.
-    final sorted = [
-      for (final (i, e) in dated.indexed) (i, e),
-    ]..sort((a, b) {
+    final sorted = [for (final (i, e) in dated.indexed) (i, e)]
+      ..sort((a, b) {
         final c = a.$2.date.sortKey.compareTo(b.$2.date.sortKey);
         return c != 0 ? c : a.$1.compareTo(b.$1);
       });
@@ -225,10 +286,19 @@ $body
   /// Renders page prose. Links between people and to media are written as
   /// relative file paths so they work on GitHub; here they become site URLs.
   String markdown(String source) {
-    final html = md.markdownToHtml(source, extensionSet: md.ExtensionSet.gitHubWeb);
+    final html = md.markdownToHtml(
+      source,
+      extensionSet: md.ExtensionSet.gitHubWeb,
+    );
     return html
-        .replaceAllMapped(RegExp(r'href="[^"]*?([a-z0-9]{6})/index\.md"'), (m) => 'href="/people/p-${m[1]}"')
-        .replaceAllMapped(RegExp(r'src="[^"]*?media/(m-[a-z0-9]+(?:-back)?)\.\w+"'), (m) => 'src="/media/${m[1]}/display?w=960"');
+        .replaceAllMapped(
+          RegExp(r'href="[^"]*?([a-z0-9]{6})/index\.md"'),
+          (m) => 'href="/people/p-${m[1]}"',
+        )
+        .replaceAllMapped(
+          RegExp(r'src="[^"]*?media/(m-[a-z0-9]+(?:-back)?)\.\w+"'),
+          (m) => 'src="/media/${m[1]}/display?w=960"',
+        );
   }
 
   // ----------------------------------------------------------------- media
@@ -239,7 +309,9 @@ $body
       final caption = esc(m.title ?? 'Untitled');
       sb.write('<a href="/media/${m.key}">');
       if (m.isImage) {
-        sb.write('<img loading="lazy" src="/media/${m.key}/display?w=240" alt="$caption">');
+        sb.write(
+          '<img loading="lazy" src="/media/${m.key}/display?w=240" alt="$caption">',
+        );
       } else {
         sb.write('<span class="file">${m.extension.toUpperCase()}</span>');
       }
@@ -250,24 +322,33 @@ $body
   }
 
   String mediaIndex() => page(
-      'Photos',
-      '<h1>Photos and documents</h1>'
-          '<p class="lead">${tree.media.length} files. Titles and names are read from each file\'s embedded metadata.</p>'
-          '${gallery(tree.media.values)}');
+    'Photos',
+    '<h1>Photos and documents</h1>'
+        '<p class="lead">${tree.media.length} files. Titles and names are read from each file\'s embedded metadata.</p>'
+        '${gallery(tree.media.values)}',
+  );
 
   String media(Media m) {
     final sb = StringBuffer('<article class="media">');
     sb.write('<h1>${esc(m.title ?? 'Untitled')}</h1>');
     if (m.isImage) {
-      sb.write('<a href="/media/${m.key}/file"><img src="/media/${m.key}/display?w=1920" alt="${esc(m.title ?? '')}"></a>');
+      sb.write(
+        '<a href="/media/${m.key}/file"><img src="/media/${m.key}/display?w=1920" alt="${esc(m.title ?? '')}"></a>',
+      );
     } else {
-      sb.write('<p><a class="file" href="/media/${m.key}/file">Open the ${m.extension.toUpperCase()} file</a></p>');
+      sb.write(
+        '<p><a class="file" href="/media/${m.key}/file">Open the ${m.extension.toUpperCase()} file</a></p>',
+      );
     }
     final other = tree.media[m.isBack ? m.id : '${m.id}-back'];
     if (other != null) {
-      sb.write('<p><a href="/media/${other.key}">See the ${other.isBack ? 'back' : 'front'}</a></p>');
+      sb.write(
+        '<p><a href="/media/${other.key}">See the ${other.isBack ? 'back' : 'front'}</a></p>',
+      );
     }
-    if (m.description != null) sb.write('<p class="description">${esc(m.description)}</p>');
+    if (m.description != null) {
+      sb.write('<p class="description">${esc(m.description)}</p>');
+    }
     if (m.people.isNotEmpty) {
       sb.write('<h2>People shown</h2><ul>');
       for (final id in m.people) {
@@ -275,7 +356,9 @@ $body
       }
       sb.write('</ul>');
     }
-    sb.write('<p class="meta">${m.key}.${m.extension}${m.width == null ? '' : ' · ${m.width} × ${m.height}'} · <a href="/media/${m.key}/file">original file</a></p>');
+    sb.write(
+      '<p class="meta">${m.key}.${m.extension}${m.width == null ? '' : ' · ${m.width} × ${m.height}'} · <a href="/media/${m.key}/file">original file</a></p>',
+    );
     sb.write('</article>');
     return page(m.title ?? 'Untitled', sb.toString());
   }
@@ -286,18 +369,26 @@ $body
     final results = index.search(query);
     final sb = StringBuffer('<h1>Search</h1>');
     if (query.trim().isEmpty) {
-      sb.write('<p class="lead">Type a name, a place or a word from a page.</p>');
+      sb.write(
+        '<p class="lead">Type a name, a place or a word from a page.</p>',
+      );
     } else if (results.isEmpty) {
       sb.write('<p class="lead">Nothing found for “${esc(query)}”.</p>');
     } else {
-      sb.write('<p class="lead">${results.length} results for “${esc(query)}”.</p><ul class="results">');
+      sb.write(
+        '<p class="lead">${results.length} results for “${esc(query)}”.</p><ul class="results">',
+      );
       for (final r in results) {
         // The snippet is escaped, then the highlight marks are restored.
-        final snippet = esc(r.snippet).replaceAll('&lt;mark&gt;', '<mark>').replaceAll('&lt;&#47;mark&gt;', '</mark>');
+        final snippet = esc(r.snippet)
+            .replaceAll('&lt;mark&gt;', '<mark>')
+            .replaceAll('&lt;&#47;mark&gt;', '</mark>');
         final link = r.kind == 'person'
             ? personLink(r.id, years: true)
             : '<a href="/media/${r.id}">${esc(tree.media[r.id]?.title ?? 'Untitled')}</a> <span class="years">(${tree.media[r.id]?.isImage ?? false ? 'photo' : 'document'})</span>';
-        sb.write('<li>$link${snippet.trim().isEmpty ? '' : '<div class="snippet">$snippet</div>'}</li>');
+        sb.write(
+          '<li>$link${snippet.trim().isEmpty ? '' : '<div class="snippet">$snippet</div>'}</li>',
+        );
       }
       sb.write('</ul>');
     }
@@ -310,11 +401,15 @@ $body
   ///
   /// [conflict] is shown when someone else saved first; it describes their
   /// change so this editor can reapply their own on top of it.
-  String editPerson(Person p,
-      {required String source, required int basedOn, String summary = '', String? error, String? conflict}) {
-    return page(
-        'Edit ${p.name}',
-        '''
+  String editPerson(
+    Person p, {
+    required String source,
+    required int basedOn,
+    String summary = '',
+    String? error,
+    String? conflict,
+  }) {
+    return page('Edit ${p.name}', '''
 <h1>Edit: ${esc(p.name)}</h1>
 ${conflict ?? ''}
 ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
@@ -342,16 +437,21 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
   }
 
   /// Explains a save that was refused because the page had moved on.
-  String conflictNotice(Revision theirs, String before) => '''
+  String conflictNotice(Revision theirs, String before) =>
+      '''
 <div class="conflict" role="alert">
 <p><strong>${esc(theirs.by)} saved a change to this page while you were editing</strong> (“${esc(theirs.summary)}”). Your text is still below and has not been saved.</p>
 <p>Their change is shown here. Work it into your text, then save again; saving now will replace their version with yours.</p>
 ${diff(before, theirs.source)}
 </div>''';
 
-  String memoryForm(Person p, {String title = '', String date = '', String text = '', String? error}) => page(
-      'Add a memory of ${p.name}',
-      '''
+  String memoryForm(
+    Person p, {
+    String title = '',
+    String date = '',
+    String text = '',
+    String? error,
+  }) => page('Add a memory of ${p.name}', '''
 <h1>Add a memory of ${esc(p.name)}</h1>
 <p class="lead">A story, a trip, something you remember. It is added to the end of the page as its own section; nothing else on the page changes.</p>
 ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
@@ -369,36 +469,49 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
   String history(Person p, List<Revision> revisions) {
     final sb = StringBuffer('<h1>History: ${personLink(p.id)}</h1>');
     if (revisions.isEmpty) {
-      sb.write('<p class="lead">No versions have been recorded for this page.</p>');
+      sb.write(
+        '<p class="lead">No versions have been recorded for this page.</p>',
+      );
       return page('History of ${p.name}', sb.toString());
     }
-    sb.write('<p class="lead">${revisions.length} saved ${revisions.length == 1 ? 'version' : 'versions'}, newest first. Pick two to compare.</p>');
+    sb.write(
+      '<p class="lead">${revisions.length} saved ${revisions.length == 1 ? 'version' : 'versions'}, newest first. Pick two to compare.</p>',
+    );
     sb.write('<form action="/people/${p.id}/compare"><table class="history">');
     for (final (i, r) in revisions.indexed) {
-      sb.write('<tr>'
-          '<td><input type="radio" name="from" value="${r.number}" aria-label="Compare from version ${r.number}"${i == 1 || revisions.length == 1 ? ' checked' : ''}></td>'
-          '<td><input type="radio" name="to" value="${r.number}" aria-label="Compare to version ${r.number}"${i == 0 ? ' checked' : ''}></td>'
-          '<td><a href="/people/${p.id}/revisions/${r.number}">${time(r.at)}</a></td>'
-          '<td>${esc(r.by)}</td>'
-          '<td>${esc(r.summary)}${i == 0 ? ' <span class="years">(current)</span>' : ''}</td>'
-          '</tr>');
+      sb.write(
+        '<tr>'
+        '<td><input type="radio" name="from" value="${r.number}" aria-label="Compare from version ${r.number}"${i == 1 || revisions.length == 1 ? ' checked' : ''}></td>'
+        '<td><input type="radio" name="to" value="${r.number}" aria-label="Compare to version ${r.number}"${i == 0 ? ' checked' : ''}></td>'
+        '<td><a href="/people/${p.id}/revisions/${r.number}">${time(r.at)}</a></td>'
+        '<td>${esc(r.by)}</td>'
+        '<td>${esc(r.summary)}${i == 0 ? ' <span class="years">(current)</span>' : ''}</td>'
+        '</tr>',
+      );
     }
-    sb.write('</table>${revisions.length > 1 ? '<p><button>Compare</button></p>' : ''}</form>');
+    sb.write(
+      '</table>${revisions.length > 1 ? '<p><button>Compare</button></p>' : ''}</form>',
+    );
     return page('History of ${p.name}', sb.toString());
   }
 
-  String revision(Person p, Revision r, {required bool isCurrent}) => page(
-      '${p.name}, version ${r.number}',
-      '''
+  String revision(
+    Person p,
+    Revision r, {
+    required bool isCurrent,
+  }) => page('${p.name}, version ${r.number}', '''
 <h1>${personLink(p.id)}: version ${r.number}</h1>
 <p class="lead">Saved ${time(r.at)} by ${esc(r.by)}: “${esc(r.summary)}”. <a href="/people/${p.id}/history">All versions</a></p>
-${isCurrent ? '<p class="lead">This is the current version.</p>' : _canEdit ? '<form method="post" action="/people/${p.id}/restore"><input type="hidden" name="number" value="${r.number}"><button>Restore this version</button> <span class="years">The current text is kept in the history.</span></form>' : ''}
+${isCurrent
+      ? '<p class="lead">This is the current version.</p>'
+      : _canEdit
+      ? '<form method="post" action="/people/${p.id}/restore"><input type="hidden" name="number" value="${r.number}"><button>Restore this version</button> <span class="years">The current text is kept in the history.</span></form>'
+      : ''}
 <pre class="source">${esc(r.source)}</pre>
 ''');
 
-  String compare(Person p, Revision from, Revision to) => page(
-      'Compare versions of ${p.name}',
-      '''
+  String compare(Person p, Revision from, Revision to) =>
+      page('Compare versions of ${p.name}', '''
 <h1>${personLink(p.id)}: version ${from.number} to ${to.number}</h1>
 <p class="lead">${from.number == 0 ? 'From before the page existed' : 'From <a href="/people/${p.id}/revisions/${from.number}">${time(from.at)}</a> by ${esc(from.by)}'}, to <a href="/people/${p.id}/revisions/${to.number}">${time(to.at)}</a> by ${esc(to.by)}. <a href="/people/${p.id}/history">All versions</a></p>
 ${diff(from.source, to.source)}
@@ -407,7 +520,9 @@ ${diff(from.source, to.source)}
   /// A line-by-line comparison, with unchanged stretches folded away.
   String diff(String before, String after) {
     final lines = diffLines(before, after);
-    if (lines.every((l) => l.kind == DiffKind.same)) return '<p class="lead">The two versions are identical.</p>';
+    if (lines.every((l) => l.kind == DiffKind.same)) {
+      return '<p class="lead">The two versions are identical.</p>';
+    }
     // Keep two lines of context around each change.
     final keep = List.filled(lines.length, false);
     for (var i = 0; i < lines.length; i++) {
@@ -430,7 +545,9 @@ ${diff(from.source, to.source)}
         DiffKind.removed => ('removed', '−'),
         DiffKind.added => ('added', '+'),
       };
-      sb.write('<div class="$cls"><span class="mark">$mark</span>${esc(line.text)}</div>');
+      sb.write(
+        '<div class="$cls"><span class="mark">$mark</span>${esc(line.text)}</div>',
+      );
     }
     sb.write('</div>');
     return sb.toString();
@@ -441,21 +558,41 @@ ${diff(from.source, to.source)}
     if (changes.isEmpty) {
       sb.write('<p class="lead">Nothing has changed yet.</p>');
     } else {
-      sb.write('<p class="lead">Every change to the tree, newest first.</p><table class="history">');
+      sb.write(
+        '<p class="lead">Every change to the tree, newest first.</p><table class="history">',
+      );
       for (final c in changes) {
         final pages = c.pages.length > 5
             ? '${c.pages.length} pages'
             : c.pages.entries
-                .map((e) => '${personLink(e.key)} <a class="years" href="/people/${e.key}/compare?from=${e.value - 1}&amp;to=${e.value}">(what changed)</a>')
-                .join(', ');
-        sb.write('<tr><td>${time(c.at)}</td><td>${esc(c.by)}</td><td>${esc(c.summary)}</td><td>$pages</td></tr>');
+                  .map(
+                    (e) =>
+                        '${personLink(e.key)} <a class="years" href="/people/${e.key}/compare?from=${e.value - 1}&amp;to=${e.value}">(what changed)</a>',
+                  )
+                  .join(', ');
+        sb.write(
+          '<tr><td>${time(c.at)}</td><td>${esc(c.by)}</td><td>${esc(c.summary)}</td><td>$pages</td></tr>',
+        );
       }
       sb.write('</table>');
     }
     return page('Recent changes', sb.toString());
   }
 
-  static const _monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  static const _monthNames = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
 
   /// `12 Oct 2026, 20:46`, in the server's time zone.
   static String time(DateTime at) {
@@ -463,11 +600,15 @@ ${diff(from.source, to.source)}
     return '${t.day} ${_monthNames[t.month - 1]} ${t.year}, ${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
   }
 
-  String forbidden(String what) => page('Not allowed', '<h1>Not allowed</h1><p class="lead">${esc(what)}</p>');
+  String forbidden(String what) => page(
+    'Not allowed',
+    '<h1>Not allowed</h1><p class="lead">${esc(what)}</p>',
+  );
 
   /// The page shown to someone who is not signed in. [config] is handed to
   /// the browser-side sign-in code.
-  static String signIn(String treeName, Map<String, Object?> config) => '''
+  static String signIn(String treeName, Map<String, Object?> config) =>
+      '''
 <!doctype html>
 <html lang="en">
 <head>
@@ -489,7 +630,8 @@ ${diff(from.source, to.source)}
 </html>
 ''';
 
-  String notFound(String what) => page('Not found', '<h1>Not found</h1><p class="lead">${esc(what)}</p>');
+  String notFound(String what) =>
+      page('Not found', '<h1>Not found</h1><p class="lead">${esc(what)}</p>');
 }
 
 const stylesheet = '''

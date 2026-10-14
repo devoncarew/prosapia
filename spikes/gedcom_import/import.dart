@@ -14,12 +14,17 @@ import 'dart:io';
 
 void main(List<String> args) {
   if (args.length < 2) {
-    stderr.writeln('usage: dart run import.dart <export.ged> <out-dir> [backup.ftmb]');
+    stderr.writeln(
+      'usage: dart run import.dart <export.ged> <out-dir> [backup.ftmb]',
+    );
     exit(64);
   }
   final outDir = args[1];
   final records = parse(File(args[0]).readAsStringSync());
-  final byXref = {for (final r in records) if (r.xref != null) r.xref!: r};
+  final byXref = {
+    for (final r in records)
+      if (r.xref != null) r.xref!: r,
+  };
   final report = Report();
 
   final people = records.where((r) => r.tag == 'INDI').toList();
@@ -47,7 +52,10 @@ void main(List<String> args) {
         // one parent can appear in more than one of them.
         final id = ids[parent.value]!;
         if (list.any((m) => m['id'] == id)) continue;
-        list.add({'id': id, if (rel != 'Natural') 'relationship': rel.toLowerCase()});
+        list.add({
+          'id': id,
+          if (rel != 'Natural') 'relationship': rel.toLowerCase(),
+        });
       }
     }
   }
@@ -56,13 +64,19 @@ void main(List<String> args) {
   for (final p in people) {
     final id = ids[p.xref]!;
     final names = p.all('NAME').toList();
-    final primary = names.firstWhere((n) => n.first('TYPE') == null, orElse: () => names.first);
+    final primary = names.firstWhere(
+      (n) => n.first('TYPE') == null,
+      orElse: () => names.first,
+    );
     final y = Yaml();
     y.field('id', id);
     y.field('name', plainName(primary.value));
     final surname = RegExp(r'/([^/]*)/').firstMatch(primary.value)?.group(1);
     if (surname != null && surname.isNotEmpty) y.field('surname', surname);
-    final others = [for (final n in names) if (n != primary) plainName(n.value)];
+    final others = [
+      for (final n in names)
+        if (n != primary) plainName(n.value),
+    ];
     if (others.isNotEmpty) y.list('also_known_as', others);
     final sex = {'M': 'male', 'F': 'female'}[p.first('SEX')?.value];
     if (sex != null) y.field('sex', sex);
@@ -85,20 +99,30 @@ void main(List<String> args) {
     for (final e in p.children) {
       final type = factTypes[e.tag];
       if (type == null) {
-        if (!handledPersonTags.contains(e.tag)) report.unmapped('INDI.${e.tag}');
+        if (!handledPersonTags.contains(e.tag)) {
+          report.unmapped('INDI.${e.tag}');
+        }
         continue;
       }
-      facts.add({'type': type, if (e.value.isNotEmpty) 'value': e.value, ...eventFields(e, report)});
+      facts.add({
+        'type': type,
+        if (e.value.isNotEmpty) 'value': e.value,
+        ...eventFields(e, report),
+      });
     }
     if (facts.isNotEmpty) y.maps('facts', facts);
     y.field('gedcom_id', p.xref!.replaceAll('@', ''));
 
     final notes = [
       for (final n in p.all('NOTE'))
-        (n.value.startsWith('@') ? byXref[n.value]?.value ?? '' : n.value).trim()
+        (n.value.startsWith('@') ? byXref[n.value]?.value ?? '' : n.value)
+            .trim(),
     ].where((t) => t.isNotEmpty);
 
-    write('$outDir/people/${personDir(plainName(primary.value), surname, id)}/index.md', '---\n$y---\n${notes.isEmpty ? '' : '\n${notes.join('\n\n')}\n'}');
+    write(
+      '$outDir/people/${personDir(plainName(primary.value), surname, id)}/index.md',
+      '---\n$y---\n${notes.isEmpty ? '' : '\n${notes.join('\n\n')}\n'}',
+    );
     report.people++;
     if (notes.isNotEmpty) report.withProse++;
   }
@@ -106,7 +130,10 @@ void main(List<String> args) {
   // Partnerships. A family with one known parent needs no record: its
   // children already list that parent.
   for (final fam in families) {
-    final partners = [for (final role in ['HUSB', 'WIFE']) if (fam.first(role) != null) ids[fam.first(role)!.value]!];
+    final partners = [
+      for (final role in ['HUSB', 'WIFE'])
+        if (fam.first(role) != null) ids[fam.first(role)!.value]!,
+    ];
     final marr = fam.first('MARR');
     if (partners.length < 2 && marr == null) continue;
     final id = ids[fam.xref]!;
@@ -114,20 +141,29 @@ void main(List<String> args) {
     y.field('id', id);
     y.list('partners', partners);
     if (marr != null) {
-      y.map('married', {if (marr.value.isNotEmpty) 'note': marr.value, ...eventFields(marr, report)});
+      y.map('married', {
+        if (marr.value.isNotEmpty) 'note': marr.value,
+        ...eventFields(marr, report),
+      });
     }
     y.field('gedcom_id', fam.xref!.replaceAll('@', ''));
     for (final c in fam.children) {
-      if (!const {'HUSB', 'WIFE', 'CHIL', 'MARR'}.contains(c.tag)) report.unmapped('FAM.${c.tag}');
+      if (!const {'HUSB', 'WIFE', 'CHIL', 'MARR'}.contains(c.tag)) {
+        report.unmapped('FAM.${c.tag}');
+      }
     }
     write('$outDir/unions/$id.md', '---\n$y---\n');
     report.unions++;
   }
 
-  write('$outDir/tree.yaml', 'name: Carew sample tree\nimported_from: ${args[0].split('/').last}\n');
+  write(
+    '$outDir/tree.yaml',
+    'name: Carew sample tree\nimported_from: ${args[0].split('/').last}\n',
+  );
 
   // Photos.
-  final shown = <String, List<Record>>{}; // media xref -> people it is attached to
+  final shown =
+      <String, List<Record>>{}; // media xref -> people it is attached to
   for (final p in people) {
     for (final o in [...p.all('OBJE'), ...p.all('_PHOTO')]) {
       final list = shown.putIfAbsent(o.value, () => []);
@@ -155,7 +191,17 @@ const factTypes = {
   '_DEG': 'degree',
 };
 
-const handledPersonTags = {'NAME', 'SEX', 'BIRT', 'DEAT', 'FAMC', 'FAMS', 'NOTE', 'OBJE', '_PHOTO'};
+const handledPersonTags = {
+  'NAME',
+  'SEX',
+  'BIRT',
+  'DEAT',
+  'FAMC',
+  'FAMS',
+  'NOTE',
+  'OBJE',
+  '_PHOTO',
+};
 
 /// The date, place and coordinates of an event, in the order they are written.
 Map<String, String> eventFields(Record e, Report report) {
@@ -163,23 +209,44 @@ Map<String, String> eventFields(Record e, Report report) {
   final place = e.first('PLAC');
   final map = place?.first('MAP');
   for (final c in e.children) {
-    if (!const {'DATE', 'PLAC'}.contains(c.tag)) report.unmapped('event.${c.tag}');
+    if (!const {'DATE', 'PLAC'}.contains(c.tag)) {
+      report.unmapped('event.${c.tag}');
+    }
   }
   return {
     if (date != null) 'date': convertDate(date, report),
     if (place != null) 'place': place.value,
-    if (map != null) 'coordinates': '[${coordinate(map.first('LATI')!.value)}, ${coordinate(map.first('LONG')!.value)}]',
+    if (map != null)
+      'coordinates':
+          '[${coordinate(map.first('LATI')!.value)}, ${coordinate(map.first('LONG')!.value)}]',
   };
 }
 
-const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+const months = [
+  'JAN',
+  'FEB',
+  'MAR',
+  'APR',
+  'MAY',
+  'JUN',
+  'JUL',
+  'AUG',
+  'SEP',
+  'OCT',
+  'NOV',
+  'DEC',
+];
 
 /// Exact dates become ISO (1950-05-17, 1987-11, 1972). Anything qualified or
 /// ranged stays in GEDCOM's own grammar (ABT 1961, BET 1880 AND 1885).
 String convertDate(String date, Report report) {
-  final m = RegExp(r'^(?:(\d{1,2}) )?(?:([A-Z]{3}) )?(\d{4})$').firstMatch(date);
+  final m = RegExp(
+    r'^(?:(\d{1,2}) )?(?:([A-Z]{3}) )?(\d{4})$',
+  ).firstMatch(date);
   if (m == null || (m[1] != null && m[2] == null)) {
-    if (!RegExp(r'^(ABT|BEF|AFT|CAL|EST) |^BET .* AND |^FROM |^TO ').hasMatch(date)) {
+    if (!RegExp(
+      r'^(ABT|BEF|AFT|CAL|EST) |^BET .* AND |^FROM |^TO ',
+    ).hasMatch(date)) {
       report.oddDates.add(date);
     }
     return date;
@@ -197,25 +264,43 @@ String convertDate(String date, Report report) {
 }
 
 /// N41.5083 -> 41.5083, W71.2417 -> -71.2417.
-String coordinate(String v) => '${'SW'.contains(v[0]) ? '-' : ''}${v.substring(1)}';
+String coordinate(String v) =>
+    '${'SW'.contains(v[0]) ? '-' : ''}${v.substring(1)}';
 
 /// A readable directory name ending in the id: carew-howard-joseph-tbczm8.
 /// Surname first, so a listing groups families. Only the trailing id
 /// identifies the person; the rest is never relied on.
 String personDir(String name, String? surname, String id) {
   var given = name;
-  if (surname != null && surname.isNotEmpty) given = name.replaceFirst(surname, '');
-  final slug = '${surname ?? ''} $given'.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-').replaceAll(RegExp(r'^-+|-+$'), '');
+  if (surname != null && surname.isNotEmpty) {
+    given = name.replaceFirst(surname, '');
+  }
+  final slug = '${surname ?? ''} $given'
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'^-+|-+$'), '');
   return '${slug.isEmpty ? '' : '$slug-'}${id.substring(2)}';
 }
 
-String plainName(String gedcomName) => gedcomName.replaceAll('/', '').replaceAll(RegExp(r'\s+'), ' ').trim();
+String plainName(String gedcomName) =>
+    gedcomName.replaceAll('/', '').replaceAll(RegExp(r'\s+'), ' ').trim();
 
-void importPhotos(String backup, String outDir, List<Record> objects, Map<String, String> ids,
-    Map<String, List<Record>> shown, Report report) {
+void importPhotos(
+  String backup,
+  String outDir,
+  List<Record> objects,
+  Map<String, String> ids,
+  Map<String, List<Record>> shown,
+  Report report,
+) {
   final tmp = Directory.systemTemp.createTempSync('prosapia_import_');
-  final names = {for (final o in objects) o: o.first('FILE')!.value.split(RegExp(r'[\\/]')).last};
-  final listing = (Process.runSync('unzip', ['-Z1', backup]).stdout as String).split('\n').toSet();
+  final names = {
+    for (final o in objects)
+      o: o.first('FILE')!.value.split(RegExp(r'[\\/]')).last,
+  };
+  final listing = (Process.runSync('unzip', ['-Z1', backup]).stdout as String)
+      .split('\n')
+      .toSet();
   final wanted = <Record, String>{}; // record -> path inside the backup
   for (final o in objects) {
     final match = listing.where((l) => l.split('/').last == names[o]);
@@ -229,7 +314,8 @@ void importPhotos(String backup, String outDir, List<Record> objects, Map<String
   final res = Process.runSync('unzip', [
     '-q', '-o', '-j', backup,
     // Two records may refer to one file; name it once.
-    for (final path in wanted.values.toSet()) path.replaceAllMapped(RegExp(r'[\[\]*?]'), (m) => '\\${m[0]}'),
+    for (final path in wanted.values.toSet())
+      path.replaceAllMapped(RegExp(r'[\[\]*?]'), (m) => '\\${m[0]}'),
     '-d', tmp.path,
   ]);
   if (res.exitCode > 1) throw StateError('unzip failed: ${res.stderr}');
@@ -264,9 +350,13 @@ void importPhotos(String backup, String outDir, List<Record> objects, Map<String
       for (final p in persons) {
         final name = plainName(p.first('NAME')!.value);
         argfile.writeln('-XMP-iptcExt:PersonInImage+=$name');
-        structs.add('{PersonName=${escapeStruct(name)},PersonId=[prosapia:${ids[p.xref]}]}');
+        structs.add(
+          '{PersonName=${escapeStruct(name)},PersonId=[prosapia:${ids[p.xref]}]}',
+        );
       }
-      argfile.writeln('-XMP-iptcExt:PersonInImageWDetails=[${structs.join(',')}]');
+      argfile.writeln(
+        '-XMP-iptcExt:PersonInImageWDetails=[${structs.join(',')}]',
+      );
     }
     argfile
       ..writeln(dest)
@@ -278,11 +368,14 @@ void importPhotos(String backup, String outDir, List<Record> objects, Map<String
   final argPath = '${tmp.path}/args.txt';
   File(argPath).writeAsStringSync(argfile.toString());
   final exif = Process.runSync('exiftool', ['-q', '-@', argPath]);
-  if ((exif.stderr as String).trim().isNotEmpty) report.exifWarnings = (exif.stderr as String).trim();
+  if ((exif.stderr as String).trim().isNotEmpty) {
+    report.exifWarnings = (exif.stderr as String).trim();
+  }
   tmp.deleteSync(recursive: true);
 }
 
-String escapeStruct(String s) => s.replaceAllMapped(RegExp(r'[,\[\]{}|]'), (m) => '|${m[0]}');
+String escapeStruct(String s) =>
+    s.replaceAllMapped(RegExp(r'[,\[\]{}|]'), (m) => '|${m[0]}');
 
 void write(String path, String content) {
   File(path)
@@ -355,11 +448,14 @@ class Yaml {
 
   void field(String key, String value) => _sb.writeln('$key: ${scalar(value)}');
 
-  void list(String key, List<String> values) => _sb.writeln('$key: [${values.map(scalar).join(', ')}]');
+  void list(String key, List<String> values) =>
+      _sb.writeln('$key: [${values.map(scalar).join(', ')}]');
 
   void map(String key, Map<String, String> fields) {
     _sb.writeln('$key:');
-    fields.forEach((k, v) => _sb.writeln('  $k: ${scalar(v, raw: k == 'coordinates')}'));
+    fields.forEach(
+      (k, v) => _sb.writeln('  $k: ${scalar(v, raw: k == 'coordinates')}'),
+    );
   }
 
   void maps(String key, List<Map<String, String>> items) {
@@ -375,7 +471,9 @@ class Yaml {
 
   static String scalar(String v, {bool raw = false}) {
     if (raw) return v;
-    final plain = RegExp(r"^[A-Za-z0-9][A-Za-z0-9 .'/()&-]*$").hasMatch(v) && !v.endsWith(' ');
+    final plain =
+        RegExp(r"^[A-Za-z0-9][A-Za-z0-9 .'/()&-]*$").hasMatch(v) &&
+        !v.endsWith(' ');
     return plain ? v : jsonEncode(v);
   }
 
@@ -398,15 +496,17 @@ class Report {
 
   @override
   String toString() => [
-        'people: $people ($withProse with prose)',
-        'unions: $unions',
-        'photos: $photos copied, $photosUntitled untitled, $photosNoPeople attached to nobody'
-            '${photosSkipped > 0 ? ', $photosSkipped skipped (no backup given)' : ''}',
-        if (mediaTypes.isNotEmpty) 'media types: $mediaTypes',
-        if (photosMissing.isNotEmpty) 'photos not found in backup: ${photosMissing.length}: ${photosMissing.take(5).join(', ')}',
-        if (oddDates.isNotEmpty) 'dates kept as written: ${oddDates.toSet().join(' | ')}',
-        if (_unmapped.isNotEmpty) 'not imported: $_unmapped',
-        if (exifWarnings != null) 'exiftool: $exifWarnings',
-        '',
-      ].join('\n');
+    'people: $people ($withProse with prose)',
+    'unions: $unions',
+    'photos: $photos copied, $photosUntitled untitled, $photosNoPeople attached to nobody'
+        '${photosSkipped > 0 ? ', $photosSkipped skipped (no backup given)' : ''}',
+    if (mediaTypes.isNotEmpty) 'media types: $mediaTypes',
+    if (photosMissing.isNotEmpty)
+      'photos not found in backup: ${photosMissing.length}: ${photosMissing.take(5).join(', ')}',
+    if (oddDates.isNotEmpty)
+      'dates kept as written: ${oddDates.toSet().join(' | ')}',
+    if (_unmapped.isNotEmpty) 'not imported: $_unmapped',
+    if (exifWarnings != null) 'exiftool: $exifWarnings',
+    '',
+  ].join('\n');
 }
