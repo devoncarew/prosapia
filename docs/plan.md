@@ -29,33 +29,15 @@ links to, not here.
 
 ## Planned milestones
 
-### Milestone 11: Firebase project
-
-Needed before milestone 5. A project's id is permanent, so choose it with the name in
-mind; `prosapia` itself may be taken.
-
-- Reserve `prosapia.app` with the registrar already in use (Squarespace). Until it is
-  attached, the site runs at Firebase Hosting's own address, `<project-id>.web.app`.
-- Create the Firebase project. Done: its id is `prosapia-ea818`, known to the Firebase
-  tools as `prod` (`firebase use prod`); the emulators stay on `demo-prosapia`.
-- Attach a billing account on the pay-as-you-go plan, with a budget alert.
-- Choose the region for Firestore and Cloud Storage. This cannot be changed later.
-- Switch on Firestore, Cloud Storage and sign-in with Google.
-- Register the web app and record its settings where the server reads them.
-- Decide how the deployed server and a developer's machine each get credentials, without
-  a long-lived key file if possible.
-- Deploy the database and storage rules already in the repository, which deny all direct
-  access.
-
-Done when: the server, run locally, serves a small test tree from the real project to a
-member who signed in with a real Google account.
-
 ### Milestone 5: deploy and backup
 
-Put the site on the internet for one family, in the Firebase project from milestone 11.
+Put the site on the internet for one family, in the Firebase project `prosapia-ea818`.
 
-- The server in a container on Cloud Run, behind Firebase Hosting, with real Google
-  sign-in.
+- The server in a container on Cloud Run in `us-west1`, beside the database and storage,
+  behind Firebase Hosting. On Cloud Run the server's credentials come from its service
+  account, so no key file is needed there either.
+- Reserve `prosapia.app` (with the registrar already in use, Squarespace) and attach it.
+  Until then the site is at `prosapia-ea818.web.app`.
 - Confirm that a sign-in with a forged signature is refused. The emulators cannot test
   this.
 - Invite members by email address, and change or remove them, from the site.
@@ -224,6 +206,11 @@ switch the feature on, since using it sends family data to the model's provider.
 
 Newest first.
 
+- **Milestone 11, Firebase project.** The project `prosapia-ea818` has billing with a
+  budget alert, Firestore and Cloud Storage in `us-west1`, Google sign-in, a registered
+  web app, and deny-all rules; the server, run locally with a developer's own `gcloud`
+  login, serves an invented test tree from it to a member signed in with a real Google
+  account.
 - **Milestone 10, GitHub project and continuous integration.** The code is public at
   `devoncarew/prosapia` under the BSD 3-Clause licence; every pull request runs Dart
   formatting, strict analysis and tests, the browser code's type check, lint and build,

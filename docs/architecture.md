@@ -40,6 +40,7 @@ Direction set:
 | Front door | Firebase Hosting: custom domain, HTTPS, caching; forwards page requests to the server |
 | Browser | TypeScript. Pages are server-rendered HTML; the editor is the one substantial browser-side component |
 | Sign-in | Firebase Authentication with Google accounts |
+| Region | `us-west1` for the database, storage and the server |
 | Records | Firestore |
 | Photos and large files | Cloud Storage for Firebase |
 | Search and relationship lookups | An in-memory SQLite index with full-text search, built when the server loads the tree |

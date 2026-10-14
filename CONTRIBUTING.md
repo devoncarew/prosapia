@@ -45,6 +45,21 @@ Anyone not on the member list is refused. Owners and editors can edit pages; add
 Resized images and files fetched from storage go in `.prosapia_cache/`, which can be
 deleted at any time.
 
+### Against the real Firebase project
+
+The server can also run on your machine against the real project, `prosapia-ea818`, with
+your own Google login and no key file. You need access to the project and
+`gcloud auth application-default login` done once.
+
+```
+dart run tool/check_credentials.dart prosapia-ea818
+dart run prosapia --project prosapia-ea818 --tree hughes
+```
+
+The first line checks your credentials reach the database and storage. The second serves
+`hughes`, a small invented tree in [test/fixtures/tree](test/fixtures/tree) loaded for
+testing; sign in with a real Google account that is one of its members.
+
 ## Checks
 
 Continuous integration runs these on every pull request. To run them yourself:
