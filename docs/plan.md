@@ -24,10 +24,8 @@ Keeping it current:
 - **Milestone numbers are never reused**, so a number in a commit message or another
   document always means the same thing.
 
-Design decisions and their reasons live in the other documents, not here:
-[architecture.md](architecture.md), [content-model.md](content-model.md),
-[media.md](media.md), [sharing.md](sharing.md) and
-[open-questions.md](open-questions.md).
+Design decisions and their reasons live in [design.md](design.md) and the documents it
+links to, not here.
 
 ## Planned milestones
 
@@ -38,8 +36,9 @@ mind; `prosapia` itself may be taken.
 
 - Reserve `prosapia.app` with the registrar already in use (Squarespace). Until it is
   attached, the site runs at Firebase Hosting's own address, `<project-id>.web.app`.
-- Create the Firebase project and attach a billing account on the pay-as-you-go plan,
-  with a budget alert.
+- Create the Firebase project. Done: its id is `prosapia-ea818`, known to the Firebase
+  tools as `prod` (`firebase use prod`); the emulators stay on `demo-prosapia`.
+- Attach a billing account on the pay-as-you-go plan, with a budget alert.
 - Choose the region for Firestore and Cloud Storage. This cannot be changed later.
 - Switch on Firestore, Cloud Storage and sign-in with Google.
 - Register the web app and record its settings where the server reads them.

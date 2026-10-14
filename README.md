@@ -51,7 +51,7 @@ Working today:
 | [docs/content-model.md](docs/content-model.md) | What a person's page holds, sources and citations, GEDCOM import and export |
 | [docs/media.md](docs/media.md) | Photos: storage formats, embedded metadata, fronts and backs, rolls |
 | [docs/sharing.md](docs/sharing.md) | Privacy, sharing and trust (not yet designed in full) |
-| [docs/open-questions.md](docs/open-questions.md) | Decisions still open, and how the big ones were settled |
+| [docs/design.md](docs/design.md) | The main decisions and why, and the questions still open |
 | [docs/plan.md](docs/plan.md) | What is being built next, known future work, and a changelog |
 
 ## Contributing
