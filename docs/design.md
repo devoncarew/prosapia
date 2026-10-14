@@ -36,6 +36,20 @@ PostgreSQL, an existing wiki engine, and Google Drive. PostgreSQL fits family
 relationships better than Firestore and remains the fallback; Firestore was chosen for
 having no running cost and nothing to operate at one family's size.
 
+## Language models
+
+Prosapia may call a language model, Claude or Gemini, to help write the record. Three
+rules shape every use:
+
+- **Never when serving a page.** A model runs when a member asks for it, or in a batch
+  an owner starts, never as part of showing content. This keeps cost bounded and pages
+  fast.
+- **Nothing a model writes enters the record without a person choosing it.** The model
+  produces a draft; a member reads it, edits it if they wish, and saves it as an edit
+  under their own name.
+- **The record says so.** A revision that began as a model's draft is marked as such,
+  with the model's name, so anyone reading the history can tell.
+
 ## Open questions
 
 None of these blocks current work. Each is discussed in the document named after it.
@@ -52,5 +66,4 @@ None of these blocks current work. Each is discussed in the document named after
   (sharing).
 - Documents, audio and the exact limit for stored video (media).
 - Which research sites permit automated capture (content model).
-- Generated text: which model for which job, its cost, and whether an owner must switch
-  it on (plan).
+- Generated text: which model for which job, and its cost (plan, milestone 16).
