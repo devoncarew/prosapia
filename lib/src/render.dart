@@ -184,10 +184,10 @@ $body
 
   /// A life in order: structured events, family events, and dated headings
   /// from the prose. Facts with no date are returned separately.
-  (List<({LoomDate date, String html})>, List<String>) _timeline(Person p) {
-    final dated = <({LoomDate date, String html})>[];
+  (List<({TreeDate date, String html})>, List<String>) _timeline(Person p) {
+    final dated = <({TreeDate date, String html})>[];
     final undated = <String>[];
-    void add(LoomDate? date, String html) =>
+    void add(TreeDate? date, String html) =>
         date == null ? undated.add(html) : dated.add((date: date, html: html));
     String at(String? place) => place == null ? '' : ' <span class="place">${esc(place)}</span>';
 
@@ -208,7 +208,7 @@ $body
     }
     for (final m in RegExp(r'^##\s+((?:\d{1,2} )?(?:[A-Za-z]{3,9} )?\d{4})\s*[:–-]\s*(.+)$', multiLine: true).allMatches(p.body)) {
       final year = RegExp(r'\d{4}').firstMatch(m[1]!)![0]!;
-      add(LoomDate(year), esc(m[2]));
+      add(TreeDate(year), esc(m[2]));
     }
     if (p.died?.date != null) add(p.died!.date, 'Died${at(p.died!.place)}');
 

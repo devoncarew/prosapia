@@ -124,7 +124,7 @@ void main(List<String> args) {
     report.unions++;
   }
 
-  write('$outDir/loom.yaml', 'name: Carew sample tree\nimported_from: ${args[0].split('/').last}\n');
+  write('$outDir/tree.yaml', 'name: Carew sample tree\nimported_from: ${args[0].split('/').last}\n');
 
   // Photos.
   final shown = <String, List<Record>>{}; // media xref -> people it is attached to
@@ -213,7 +213,7 @@ String plainName(String gedcomName) => gedcomName.replaceAll('/', '').replaceAll
 
 void importPhotos(String backup, String outDir, List<Record> objects, Map<String, String> ids,
     Map<String, List<Record>> shown, Report report) {
-  final tmp = Directory.systemTemp.createTempSync('loom_import_');
+  final tmp = Directory.systemTemp.createTempSync('prosapia_import_');
   final names = {for (final o in objects) o: o.first('FILE')!.value.split(RegExp(r'[\\/]')).last};
   final listing = (Process.runSync('unzip', ['-Z1', backup]).stdout as String).split('\n').toSet();
   final wanted = <Record, String>{}; // record -> path inside the backup
@@ -254,7 +254,7 @@ void importPhotos(String backup, String outDir, List<Record> objects, Map<String
     // Metadata only: the image data is not re-encoded.
     argfile
       ..writeln('-overwrite_original')
-      ..writeln('-XMP-dc:Identifier=loom:$id');
+      ..writeln('-XMP-dc:Identifier=prosapia:$id');
     if (title != null) argfile.writeln('-XMP-dc:Title=$title');
     if (text != null) argfile.writeln('-XMP-dc:Description=$text');
     final persons = shown[o.xref] ?? const [];
@@ -264,7 +264,7 @@ void importPhotos(String backup, String outDir, List<Record> objects, Map<String
       for (final p in persons) {
         final name = plainName(p.first('NAME')!.value);
         argfile.writeln('-XMP-iptcExt:PersonInImage+=$name');
-        structs.add('{PersonName=${escapeStruct(name)},PersonId=[loom:${ids[p.xref]}]}');
+        structs.add('{PersonName=${escapeStruct(name)},PersonId=[prosapia:${ids[p.xref]}]}');
       }
       argfile.writeln('-XMP-iptcExt:PersonInImageWDetails=[${structs.join(',')}]');
     }
@@ -349,7 +349,7 @@ List<Record> parse(String text) {
 
 // -------------------------------------------------------------------- YAML
 
-/// Writes the small subset of YAML that Loom's front matter uses.
+/// Writes the small subset of YAML that Prosapia's front matter uses.
 class Yaml {
   final _sb = StringBuffer();
 

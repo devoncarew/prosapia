@@ -1,8 +1,8 @@
 # Photos and media
 
 What is known about a photo is written into the photo file, using existing metadata
-standards, so a copy emailed to a cousin still says who is in it. Loom keeps the same
-facts in its database for searching, but the file is the authority.
+standards, so a copy emailed to a cousin still says who is in it. Prosapia keeps the
+same facts in its database for searching, but the file is the authority.
 
 The field names below are from memory and should be checked against the current
 specifications in milestone 6 of the [plan](plan.md).
@@ -17,7 +17,7 @@ specifications in milestone 6 of the [plan](plan.md).
 | Caption or title | XMP `dc:title` |
 | Where it was taken | IPTC `Location Shown` |
 | Who holds the original, who scanned it | XMP `dc:source` and `dc:rights` |
-| Link back to Loom | The photo id in XMP `dc:identifier`; each person's id in the standard IPTC `Person Shown with Details` field. Which side this is (front or back) needs a field of Loom's own |
+| Link back to Prosapia | The photo id in XMP `dc:identifier`; each person's id in the standard IPTC `Person Shown with Details` field. Which side this is (front or back) needs a field of Prosapia's own |
 
 ## How a photo is stored
 
@@ -28,7 +28,7 @@ embedded id.
 <!-- prettier-ignore -->
 | What arrives | Stored as |
 | --- | --- |
-| A JPEG, from a camera, phone or scanner | That file as it is. The pixels are never re-compressed; Loom adds metadata beside what the camera wrote |
+| A JPEG, from a camera, phone or scanner | That file as it is. The pixels are never re-compressed; Prosapia adds metadata beside what the camera wrote |
 | An uncompressed scan, such as TIFF or PNG | A JPEG, encoded once at high quality. The uncompressed file is not kept |
 | A HEIC, the default from iPhones | That file as it is |
 | A front and a back | Two files, each handled by the rules above |
@@ -52,8 +52,8 @@ media/
   matched again.
 - **The front carries the transcription of the back**, so the words survive even if the
   back is lost.
-- **Loom keeps them together** when viewing, exporting and moving. The association is
-  read from the names and the embedded ids, so the pairing can always be rebuilt from
+- **Prosapia keeps them together** when viewing, exporting and moving. The association
+  is read from the names and the embedded ids, so the pairing can always be rebuilt from
   the files alone.
 
 This replaces the earlier requirement that the two sides be physically one file. The
@@ -88,17 +88,17 @@ names above. Very large files, such as video, are listed there but not copied.
 
 ### Video
 
-Proposed: Loom stores short clips and links to long videos.
+Proposed: Prosapia stores short clips and links to long videos.
 
 - **A short clip is stored like a photo**, up to a size limit. The working limit is 50
   MB, roughly a minute of phone video.
 - **A longer video is a link** to wherever it is hosted, such as YouTube or a shared
-  drive, with a title, a date and the people in it recorded in Loom.
+  drive, with a title, a date and the people in it recorded in Prosapia.
 - **Common video formats cannot carry embedded text reliably**, so for video the
   database record is the authority, not the file.
 
 The sample tree's one video is 259 MB and was skipped on load under this rule. Open: the
-exact limit, and whether Loom should offer to make a short excerpt of a long video.
+exact limit, and whether Prosapia should offer to make a short excerpt of a long video.
 
 ### Display copies
 
@@ -110,9 +110,9 @@ do not display HEIC. They are cached, and the cache can be deleted at any time.
 
 - **Embedded metadata is canonical for facts about the image.** The page that uses the
   photo holds the story around it.
-- **Names are written as text and as ids.** Text survives outside Loom; ids let Loom
-  link a face to a person page.
-- **Loom writes metadata on save and reads it on import.** A photo tagged elsewhere
+- **Names are written as text and as ids.** Text survives outside Prosapia; ids let
+  Prosapia link a face to a person page.
+- **Prosapia writes metadata on save and reads it on import.** A photo tagged elsewhere
   arrives with its people already named.
 - **Metadata edits never re-encode the image.** They rewrite the metadata block only.
 

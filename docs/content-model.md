@@ -44,7 +44,7 @@ She sailed from New York in June with her cousin [Owen Price](../price-owen-4h8w
   the person is created and is never renamed automatically; if a name is later
   corrected, the old directory name still works, and a tidy-up rename is an ordinary
   edit. Structured references use the bare id (`parents: [p-3f8d1a]`) and never break.
-- **Ids from other systems are extra links, not Loom's ids.** A person may record a
+- **Ids from other systems are extra links, not Prosapia's ids.** A person may record a
   FamilySearch or WikiTree id, which identify one person in a shared tree, to link
   outward and to match people on re-import. Ancestry ids identify a row in one member's
   tree, so they are weaker. Most people in a family tree are in none of these systems.
@@ -58,12 +58,12 @@ She sailed from New York in June with her cousin [Owen Price](../price-owen-4h8w
 - **Places are free text** in the first version, as written in the source.
 - **Links between people are relative markdown links**
   (`[Owen Price](../price-owen-4h8w2r/index.md)`), not bare ids or wiki syntax. They
-  work when the exported files are read on GitHub, and Loom resolves them to the
+  work when the exported files are read on GitHub, and Prosapia resolves them to the
   person's current name.
-- **The file reads well raw; Loom renders on top.** GitHub's own markdown view of the
-  exported files is a plain fallback reader. The Loom server adds the infobox from the
-  structured facts, citation markers and derived views. It does not reorder the page
-  body: the authored order stands, and chronological ordering lives in the separate
+- **The file reads well raw; Prosapia renders on top.** GitHub's own markdown view of
+  the exported files is a plain fallback reader. The Prosapia server adds the infobox
+  from the structured facts, citation markers and derived views. It does not reorder the
+  page body: the authored order stands, and chronological ordering lives in the separate
   timeline view. One gap: GitHub does not display HEIC images inline, so those show
   there as links.
 
@@ -180,7 +180,7 @@ belongs in the research spike.
 
 - How formal should citations be? Genealogists have detailed citation conventions; most
   relatives will paste a link.
-- Does Loom record the reasoning behind a conclusion (why two records are the same
+- Does Prosapia record the reasoning behind a conclusion (why two records are the same
   person), or only the conclusion and its sources?
 - Copyright and site terms for saved record images, especially once a page is shared
   widely.
@@ -188,23 +188,23 @@ belongs in the research spike.
 
 ## GEDCOM 7.0 interchange
 
-GEDCOM 7.0 is the import and export format, not the storage format. Loom's pages hold
-more prose than GEDCOM models well, so the mapping is deliberate and some loss is
+GEDCOM 7.0 is the import and export format, not the storage format. Prosapia's pages
+hold more prose than GEDCOM models well, so the mapping is deliberate and some loss is
 accepted.
 
 The tag names below are from memory of the 7.0 specification and should be confirmed
 when the importer is built.
 
 <!-- prettier-ignore -->
-| Loom | GEDCOM 7.0 | Round-trips? |
+| Prosapia | GEDCOM 7.0 | Round-trips? |
 | --- | --- | --- |
 | Person and structured facts | `INDI` with `NAME`, `BIRT`, `DEAT` and other events | Yes |
-| Parents and partnerships | `FAM` with `HUSB`, `WIFE`, `CHIL` | Yes; Loom derives `FAM` records on export |
+| Parents and partnerships | `FAM` with `HUSB`, `WIFE`, `CHIL` | Yes; Prosapia derives `FAM` records on export |
 | Dates, including uncertain ones | Date values (`ABT`, `BET ... AND`, `BEF`, `AFT`) | Yes, same grammar |
 | Source records and citations | `SOUR` records and `SOUR` citations on facts | Yes for structured facts |
 | Media | `OBJE` with `FILE`; files bundled in a GEDZIP archive | Yes; embedded metadata rides inside the files |
 | Visibility | `RESN` (confidential, private, locked) | Deferred with the sharing model |
-| Loom ids and links to other systems | `EXID` external identifiers | Yes |
+| Prosapia ids and links to other systems | `EXID` external identifiers | Yes |
 | Page prose and dated entries | `NOTE` text, or a documented extension tag | Lossy; formatting and inline images flatten |
 
 ### Decided by the brief
@@ -217,15 +217,15 @@ when the importer is built.
   be undone as a whole.
 - **Import keeps the original file** as a source, so every imported fact can cite where
   it came from.
-- **Unknown tags are preserved**, not dropped, so a round trip through Loom does not
+- **Unknown tags are preserved**, not dropped, so a round trip through Prosapia does not
   destroy another tool's data.
 
 ### Open
 
-- **Older files.** Settled in principle: Loom must read GEDCOM 5.5.1. The first real
+- **Older files.** Settled in principle: Prosapia must read GEDCOM 5.5.1. The first real
   input, a 2024 export from Family Tree Maker, is 5.5.1 and uses that tool's own
   extension tags. How far to support 5.5 and other tools' extensions is open.
 - **Re-import and merge.** Importing a newer export of the same tree must match people
   already present, not duplicate them. Matching rules are undefined.
 - **How much prose to push out.** Whole pages as notes, a summary only, or a link back
-  to Loom.
+  to Prosapia.

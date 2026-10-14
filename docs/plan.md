@@ -2,8 +2,8 @@
 
 ## How to use this document
 
-This is the working list of what Loom is building, what it might build, and what it has
-built. It has three parts:
+This is the working list of what Prosapia is building, what it might build, and what it
+has built. It has three parts:
 
 - **Planned milestones** are scheduled and detailed: each says what will be built and
   how we will know it is done. They are listed in the order they will be worked; the
@@ -31,42 +31,10 @@ Design decisions and their reasons live in the other documents, not here:
 
 ## Planned milestones
 
-### Milestone 9: project name
-
-Chosen: **Prosapia**, Latin for lineage or family line, with a short subtitle to give
-context. "Loom" was a working title and is widely used by other products. The name needs
-settling before it is baked into a repository, a Firebase project and a web address,
-since the last two cannot be renamed.
-
-Checked on 13 and 14 October 2026:
-
-<!-- prettier-ignore -->
-| What | Result |
-| --- | --- |
-| Domains | `prosapia.app`, `.dev`, `.family` and `.wiki` are not registered. `.com` (since 1999), `.net` and `.org` are taken; `.io` appears to be in use |
-| GitHub | The `prosapia` organization was created in February 2026 by someone else and holds one repository. `prosapia-app`, `prosapiaapp` and `getprosapia` are free |
-| Package names | `prosapia` is free on pub.dev |
-| Other uses | Prosapia Genetics, LLC, a Delaware company, sold DNA ancestry reports from about 2014. Whether it still trades is unknown. *Prosapia* is also a genus of insects, and still a word for lineage in Spanish, Italian and Portuguese |
-| US trademarks | One live application for PROSAPIA, filed 29 October 2025 by 1601 LLC of Utah for agave spirits (class 33); allowed, not yet registered. One cancelled registration, for a motorcycle club. Nothing for software, genealogy or online services, and nothing from Prosapia Genetics |
-
-Still to do:
-
-- Search the European and international trademark registers (EUIPO's eSearch and WIPO's
-  Global Brand Database) for "Prosapia". The US register was searched on 14
-  October 2026.
-- Choose the subtitle.
-- Register the domain and the GitHub name.
-- Rename where the working title appears: the Dart package, the commands, the documents.
-
-Done when: the checks above are complete and recorded here, and the name is in use in
-the repository.
-
 ### Milestone 10: GitHub project and continuous integration
 
-Depends on milestone 9 for the repository's name.
-
-- Create the GitHub repository and push the history. From then on, work happens on
-  branches and merges through pull requests.
+- Create the GitHub repository, `devoncarew/prosapia`, and push the history. From then
+  on, work happens on branches and merges through pull requests.
 - Confirm nothing private is in the history first: the sample photo and its text are
   committed today.
 - Continuous integration on every pull request: Dart formatting, analysis and tests; the
@@ -82,8 +50,11 @@ failing, and the main branch is green.
 
 ### Milestone 11: Firebase project
 
-Depends on milestone 9, because a project's id is permanent. Needed before milestone 5.
+Needed before milestone 5. A project's id is permanent, so choose it with the name in
+mind; `prosapia` itself may be taken.
 
+- Reserve `prosapia.app` with the registrar already in use (Squarespace). Until it is
+  attached, the site runs at Firebase Hosting's own address, `<project-id>.web.app`.
 - Create the Firebase project and attach a billing account on the pay-as-you-go plan,
   with a budget alert.
 - Choose the region for Firestore and Cloud Storage. This cannot be changed later.
@@ -143,7 +114,7 @@ browser into a tree that is already in use.
   Cloud Storage. The server stores JPEGs and HEICs as they are, encodes uncompressed
   scans to JPEG, names the pair, and writes the metadata into each file.
 - Verify the XMP and IPTC field names in [media.md](media.md) against the
-  specifications, and define Loom's own field for which side a file is.
+  specifications, and define Prosapia's own field for which side a file is.
 - Choose the JPEG quality for scans using a real full-resolution scanner output.
 - Front and back shown together wherever the photo appears.
 - Rolls: create one, add photos in order, and suggest a frame's date or place to the
@@ -204,8 +175,8 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 
 ### Language-model assistance
 
-Loom can call a language model, Claude or Gemini, to help write the record. Three rules
-shape every use:
+Prosapia can call a language model, Claude or Gemini, to help write the record. Three
+rules shape every use:
 
 - **Never when serving a page.** A model runs when a member asks for it, or in a batch
   an owner starts, never as part of showing content. This keeps cost bounded and pages
@@ -258,6 +229,8 @@ switch the feature on, since using it sends family data to the model's provider.
 
 - Reload only what changed after a save, not the whole tree.
 - Export on every change, not nightly.
+- Search the European and international trademark registers for "Prosapia" before any
+  commercial launch. The US register showed no conflict.
 - More than one tree on one server.
 - Decide when a tree is too large to hold in memory, and what replaces that.
 
@@ -265,6 +238,10 @@ switch the feature on, since using it sends family data to the model's provider.
 
 Newest first.
 
+- **Milestone 9, project name.** The project is named Prosapia, Latin for lineage or
+  family line, with the subtitle "family history, in prose"; `prosapia.app` was
+  unregistered, and the US trademark register held only an unrelated application for
+  agave spirits, so Loom, the working title, was renamed throughout.
 - **Milestone 8, markdown formatter.** `npm run format:md` wraps the repository's
   markdown at 88 columns using Prettier, and `npm run check:md` verifies it; tables too
   wide for the line are marked `<!-- prettier-ignore -->` and kept compact, and tree

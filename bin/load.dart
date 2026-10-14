@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:args/args.dart';
 import 'package:firebase_admin_sdk/firebase_admin_sdk.dart';
-import 'package:loom/src/file_store.dart';
-import 'package:loom/src/firestore_store.dart';
-import 'package:loom/src/store.dart';
+import 'package:prosapia/src/file_store.dart';
+import 'package:prosapia/src/firestore_store.dart';
+import 'package:prosapia/src/store.dart';
 
 /// Loads a tree from files into Firestore and Cloud Storage, replacing the
 /// records of the tree with the same id, and adds its first owner.
@@ -15,7 +15,7 @@ Future<void> main(List<String> arguments) async {
     ..addMultiOption('owner', help: 'Email address of an owner. May be repeated.')
     ..addMultiOption('editor', help: 'Email address of an editor.')
     ..addMultiOption('viewer', help: 'Email address of a viewer.')
-    ..addOption('project', defaultsTo: env['GOOGLE_CLOUD_PROJECT'] ?? 'demo-loom')
+    ..addOption('project', defaultsTo: env['GOOGLE_CLOUD_PROJECT'] ?? 'demo-prosapia')
     ..addOption('bucket')
     ..addOption('max-file-mb', defaultsTo: '50', help: 'Larger media files are skipped.');
   final ArgResults args;
@@ -23,7 +23,7 @@ Future<void> main(List<String> arguments) async {
     args = parser.parse(arguments);
     if (args.rest.length != 1) throw const FormatException('Give one tree directory.');
   } on FormatException catch (e) {
-    stderr.writeln('${e.message}\n\nusage: dart run loom:load --tree <id> --owner <email> <tree-directory>\n${parser.usage}');
+    stderr.writeln('${e.message}\n\nusage: dart run prosapia:load --tree <id> --owner <email> <tree-directory>\n${parser.usage}');
     exit(64);
   }
   final project = args['project'] as String;
@@ -39,7 +39,7 @@ Future<void> main(List<String> arguments) async {
 
   final app = FirebaseApp.initializeApp(options: AppOptions(projectId: project));
   final store = FirestoreStore(app, args['tree'] as String,
-      bucketName: (args['bucket'] as String?) ?? '$project.firebasestorage.app', cacheDir: '.loom_cache');
+      bucketName: (args['bucket'] as String?) ?? '$project.firebasestorage.app', cacheDir: '.prosapia_cache');
   final watch = Stopwatch()..start();
   final result = await store.replaceWith(tree, source,
       maxMediaBytes: int.parse(args['max-file-mb'] as String) * 1000 * 1000, progress: stdout.writeln);

@@ -8,7 +8,7 @@ import 'page_source.dart';
 import 'store.dart';
 import 'tree.dart';
 
-/// A tree kept as files in Loom's portable layout: a markdown file per
+/// A tree kept as files in Prosapia's portable layout: a markdown file per
 /// person, photos with embedded metadata. Used for development, for tests,
 /// and to read an export or an import. Anyone who can reach the server can
 /// read it; there is no sign-in.
@@ -31,7 +31,7 @@ class FileStore extends TreeStore {
 
   @override
   Future<Tree> load() async {
-    final settings = File(p.join(root, 'loom.yaml'));
+    final settings = File(p.join(root, 'tree.yaml'));
     final name = settings.existsSync()
         ? (loadYaml(settings.readAsStringSync()) as Map)['name'] as String?
         : null;
@@ -98,7 +98,7 @@ class FileStore extends TreeStore {
       for (final person in (meta['PersonInImageWDetails'] as List?) ?? const []) {
         final ids = (person as Map)['PersonId'];
         for (final id in ids is List ? ids : [ids]) {
-          if (id is String && id.startsWith('loom:')) {
+          if (id is String && id.startsWith('prosapia:')) {
             item.people.add(id.substring(5));
           }
         }

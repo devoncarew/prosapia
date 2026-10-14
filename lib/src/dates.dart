@@ -1,7 +1,7 @@
-/// A date as written in a Loom file: ISO when exact (`1950-05-17`, `1987-11`,
+/// A date as written in a Prosapia file: ISO when exact (`1950-05-17`, `1987-11`,
 /// `1972`), otherwise GEDCOM's grammar (`ABT 1961`, `BET 1880 AND 1885`).
-class LoomDate {
-  LoomDate(this.raw);
+class TreeDate {
+  TreeDate(this.raw);
 
   final String raw;
 

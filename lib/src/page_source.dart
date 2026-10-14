@@ -50,7 +50,7 @@ Person parsePersonSource(String source, {required String id, required String dir
   return (yaml, (m[2] ?? '').replaceAll('\r\n', '\n').trim());
 }
 
-/// Writes the subset of YAML that Loom's structured blocks use, laid out to
+/// Writes the subset of YAML that Prosapia's structured blocks use, laid out to
 /// be read and edited by hand.
 String toYaml(Map<String, Object?> map) {
   final sb = StringBuffer();

@@ -1,6 +1,6 @@
 // Firebase spike (milestone 3 in docs/plan.md).
 //
-// Checks that a Dart server can do what Loom needs from Firebase, using the
+// Checks that a Dart server can do what Prosapia needs from Firebase, using the
 // official Admin SDK against the local emulators:
 //   1. Firestore: write and read a page, keep revisions, refuse a stale save.
 //   2. Sign-in: verify a Google sign-in and keep it as a session cookie.
@@ -18,7 +18,7 @@ import 'package:google_cloud_firestore/google_cloud_firestore.dart';
 import 'package:google_cloud_storage/google_cloud_storage.dart' as gcs;
 import 'package:http/http.dart' as http;
 
-const project = 'demo-loom';
+const project = 'demo-prosapia';
 var failures = 0;
 
 void check(String what, bool ok, [Object? detail]) {

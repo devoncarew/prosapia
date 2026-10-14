@@ -3,33 +3,33 @@ import 'dart:io';
 
 import 'package:args/args.dart';
 import 'package:firebase_admin_sdk/firebase_admin_sdk.dart';
-import 'package:loom/src/auth.dart';
-import 'package:loom/src/file_store.dart';
-import 'package:loom/src/firestore_store.dart';
-import 'package:loom/src/images.dart';
-import 'package:loom/src/server.dart';
-import 'package:loom/src/store.dart';
+import 'package:prosapia/src/auth.dart';
+import 'package:prosapia/src/file_store.dart';
+import 'package:prosapia/src/firestore_store.dart';
+import 'package:prosapia/src/images.dart';
+import 'package:prosapia/src/server.dart';
+import 'package:prosapia/src/store.dart';
 import 'package:path/path.dart' as p;
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
 
 const usage = '''
 Serve a tree from files (no sign-in; for development):
-  dart run loom [options] <tree-directory>
+  dart run prosapia [options] <tree-directory>
 
 Serve a tree from Firestore (members sign in with Google):
-  dart run loom [options] --tree <tree-id>
+  dart run prosapia [options] --tree <tree-id>
 ''';
 
 Future<void> main(List<String> arguments) async {
   final env = Platform.environment;
   final parser = ArgParser()
     ..addOption('port', abbr: 'p', defaultsTo: env['PORT'] ?? '8080')
-    ..addOption('cache', defaultsTo: '.loom_cache', help: 'Scratch space for display copies. Safe to delete.')
+    ..addOption('cache', defaultsTo: '.prosapia_cache', help: 'Scratch space for display copies. Safe to delete.')
     ..addOption('tree', help: 'The id of a tree in Firestore.')
-    ..addOption('project', defaultsTo: env['GOOGLE_CLOUD_PROJECT'] ?? 'demo-loom', help: 'The Firebase project.')
+    ..addOption('project', defaultsTo: env['GOOGLE_CLOUD_PROJECT'] ?? 'demo-prosapia', help: 'The Firebase project.')
     ..addOption('bucket', help: 'The Cloud Storage bucket. Defaults to <project>.firebasestorage.app.')
-    ..addOption('web-config', defaultsTo: env['LOOM_WEB_CONFIG'], help: 'Firebase web settings as JSON, for browser sign-in.');
+    ..addOption('web-config', defaultsTo: env['PROSAPIA_WEB_CONFIG'], help: 'Firebase web settings as JSON, for browser sign-in.');
   final ArgResults args;
   try {
     args = parser.parse(arguments);
@@ -73,7 +73,7 @@ Future<void> main(List<String> arguments) async {
         ? <String, Object?>{'apiKey': 'demo-key', 'authDomain': '$project.firebaseapp.com', 'projectId': project}
         : (jsonDecode(args['web-config'] as String) as Map).cast<String, Object?>();
     if (emulator == null && args['web-config'] == null) {
-      stderr.writeln('Sign-in against a real project needs --web-config (or LOOM_WEB_CONFIG).');
+      stderr.writeln('Sign-in against a real project needs --web-config (or PROSAPIA_WEB_CONFIG).');
       exit(64);
     }
     sessions = Sessions(app.auth(), store,

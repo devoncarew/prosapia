@@ -1,5 +1,5 @@
 {
-  "name": "loom-tools",
+  "name": "prosapia-tools",
   "private": true,
   "description": "Repository tooling. The browser code has its own package in web/.",
   "scripts": {

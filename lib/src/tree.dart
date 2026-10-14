@@ -22,14 +22,14 @@ class Event {
     final date = map['date'];
     return Event(
       // YAML reads a bare year as a number.
-      date: date == null ? null : LoomDate(date.toString()),
+      date: date == null ? null : TreeDate(date.toString()),
       place: map['place'] as String?,
       note: map['note'] as String?,
       coordinates: (map['coordinates'] as List?)?.cast<num>().toList(),
     );
   }
 
-  final LoomDate? date;
+  final TreeDate? date;
   final String? place;
   final String? note;
 
@@ -121,7 +121,7 @@ class Person {
   final parents = <ParentLink>[];
   final facts = <Fact>[];
 
-  /// Fields this version of Loom does not interpret. They are kept so a
+  /// Fields this version of Prosapia does not interpret. They are kept so a
   /// record survives a round trip unchanged.
   final extra = <String, Object?>{};
 

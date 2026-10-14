@@ -55,7 +55,7 @@ enum Role {
   bool get canEdit => this != viewer;
 }
 
-/// Someone invited to a tree. Google confirms who they are; Loom decides
+/// Someone invited to a tree. Google confirms who they are; Prosapia decides
 /// what they may do.
 class Member {
   Member(this.email, this.role, {this.name});

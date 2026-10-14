@@ -1,6 +1,8 @@
-# Loom
+# Prosapia
 
-Loom is a family-history wiki: pages about people, written as markdown with images,
+_Family history, in prose._
+
+Prosapia is a family-history wiki: pages about people, written as markdown with images,
 served by a hosted web app that relatives sign in to with a Google account. Eight
 directions are set, one design is proposed for confirmation, and three questions are
 open. Two of the open questions, privacy tiers and access enforcement, are deferred: for
@@ -32,7 +34,7 @@ open item set aside on purpose.
 
 - **A family's history outlives the software.** The database is the live record, and the
   whole tree is continuously exported as plain markdown files and photos that need no
-  Loom to read.
+  Prosapia to read.
 - **Prose first, structure where it pays.** A contributor can add a story without
   filling in a form.
 - **Information travels with its artifact.** What is known about a photo lives inside
@@ -49,12 +51,12 @@ The server needs Dart, `exiftool` and `libvips`.
 
 ### From files, with no sign-in
 
-The quickest way to look at a tree. The directory is a tree in Loom's file layout;
+The quickest way to look at a tree. The directory is a tree in Prosapia's file layout;
 `spikes/gedcom_import` can generate a sample one from a GEDCOM export.
 
 ```
 dart pub get
-dart run loom data/tree
+dart run prosapia data/tree
 ```
 
 ### From Firestore, with Google sign-in
@@ -72,18 +74,18 @@ import yet. In a second terminal:
 
 ```
 source tool/emulator_env.sh
-dart run loom:load --tree carew --owner you@example.com data/tree
-dart run loom --tree carew
+dart run prosapia:load --tree carew --owner you@example.com data/tree
+dart run prosapia --tree carew
 ```
 
-`loom:load` copies a tree from files into Firestore and Cloud Storage and names its
+`prosapia:load` copies a tree from files into Firestore and Cloud Storage and names its
 members. Open http://localhost:8080 and sign in; the emulator shows a stand-in for
 Google's account chooser, where you add an account with the owner's email address.
 Anyone not on the member list is refused. Owners and editors can edit pages; add
-`--editor` and `--viewer` addresses to `loom:load` to try the other roles.
+`--editor` and `--viewer` addresses to `prosapia:load` to try the other roles.
 
-Resized images and files fetched from storage go in `.loom_cache/`, which can be deleted
-at any time.
+Resized images and files fetched from storage go in `.prosapia_cache/`, which can be
+deleted at any time.
 
 ## Working on it
 

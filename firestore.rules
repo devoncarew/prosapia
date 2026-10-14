@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Only the Loom server reads and writes the database, and it does so with
+// Only the Prosapia server reads and writes the database, and it does so with
 // admin credentials that bypass these rules. Browsers get nothing.
 service cloud.firestore {
   match /databases/{database}/documents {

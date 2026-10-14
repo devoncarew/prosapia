@@ -1,6 +1,6 @@
-import 'package:loom/src/diff.dart';
-import 'package:loom/src/page_source.dart';
-import 'package:loom/src/tree.dart';
+import 'package:prosapia/src/diff.dart';
+import 'package:prosapia/src/page_source.dart';
+import 'package:prosapia/src/tree.dart';
 import 'package:test/test.dart';
 
 const source = '''

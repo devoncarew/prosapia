@@ -2,14 +2,14 @@
 
 ## System overview
 
-Loom is a hosted web app: a server sits between the people using it and a database, and
-everything a reader sees is computed from that database.
+Prosapia is a hosted web app: a server sits between the people using it and a database,
+and everything a reader sees is computed from that database.
 
 ```mermaid
 flowchart TD
     browser["Browser<br/>server-rendered pages, the editor, Google sign-in"]
     hosting["Firebase Hosting<br/>domain, HTTPS, caching"]
-    server["Loom server on Cloud Run<br/>Dart; holds the tree and a search index in memory"]
+    server["Prosapia server on Cloud Run<br/>Dart; holds the tree and a search index in memory"]
     auth["Firebase Authentication<br/>sign-in with Google"]
     firestore[("Firestore<br/>people, partnerships, sources, rolls,<br/>revisions, members, change log")]
     storage[("Cloud Storage<br/>photos and large files,<br/>metadata embedded in each file")]
@@ -44,7 +44,7 @@ Direction set:
 | Photos and large files | Cloud Storage for Firebase |
 | Search and relationship lookups | An in-memory SQLite index with full-text search, built when the server loads the tree |
 | Image encoding and metadata | Command-line tools in the server's container: `exiftool` for metadata, `libvips` for JPEG encoding and display copies |
-| GEDCOM | Loom's own reader and writer |
+| GEDCOM | Prosapia's own reader and writer |
 | Backup | Firestore's scheduled backups, plus a nightly export to a private GitHub repository |
 | Local development | Firebase's emulators, or a tree loaded from files |
 
@@ -62,7 +62,7 @@ One family's usage should sit within the free allowances or cost very little.
 Direction set: the database is the record. Each tree's people, partnerships, sources and
 rolls are Firestore documents; photos and large files are objects in Cloud Storage. Git
 and GitHub are no longer the store: most relatives have a Google account and no GitHub
-account, and Loom would have had to build its own sign-in and editing screens in any
+account, and Prosapia would have had to build its own sign-in and editing screens in any
 case.
 
 ```
@@ -79,7 +79,7 @@ trees/{tree}
 
 ### The file layout remains, as the import and export format
 
-The markdown layout designed earlier is still Loom's portable form. It is what the
+The markdown layout designed earlier is still Prosapia's portable form. It is what the
 nightly export writes, what an import reads, and what the server loads in local
 development and tests.
 
@@ -94,7 +94,7 @@ tree/
     m-5t1q8z.jpg        (a photo's front)
     m-5t1q8z-back.jpg   (its back)
   rolls/     r-8d2k5n.md   (an optional group of related photos)
-  loom.yaml  (tree name and settings)
+  tree.yaml  (tree name and settings)
 ```
 
 ### Decisions
@@ -125,8 +125,8 @@ tree/
 
 - **Firestore's scheduled backups** cover disaster recovery.
 - **A nightly export writes the tree, in the file layout above, to a private GitHub
-  repository.** It is readable without Loom. Because every change is logged, the export
-  writes one commit per change with its real author, so the history carries over.
+  repository.** It is readable without Prosapia. Because every change is logged, the
+  export writes one commit per change with its real author, so the history carries over.
 - **GEDCOM is produced alongside** for other genealogy tools. It loses too much prose to
   serve as the backup.
 
@@ -170,8 +170,8 @@ for larger families.
 | Editor | Edit any page, add photos, restore earlier versions     |
 | Viewer | Read                                                    |
 
-People are invited by email address and sign in with Google. Loom keeps the member list;
-Google only confirms who someone is.
+People are invited by email address and sign in with Google. Prosapia keeps the member
+list; Google only confirms who someone is.
 
 ### Decided by the brief
 
@@ -181,7 +181,7 @@ Google only confirms who someone is.
 ### Proposed
 
 <!-- prettier-ignore -->
-| Feature | In Loom |
+| Feature | In Prosapia |
 | --- | --- |
 | Page history | Every page lists its revisions; any two can be compared |
 | Restore | An editor can bring back an earlier version; that is itself a new revision |

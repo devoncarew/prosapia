@@ -1,5 +1,5 @@
 // Sign-in page. The browser signs in with Google through Firebase, then
-// hands the resulting ID token to the Loom server, which checks membership
+// hands the resulting ID token to the Prosapia server, which checks membership
 // and sets the session cookie. Nothing is kept in the browser afterwards:
 // the server's cookie is the session.
 

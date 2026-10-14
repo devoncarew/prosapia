@@ -1,7 +1,7 @@
 # Sample trees and other local data: a person's page is the family's text.
 data/
 .emulator_data/
-.loom_cache/
+.prosapia_cache/
 
 # Generated.
 spikes/*/out/

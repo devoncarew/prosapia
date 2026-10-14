@@ -1,7 +1,7 @@
 # Firebase spike
 
 The first step of milestone 3 in [docs/plan.md](../../docs/plan.md): can a Dart server
-do what Loom needs from Firebase?
+do what Prosapia needs from Firebase?
 
 ```
 firebase emulators:exec "dart run spikes/firebase/spike.dart"

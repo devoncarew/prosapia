@@ -10,7 +10,7 @@ they belong to is built; each is listed in its own document.
 <!-- prettier-ignore -->
 | Question | Answer |
 | --- | --- |
-| Where does Loom run, and on what stack? | A hosted web app: a Dart server on Cloud Run behind Firebase Hosting, Firestore for records, Cloud Storage for photos, sign-in with Google, TypeScript in the browser |
+| Where does Prosapia run, and on what stack? | A hosted web app: a Dart server on Cloud Run behind Firebase Hosting, Firestore for records, Cloud Storage for photos, sign-in with Google, TypeScript in the browser |
 | Who is the first user? | One family, one tree, a handful of invited relatives. The simplifications this allows are removed step by step so the tool becomes general purpose |
 | How is per-page visibility enforced? | By the server, which is the only thing that reads the database. Designing the levels themselves is deferred |
 
@@ -18,7 +18,7 @@ they belong to is built; each is listed in its own document.
 
 The first design kept each tree in a GitHub repository and made changes through pull
 requests. It was dropped because most relatives have a Google account and no GitHub
-account, so Loom needed its own sign-in and editing screens anyway, and per-person
+account, so Prosapia needed its own sign-in and editing screens anyway, and per-person
 visibility is hard on a store that is copied whole. Git survives as the export: a
 nightly copy of the tree as files in a private GitHub repository.
 
