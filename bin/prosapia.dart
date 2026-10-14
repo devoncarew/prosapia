@@ -91,17 +91,22 @@ Future<void> main(List<String> arguments) async {
 
   if (app != null) {
     final emulator = env['FIREBASE_AUTH_EMULATOR_HOST'];
-    final config = args['web-config'] == null
+    var webConfig = args['web-config'] as String?;
+    final configFile = File('config/web_$project.json');
+    if (webConfig == null && configFile.existsSync()) {
+      webConfig = configFile.readAsStringSync();
+    }
+    final config = webConfig == null
         ? <String, Object?>{
             'apiKey': 'demo-key',
             'authDomain': '$project.firebaseapp.com',
             'projectId': project,
           }
-        : (jsonDecode(args['web-config'] as String) as Map)
-              .cast<String, Object?>();
-    if (emulator == null && args['web-config'] == null) {
+        : (jsonDecode(webConfig) as Map).cast<String, Object?>();
+    if (emulator == null && webConfig == null) {
       stderr.writeln(
-        'Sign-in against a real project needs --web-config (or PROSAPIA_WEB_CONFIG).',
+        'Sign-in against a real project needs config/web_$project.json, '
+        '--web-config or PROSAPIA_WEB_CONFIG.',
       );
       exit(64);
     }
