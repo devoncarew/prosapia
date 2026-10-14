@@ -98,8 +98,8 @@ class FileStore extends TreeStore {
       for (final person in (meta['PersonInImageWDetails'] as List?) ?? const []) {
         final ids = (person as Map)['PersonId'];
         for (final id in ids is List ? ids : [ids]) {
-          if (id is String && id.startsWith('prosapia:')) {
-            item.people.add(id.substring(5));
+          if (id is String && id.startsWith(Media.idScheme)) {
+            item.people.add(id.substring(Media.idScheme.length));
           }
         }
       }

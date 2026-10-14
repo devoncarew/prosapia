@@ -198,6 +198,10 @@ class Media {
         ..size = map['size'] as int?
         ..people.addAll(((map['people'] as List?) ?? const []).cast<String>());
 
+  /// Ids written into a file's metadata carry this prefix, so they can be
+  /// told apart from other software's identifiers: `prosapia:p-7k2m9x`.
+  static const idScheme = 'prosapia:';
+
   /// `m-5t1q8z.jpg` is a front, `m-5t1q8z-back.jpg` its back.
   static final namePattern = RegExp(r'^(m-[a-z0-9]+)(-back)?\.(\w+)$');
 
