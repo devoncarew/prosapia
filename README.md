@@ -1,6 +1,6 @@
 # Prosapia
 
-_Family history, in prose._
+_Genealogy, in prose._
 
 Prosapia is a family-history wiki: pages about people, written as markdown with images,
 served by a hosted web app that relatives sign in to with a Google account. Eight
