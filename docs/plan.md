@@ -38,7 +38,7 @@ context. "Loom" was a working title and is widely used by other products. The na
 settling before it is baked into a repository, a Firebase project and a web address,
 since the last two cannot be renamed.
 
-Checked on 13 October 2026:
+Checked on 13 and 14 October 2026:
 
 <!-- prettier-ignore -->
 | What | Result |
@@ -47,12 +47,13 @@ Checked on 13 October 2026:
 | GitHub | The `prosapia` organization was created in February 2026 by someone else and holds one repository. `prosapia-app`, `prosapiaapp` and `getprosapia` are free |
 | Package names | `prosapia` is free on pub.dev |
 | Other uses | Prosapia Genetics, LLC, a Delaware company, sold DNA ancestry reports from about 2014. Whether it still trades is unknown. *Prosapia* is also a genus of insects, and still a word for lineage in Spanish, Italian and Portuguese |
+| US trademarks | One live application for PROSAPIA, filed 29 October 2025 by 1601 LLC of Utah for agave spirits (class 33); allowed, not yet registered. One cancelled registration, for a motorcycle club. Nothing for software, genealogy or online services, and nothing from Prosapia Genetics |
 
 Still to do:
 
-- Search the trademark registers (the US Patent and Trademark Office, and the European
-  and international ones) for "Prosapia", and find out whether Prosapia Genetics is
-  still active. It is the one earlier use in the same field.
+- Search the European and international trademark registers (EUIPO's eSearch and WIPO's
+  Global Brand Database) for "Prosapia". The US register was searched on 14
+  October 2026.
 - Choose the subtitle.
 - Register the domain and the GitHub name.
 - Rename where the working title appears: the Dart package, the commands, the documents.
