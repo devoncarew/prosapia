@@ -1,5 +1,26 @@
 # Open questions
 
+## Where each area stands
+
+"Direction set" means the area is decided. "Proposed" is a design written up but not yet
+confirmed. "Open" has no answer yet; "deferred" marks an open item set aside on purpose.
+
+<!-- prettier-ignore -->
+| Area | Status | Where it stands |
+| --- | --- | --- |
+| Viewing and editing | Direction set | Wikipedia-like pages: text, light formatting, images |
+| Backing store | Direction set | Firestore for records, Cloud Storage for photos. Every save is kept as a revision and logged. A nightly export writes the tree as markdown files to a private GitHub repository |
+| Interchange | Direction set | GEDCOM 7.0 for import and export |
+| Photo information | Direction set | Names, dates and transcriptions embedded in the image file |
+| Content model | Direction set | One markdown file per person, in the person's own directory; structured facts on top, free-form entries below |
+| Sources and citations | Proposed | A record per source, cited from individual claims |
+| Privacy tiers | Open | Deferred. The sharing model is to be decided; four levels are sketched below as a starting point |
+| Editing | Direction set | Members with write access edit directly, with no review step. Every edit is logged, attributed and reversible |
+| Access enforcement | Open | Deferred with the sharing model. Members are invited by email and sign in with Google; roles are owner, editor and viewer |
+| Photo storage | Direction set | JPEGs and HEICs kept as they are; uncompressed scans become JPEG. A front and back are two files paired by name and embedded id |
+| Hosting and technology stack | Direction set | A Dart server on Cloud Run behind Firebase Hosting; TypeScript in the browser; Firebase sign-in. Fallback: TypeScript for the server too |
+| Merging new entries | Open | An update is kept as a dated entry first; how it is woven into the biography is undecided |
+
 ## Open questions
 
 The questions that blocked other decisions are settled. The rest can wait until the area

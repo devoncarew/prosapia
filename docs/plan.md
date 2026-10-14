@@ -38,7 +38,7 @@ Design decisions and their reasons live in the other documents, not here:
 - Confirm nothing private is in the history first: the sample photo and its text are
   committed today.
 - Continuous integration on every pull request: Dart formatting, analysis and tests; the
-  TypeScript type check and build; the markdown check, `npm run check:md`.
+  TypeScript type check and build; the markdown check, `npm run check`.
 - Linting standards: a stricter Dart analysis configuration, and a linter and formatter
   for the TypeScript.
 - Decide whether the emulator-based checks, such as the Firebase spike, run in
@@ -242,10 +242,10 @@ Newest first.
   family line, with the subtitle "Genealogy, in prose"; `prosapia.app` was unregistered,
   and the US trademark register held only an unrelated application for agave spirits, so
   Loom, the working title, was renamed throughout.
-- **Milestone 8, markdown formatter.** `npm run format:md` wraps the repository's
-  markdown at 88 columns using Prettier, and `npm run check:md` verifies it; tables too
-  wide for the line are marked `<!-- prettier-ignore -->` and kept compact, and tree
-  content is left alone.
+- **Milestone 8, markdown formatter.** `npm run format` wraps the repository's markdown
+  at 88 columns using Prettier, and `npm run check` verifies it; tables too wide for the
+  line are marked `<!-- prettier-ignore -->` and kept compact, and tree content is left
+  alone.
 - **Milestone 4, editing.** Members with write access edit an existing person's page as
   text with a live preview; every save is a revision and a change-log entry, stale saves
   are refused, and history, compare, restore, recent changes and "Add a memory" work.
