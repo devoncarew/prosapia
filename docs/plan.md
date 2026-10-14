@@ -31,23 +31,6 @@ Design decisions and their reasons live in the other documents, not here:
 
 ## Planned milestones
 
-### Milestone 10: GitHub project and continuous integration
-
-- Create the GitHub repository, `devoncarew/prosapia`, and push the history. From then
-  on, work happens on branches and merges through pull requests.
-- Confirm nothing private is in the history first: the sample photo and its text are
-  committed today.
-- Continuous integration on every pull request: Dart formatting, analysis and tests; the
-  TypeScript type check and build; the markdown check, `npm run check`.
-- Linting standards: a stricter Dart analysis configuration, and a linter and formatter
-  for the TypeScript.
-- Decide whether the emulator-based checks, such as the Firebase spike, run in
-  continuous integration.
-- A licence and a short contributing note, if the repository is to be public.
-
-Done when: a pull request that breaks formatting, analysis or a test is marked as
-failing, and the main branch is green.
-
 ### Milestone 11: Firebase project
 
 Needed before milestone 5. A project's id is permanent, so choose it with the name in
@@ -231,6 +214,10 @@ switch the feature on, since using it sends family data to the model's provider.
 - Export on every change, not nightly.
 - Search the European and international trademark registers for "Prosapia" before any
   commercial launch. The US register showed no conflict.
+- Run the Firebase emulator checks in continuous integration, so sign-in and storage are
+  tested on every change.
+- Require the continuous integration checks to pass before a pull request can merge (a
+  GitHub repository setting).
 - More than one tree on one server.
 - Decide when a tree is too large to hold in memory, and what replaces that.
 
@@ -238,6 +225,11 @@ switch the feature on, since using it sends family data to the model's provider.
 
 Newest first.
 
+- **Milestone 10, GitHub project and continuous integration.** The code is public at
+  `devoncarew/prosapia` under the BSD 3-Clause licence; every pull request runs Dart
+  formatting, strict analysis and tests, the browser code's type check, lint and build,
+  and Prettier checks, and the README now introduces the project, with setup moved to
+  CONTRIBUTING.md.
 - **Milestone 9, project name.** The project is named Prosapia, Latin for lineage or
   family line, with the subtitle "Genealogy, in prose"; `prosapia.app` was unregistered,
   and the US trademark register held only an unrelated application for agave spirits, so
