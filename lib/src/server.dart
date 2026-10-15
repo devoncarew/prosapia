@@ -232,18 +232,18 @@ Handler siteHandler(
 
   router.get(
     '/people/<id>/edit',
-    (Request r, String id) => editing(
-      r,
-      id,
-      (person, member) async => html(
+    (Request r, String id) => editing(r, id, (person, member) async {
+      final off = await helpUnavailable();
+      return html(
         render(r).editPerson(
           person,
           source: person.source,
           basedOn: person.revision,
-          help: await helpUnavailable() == null,
+          help: off == null,
+          helpOff: off,
         ),
-      ),
-    ),
+      );
+    }),
   );
 
   router.post(

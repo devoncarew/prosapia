@@ -629,6 +629,7 @@ $body
     String? error,
     String? conflict,
     bool help = false,
+    String? helpOff,
     String? helpedBy,
   }) {
     return page('Edit ${p.name}', '''
@@ -641,11 +642,15 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
   <div class="tabs" role="tablist">
     <button type="button" role="tab" id="tab-write" aria-selected="true" aria-controls="panel-write">Write</button>
     <button type="button" role="tab" id="tab-preview" aria-selected="false" aria-controls="panel-preview">Preview</button>
-    ${help ? '''<span class="help" data-url="/people/${p.id}/help">
+    ${help
+        ? '''<span class="help" data-url="/people/${p.id}/help">
       <button type="button" data-request="draft" title="Write the story from the facts, memories and photo captions">Claude: Draft</button>
       <button type="button" data-request="revise" title="Rewrite the whole story">Claude: Revise…</button>
       <button type="button" data-request="selection" title="Rewrite the selected text" disabled>Claude: Revise selection</button>
-    </span>''' : ''}
+    </span>'''
+        : helpOff != null && viewer?.role == Role.owner
+        ? '<span class="help off">${esc(helpOff)} <a href="/settings">Settings</a></span>'
+        : ''}
   </div>
   <div class="help-bar" hidden role="status"></div>
   <div class="tab-panel" id="panel-write" role="tabpanel" aria-labelledby="tab-write">
@@ -1110,6 +1115,7 @@ a.deleted { color: var(--muted); text-decoration: line-through; }
 .resolve form { margin: 0; }
 .resolve button { font-size: 13px; }
 .help { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.help.off { font: 13px system-ui, sans-serif; color: var(--muted); }
 .help button { font: 13px system-ui, sans-serif; padding: 4px 10px; }
 .help button:disabled { opacity: 0.45; }
 .help-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 8px 12px; margin: 8px 0;
