@@ -55,20 +55,20 @@ after opening to the family.
 
 _The historian finds a baptism record for a fourth child of Thomas and Ann._
 
-From Thomas's page they choose **Add a child**. Ann is offered as the other parent,
-since she is Thomas's only partner; they could pick "unknown" instead. They type the
-child's name and "bapt. 1891" as the birth. If someone with a similar name and dates is
-already in the tree, Prosapia asks whether it is the same person before creating
-another. The new child appears among Thomas's and Ann's children and the siblings, and
-their new page invites a few more details.
+They edit Thomas's page and add the name to his `Children:` line: `Mary Hughes`. Typing
+`@` and part of a name would instead offer people already in the tree, in case she is
+there already. Saved, she appears among Thomas's and Ann's children and among her
+siblings, as a name without a page. When there is something to say about her, they use
+**Create a page** on her name; Prosapia checks for a similar person already in the tree,
+then creates her page with her parents filled in and turns the name into a link.
 
-Milestones: 14 (adding people), 13 (dates).
+Milestones: 14 (relationships in the text), 13 (the page syntax).
 
 ### 3. Add a parent, partner or sibling
 
-The same as adding a child, from the other direction. Adding a second partner asks for
-the order and any marriage date. Adding a sibling places the new person under the same
-parents, creating unknown parents if none are recorded.
+The same as adding a child, typed in the `Parents:`, `Partner:` or `Siblings:` line of
+either person's page. A partner line can carry a marriage date and place:
+`Partner: @price-ann-9c4e2b, married [date: 1884]`.
 
 Milestone: 14.
 

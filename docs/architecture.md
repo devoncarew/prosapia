@@ -110,8 +110,11 @@ tree/
   three always agree.
 - **Every change is logged.** The change log lists who changed which pages and why. It
   drives the recent-changes view and the export.
-- **Direct links only.** A child lists its parents; a partnership is its own record.
-  Children, siblings and descendants are derived, not stored.
+- **Relationships as stated.** A relationship may be stated on either person's page, as
+  described in
+  [content-model.md](content-model.md#people-and-relationships-in-the-text); the server
+  combines both sides. Descendants and other longer relationships are derived, not
+  stored.
 - **The server caches the tree in memory.** On start it loads the tree and builds the
   search index, as it does from files today. Each tree carries a version number; a
   server instance that sees a newer one reloads. This is enough for any near or
