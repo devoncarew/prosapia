@@ -5,9 +5,9 @@
 This is the working list of what Prosapia is building, what it might build, and what it
 has built. It has three parts:
 
-- **Planned releases** group the scheduled milestones. Each milestone says what will be
-  built and how we will know it is done. Releases, and the milestones within them, are
-  listed in the order they will be worked; milestone numbers are labels, not the order.
+- **Milestones** are the scheduled work. Each says what will be built and how we will
+  know it is done. They are listed in the order they will be worked; milestone numbers
+  are labels, not the order.
 - **Known future work** is everything we know is needed or wanted but have not scheduled
   or detailed. One line each.
 - **Completed milestones** is a changelog: about one sentence per finished milestone,
@@ -17,8 +17,8 @@ Keeping it current:
 
 - **When work is discovered** that is not part of the milestone in hand, add a line to
   Known future work. Do not widen the current milestone.
-- **When work is scheduled**, move it out of Known future work into a new milestone in a
-  release, with its tasks and a "Done when".
+- **When work is scheduled**, move it out of Known future work into a new milestone,
+  with its tasks and a "Done when".
 - **When a milestone is completed**, delete its section and add a summary line to
   Completed milestones. Anything it left unfinished goes to Known future work.
 - **Milestone numbers are never reused**, so a number in a commit message or another
@@ -27,38 +27,9 @@ Keeping it current:
 Design decisions and their reasons live in [design.md](design.md) and the documents it
 links to, not here.
 
-## Planned releases
+## Milestones
 
-Milestones are grouped into releases. Each release is a point where Prosapia is usable
-for something new; releases, and the milestones within them, are listed in the order
-they will be worked. Work whose design is clear comes earlier; work whose design is
-still forming comes later. The [user journeys](journeys.md) describe what the editing
-work is aiming at.
-
-Releases A to C come before relatives are invited. Release D follows.
-
-### Release A: the core of editing
-
-Goal: the family historian keeps their real tree comfortably, on a desktop, without
-YAML. Nobody else is invited yet; the real tree is loaded and used privately. Editing on
-a phone is not a goal yet; viewing on one is.
-
-Its milestones are complete: 13 (the page syntax and its editor) and 14 (relationships
-in the text). What remains before release B is using it on the real tree.
-
-### Release B: help and photos
-
-Goal: the most useful language-model feature, and the ability to add photos, before
-relatives arrive.
-
-Its milestones are complete: 16 (help from a language model) and 6 (photos in the app).
-
-### Release C: open to the family
-
-Goal: relatives are invited, can find their way around, and can contribute from a
-desktop.
-
-#### Milestone 5: deploy and backup
+### Milestone 5: deploy and backup
 
 - The server in a container on Cloud Run in `us-west1`, beside the database and storage,
   behind Firebase Hosting. On Cloud Run the server's credentials come from its service
@@ -71,31 +42,44 @@ desktop.
 - A nightly export of the tree, in the file layout, to a private GitHub repository: one
   commit per logged change, with its author.
 - Firestore's scheduled backups switched on.
+- The container includes `exiftool` and `vips`, which the server needs for photos.
+- The Anthropic API key comes from Secret Manager, not a `.env` file.
+- Cloud Run's disk is temporary: display copies and staged uploads are made again after
+  a restart, which is expected.
+- A way to redeploy: a documented command, or a deploy from continuous integration when
+  `main` changes.
 
 Done when: invited relatives can sign in at `prosapia.app` and edit, and the exported
 repository, loaded by the server in file mode, renders the same site.
 
-#### Milestone 18: a relative's first visit
+### Milestone 18: the first visit
 
 Journey 10.
 
 - An invitation email that says who invited them and what Prosapia is.
 - Readable addresses for people's pages, such as `/people/carew-howard-joseph-tbczm8`,
   so a link someone shares says who it is. Only the trailing id is relied on.
-- Nicknames shown in the list of people: Walter "Scotty" Carew.
 - A first page after sign-in that orients a newcomer: their own page or their nearest
   relative's, and one easy thing to do.
-- Every page readable on a phone.
-- A way to report a mistake without editing, for those who would rather not.
+- Every page readable on a phone, since a first visit is often on one.
 
 Done when: a relative who has never seen Prosapia can accept an invitation, find their
 own family, and add a memory without help.
 
-### Release D: after opening
+### Milestone 20: dogfooding and polish
 
-Goal: richer entry and more help, shaped by how the family actually uses Prosapia.
+Using the deployed site on the real tree, and fixing what that turns up. Small items are
+kept in the [punch list](punchlist.md) and worked from there.
 
-#### Milestone 15: events and memories
+- Nicknames shown in the list of people: Walter "Scotty" Carew.
+- A normal form for a page's markdown: a light formatting pass, so equivalent pages are
+  written the same way.
+- A design pass over the person page, the editor and the photo pages.
+
+Done when: the family historian has used the deployed site for a few weeks, and what
+they found is fixed or moved to Known future work.
+
+### Milestone 15: events and memories
 
 Journeys 1 and 7.
 
@@ -110,7 +94,7 @@ Journeys 1 and 7.
 Done when: an event with two people involved, entered from one person's page, appears on
 both people's timelines.
 
-#### Milestone 17: more help from the model
+### Milestone 17: more help from the model
 
 - Entry from a sentence: typing "Margaret moved to Chicago with her sister in spring
   1925" proposes fact lines or an event, for the person to check before saving.
@@ -121,13 +105,13 @@ both people's timelines.
 Done when: journeys 1 and 2 can each start from one typed sentence, and nothing the
 model proposes is saved without the person confirming it.
 
-#### Milestone 19: editing on a phone
+### Milestone 19: editing on a phone
 
 - Adding a memory, correcting a fact and tagging a photo work comfortably on a phone.
 
 Done when: journey 7 works on a phone.
 
-#### Milestone 7: GEDCOM import
+### Milestone 7: GEDCOM import
 
 The spike in [spikes/gedcom_import](../spikes/gedcom_import/README.md) already converts
 a real GEDCOM 5.5.1 export into the file layout, and milestone 12 makes it the way a
@@ -152,10 +136,6 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 ### People and relationships
 
 - Merge two records that turn out to be the same person.
-- Choose the JPEG quality for scans from a real full-resolution scanner output; 92 is a
-  placeholder.
-- Upload files larger than Cloud Run's 32 MB request limit, such as large TIFF scans,
-  straight to storage with a signed upload address.
 - Undo a change that later edits have built on, by working out what to take back,
   instead of refusing as now.
 - Give a page to a plain name written elsewhere than a relationship line, such as a
@@ -169,13 +149,12 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 ### Editing
 
 - A formatted editor for the story, for relatives who will not write markdown.
-- A normal form for a page's markdown: a light formatting pass, so equivalent pages are
-  written the same way.
 - Talk pages: a discussion thread per person.
 - Watchlist: follow a person and hear about changes.
 - Blame: for any sentence or fact, who added it and when.
 - Contributions from people who are not members, such as a correction sent by email.
 - Optional review of edits, for families that want it.
+- A way to report a mistake without editing, for those who would rather not.
 
 ### Sources and research
 
@@ -199,6 +178,10 @@ Uses not yet scheduled; the rules every use follows are in
 
 ### Photos and media
 
+- Choose the JPEG quality for scans from a real full-resolution scanner output; 92 is a
+  placeholder.
+- Upload files larger than Cloud Run's 32 MB request limit, such as large TIFF scans,
+  straight to storage with a signed upload address.
 - Documents (letters, certificates, census pages): previews and metadata for PDFs.
 - Video: store short clips, link to long ones, as proposed in [media.md](media.md).
 - Multi-page scanned PDFs, such as the two baby books: keep as one document, or store as
