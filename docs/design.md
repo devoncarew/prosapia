@@ -41,10 +41,11 @@ having no running cost and nothing to operate at one family's size.
 
 ## Language models
 
-Prosapia may call a language model to help write the record. It uses one model family,
-for one bill: a fast, inexpensive model for summaries and tidying, and a stronger one
-for writing. Which family, Claude or Gemini, is chosen in milestone 16 by the quality of
-the writing and its cost. Three rules shape every use:
+Prosapia may call a language model to help write the record. It uses Claude, one model
+family for one bill: a fast, inexpensive model (Claude Haiku) for summaries and tidying,
+and a stronger one for writing. Claude was chosen without a formal comparison, on a
+preference; if its writing or cost disappoints, Gemini is the alternative. Three rules
+shape every use:
 
 - **Never when serving a page.** A model runs when a member asks for it, or in a batch
   an owner starts, never as part of showing content. This keeps cost bounded and pages
@@ -57,7 +58,10 @@ the writing and its cost. Three rules shape every use:
   from" the model, so anyone reading the history can tell.
 
 The one-line summary of a change is the exception: a model may write it after the save,
-with no review and no mark. It describes a change rather than adding to the record.
+with no review. It describes a change rather than adding to the record. Each change
+records whether its summary was written by a model, but entries are not marked one by
+one; pages that list changes carry a single note, such as "Change summaries by Claude
+Haiku".
 
 What may be sent to a model about living people is open; it is settled in milestone 16,
 before any of their pages are sent.

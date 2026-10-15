@@ -57,16 +57,15 @@ Journeys 5 and 7. The rules every use follows are in
 [design.md](design.md#language-models); how the results should read is in
 [writing.md](writing.md).
 
-- **Choose the model family** by trying Claude's and Gemini's on the same pages and
-  requests: the writing judged without knowing which model wrote it, and each call's
-  cost recorded. One family, for billing: a fast, inexpensive model for summaries and
-  tidying, and a stronger one for writing. Try them on the invented tree and on pages of
-  people who have died; settle in design.md what may be sent about living people before
-  their pages are.
-- **The foundation.** The server calls the model, never the browser. An owner switches
-  the feature on for their tree; each call's cost is recorded, with a monthly limit.
-- **A voice and a pattern.** Finish [writing.md](writing.md): how a biography should
-  read, and the pattern change summaries follow. Both become the models' instructions.
+- **Claude, in two tiers:** Claude Haiku for summaries and tidying, and a stronger
+  Claude model for writing, chosen by trying them on real requests. Try them on the
+  invented tree and on pages of people who have died; settle in design.md what may be
+  sent about living people before their pages are.
+- **The foundation.** The server calls the model, never the browser, with an API key
+  kept out of the repository. An owner switches the feature on for their tree; each
+  call's cost is recorded, with a monthly limit.
+- **A voice and a pattern.** [writing.md](writing.md) says how a biography should read,
+  and the pattern change summaries follow; both become the models' instructions.
 - **In the editor, actions named for the model and for what they act on:**
   - _Claude: Draft_, when the story is empty: writes it from the page's facts, memories
     and photo captions. It presents what the tree holds and adds nothing to it.
@@ -83,9 +82,10 @@ Journeys 5 and 7. The rules every use follows are in
   summary, so the editor need not; one typed by the editor is kept as written. The
   editor's actions become Publish and Discard.
 - **The history.** A revision saved with help from the model says so ("with help from
-  Claude"); a model-written summary is not marked. Selecting a version shows what
-  changed from the version before it, as a diff, and the option to compare two chosen
-  versions goes.
+  Claude"). Model-written summaries are not marked one by one; Recent changes and the
+  history carry one note, "Change summaries by Claude Haiku". Selecting a version shows
+  what changed from the version before it, as a diff, and the option to compare two
+  chosen versions goes.
 
 Done when: a usable draft can be produced and saved for a person with only facts, and
 for one with several memories; a list of notes selected in a story becomes a paragraph;

@@ -2,7 +2,6 @@
 
 How text in Prosapia should read. It guides the people who write pages, and it becomes
 the instructions given to a language model (see [design.md](design.md#language-models)).
-A first draft, to be finished in milestone 16.
 
 ## Biographies
 
