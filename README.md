@@ -53,6 +53,7 @@ Working today:
 | [docs/sharing.md](docs/sharing.md) | Privacy, sharing and trust (not yet designed in full) |
 | [docs/design.md](docs/design.md) | The main decisions and why, and the questions still open |
 | [docs/loading.md](docs/loading.md) | Loading a family's existing tree, from other genealogy software, into Prosapia |
+| [docs/writing.md](docs/writing.md) | How biographies and change summaries should read, for people and for a language model |
 | [docs/journeys.md](docs/journeys.md) | The tasks people come to Prosapia to do, and what a forgiving version looks like |
 | [docs/plan.md](docs/plan.md) | What is being built next, known future work, and a changelog |
 

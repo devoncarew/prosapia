@@ -10,6 +10,7 @@ still open. The details of each area are in their own documents:
 | [media.md](media.md)                 | Photos and other files                              |
 | [sharing.md](sharing.md)             | Privacy, sharing and trust                          |
 | [loading.md](loading.md)             | Loading a family's existing tree into production    |
+| [writing.md](writing.md)             | How biographies and change summaries should read    |
 
 Work that is scheduled, and work known but not yet scheduled, is in the [plan](plan.md).
 
@@ -40,22 +41,30 @@ having no running cost and nothing to operate at one family's size.
 
 ## Language models
 
-Prosapia may call a language model, Claude or Gemini, to help write the record. Three
-rules shape every use:
+Prosapia may call a language model to help write the record. It uses Claude, one model
+family for one bill: a fast, inexpensive model (Claude Haiku) for summaries and tidying,
+and a stronger one for writing. Claude was chosen without a formal comparison, on a
+preference; if its writing or cost disappoints, Gemini is the alternative. Three rules
+shape every use:
 
 - **Never when serving a page.** A model runs when a member asks for it, or in a batch
   an owner starts, never as part of showing content. This keeps cost bounded and pages
   fast.
-- **Nothing a model writes enters the record without a person choosing it.** The model
-  produces a draft; a member reads it, edits it if they wish, and saves it as an edit
-  under their own name.
-- **The record says so.** A revision that began as a model's draft is marked as such,
-  with the model's name, so anyone reading the history can tell.
+- **Nothing a model writes enters the record without a person choosing it.** The model's
+  text replaces what it was asked to act on, in the editor; the person reads it, edits
+  or undoes it, and saves it as an edit under their own name. Each action says what it
+  acts on: the whole story, or the selection.
+- **The history says so.** A revision saved with a model's help is marked "with help
+  from" the model, so anyone reading the history can tell.
 
-One exception is under consideration (see the [plan](plan.md)): a model writing the
-one-line summary of a change after it is saved. A summary describes a change rather than
-adding to the record, so it would need no review, and it would be marked as
-model-written.
+The one-line summary of a change is the exception: a model may write it after the save,
+with no review. It describes a change rather than adding to the record. Each change
+records whether its summary was written by a model, but entries are not marked one by
+one; pages that list changes carry a single note, such as "Change summaries by Claude
+Haiku".
+
+What may be sent to a model about living people is open; it is settled in milestone 16,
+before any of their pages are sent.
 
 ## Open questions
 

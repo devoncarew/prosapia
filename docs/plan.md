@@ -51,20 +51,46 @@ in the text). What remains before release B is using it on the real tree.
 Goal: the most useful language-model feature, and the ability to add photos, before
 relatives arrive.
 
-#### Milestone 16: language-model foundation and biography drafts
+#### Milestone 16: help from a language model
 
-Journey 5. The rules every use follows are in [design.md](design.md#language-models).
+Journeys 5 and 7. The rules every use follows are in
+[design.md](design.md#language-models); how the results should read is in
+[writing.md](writing.md).
 
-- Choose the model provider, Claude or Gemini, by trying both on biography drafting; the
-  server calls it, never the browser.
-- An owner switches the feature on for their tree. Each call's cost is recorded, with a
-  monthly limit.
-- Draft a biography from a person's facts, memories and photo captions, shown beside the
-  current page for editing before it is saved.
-- Revisions that began as a model's draft record the model's name.
+- **Claude, in two tiers:** Claude Haiku for summaries and tidying, and a stronger
+  Claude model for writing, chosen by trying them on real requests. Try them on the
+  invented tree and on pages of people who have died; settle in design.md what may be
+  sent about living people before their pages are.
+- **The foundation.** The server calls the model, never the browser, with an API key
+  kept out of the repository. An owner switches the feature on for their tree; each
+  call's cost is recorded, with a monthly limit.
+- **A voice and a pattern.** [writing.md](writing.md) says how a biography should read,
+  and the pattern change summaries follow; both become the models' instructions.
+- **In the editor, actions named for the model and for what they act on:**
+  - _Claude: Draft_, when the story is empty: writes it from the page's facts, memories
+    and photo captions. It presents what the tree holds and adds nothing to it.
+  - _Claude: Revise_, when there is a story: rewrites the whole of it with the facts,
+    optionally guided by a sentence from the editor.
+  - _Claude: Revise selection_: rewrites only the selected text, with the goal inferred
+    from it and its surroundings. A list of facts or notes becomes a clear paragraph;
+    rough prose is tidied.
+- **On Add a memory,** _Claude: Tidy up_, keeping the teller's voice.
+- **Replace, then undo.** The model's text replaces what it acted on in the editor as
+  one step, so undo restores the original exactly; the new text stays marked until it is
+  kept or undone. Nothing is saved until the person saves.
+- **Automatic change summaries.** After a save, the fast model writes the one-line
+  summary, so the editor need not; one typed by the editor is kept as written. The
+  editor's actions become Publish and Discard.
+- **The history.** A revision saved with help from the model says so ("with help from
+  Claude"). Model-written summaries are not marked one by one; Recent changes and the
+  history carry one note, "Change summaries by Claude Haiku". Selecting a version shows
+  what changed from the version before it, as a diff, and the option to compare two
+  chosen versions goes.
 
 Done when: a usable draft can be produced and saved for a person with only facts, and
-for one with several memories, and the history shows which revisions began as drafts.
+for one with several memories; a list of notes selected in a story becomes a paragraph;
+a change saved without a summary gets one; and the history shows which revisions had
+help, and what each version changed.
 
 #### Milestone 6: photos in the app
 
@@ -115,6 +141,9 @@ repository, loaded by the server in file mode, renders the same site.
 Journey 10.
 
 - An invitation email that says who invited them and what Prosapia is.
+- Readable addresses for people's pages, such as `/people/carew-howard-joseph-tbczm8`,
+  so a link someone shares says who it is. Only the trailing id is relied on.
+- Nicknames shown in the list of people: Walter "Scotty" Carew.
 - A first page after sign-in that orients a newcomer: their own page or their nearest
   relative's, and one easy thing to do.
 - Every page readable on a phone.
@@ -147,7 +176,8 @@ both people's timelines.
 - Entry from a sentence: typing "Margaret moved to Chicago with her sister in spring
   1925" proposes fact lines or an event, for the person to check before saving.
 - Weave loose memories into an existing biography, as a proposed edit.
-- Tidy or shorten a passage, or turn an imported note into prose.
+- Targeted requests: "add a brief mention of the trip John took with Jane and Sam in
+  2011".
 
 Done when: journeys 1 and 2 can each start from one typed sentence, and nothing the
 model proposes is saved without the person confirming it.
@@ -215,12 +245,6 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 Uses not yet scheduled; the rules every use follows are in
 [design.md](design.md#language-models).
 
-- Writing the one-line summary of a change automatically, after the save, with a fast,
-  inexpensive model, instead of asking the editor for it. Summaries are useful, but
-  writing them is toil. This would be the one model-written text that needs no review:
-  it describes a change rather than adding to the record, and is marked as
-  model-written. The editor's actions could then become "Publish" and "Discard", as on
-  GitHub.
 - Transcribing a scanned letter or certificate.
 - Checking: point out conflicts, such as a child born after a parent's death, beyond the
   simple checks in milestone 13.

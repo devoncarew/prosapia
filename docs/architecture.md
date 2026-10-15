@@ -240,8 +240,9 @@ shows up.
 
 ### Open
 
-- **Generated summaries.** Whether a language model drafts a biography or suggests
-  structured facts from prose, and how its output is labelled and cited.
+- **Model-written text and sources.** How text a model wrote from cited facts carries
+  those citations. The rules for model help are in
+  [design.md](design.md#language-models).
 - **Static or live.** Public pages could be published as a static site; private ones
   need access checks on every request.
 - **Printing.** Family books and wall charts are a common end product; in scope or
