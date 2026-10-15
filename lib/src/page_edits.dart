@@ -91,6 +91,34 @@ String referencesToName(String source, String personId, String name) {
   );
 }
 
+/// Sets the first `[label]:` line to [value], or adds one at the end of
+/// the facts block. Returns null if the page has no facts block.
+String? setFact(String source, String label, String value) {
+  final key = label.toLowerCase();
+  var done = false;
+  final changed = _editFacts(source, (line) {
+    if (done || line.key != key) return null;
+    done = true;
+    return [value];
+  });
+  if (changed != null) return changed;
+  final lines = source.split('\n');
+  var i = 0;
+  while (i < lines.length && lines[i].trim().isEmpty) {
+    i++;
+  }
+  if (i >= lines.length ||
+      ParsedPage.labelPattern.firstMatch(lines[i])?[1]?.toLowerCase() !=
+          'name') {
+    return null;
+  }
+  while (i < lines.length && lines[i].trim().isNotEmpty) {
+    i++;
+  }
+  lines.insert(i, '$label: $value');
+  return lines.join('\n');
+}
+
 /// The text of a new page: its name, and what is known from where it was
 /// made.
 String newPage({

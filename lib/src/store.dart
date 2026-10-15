@@ -71,6 +71,15 @@ abstract class TreeStore {
   /// Records the cost of one call to the model.
   Future<void> recordCost(double dollars, {required String model}) async {}
 
+  /// Adds photos to the tree: each [MediaWrite]'s file is stored and its
+  /// record written, as one entry in the log. Also used to replace a
+  /// photo's file after its details change.
+  Future<void> saveMedia(
+    List<MediaWrite> files, {
+    required Member author,
+    required String summary,
+  }) => throw UnsupportedError('This store is read-only.');
+
   /// Every saved version of a person's page, newest first.
   Future<List<Revision>> history(String personId) async => const [];
 
@@ -128,6 +137,16 @@ class PageWrite {
   /// The revision this write was based on; zero for a new page.
   final int basedOn;
   final bool delete;
+}
+
+/// A photo file to store, with its record.
+class MediaWrite {
+  MediaWrite(this.media, this.file);
+
+  final Media media;
+
+  /// The file as it should be stored, with its metadata already written.
+  final File file;
 }
 
 /// The outcome of a save: the new revision number, or the page and revision
@@ -193,6 +212,7 @@ class Change {
     required this.summary,
     required this.at,
     required this.pages,
+    this.media = const [],
     this.summaryBy,
   });
 
@@ -204,6 +224,9 @@ class Change {
 
   /// The pages changed, each with the revision the change produced.
   final Map<String, int> pages;
+
+  /// The photos and other files added or changed, by key.
+  final List<String> media;
 
   /// The model that wrote [summary], if one did.
   final String? summaryBy;

@@ -14,7 +14,9 @@ import 'firestore_store.dart' show contentTypes;
 import 'images.dart';
 import 'index.dart';
 import 'page_edits.dart';
+import 'photo_metadata.dart';
 import 'render.dart';
+import 'staging.dart';
 import 'store.dart';
 import 'tree.dart';
 
@@ -73,9 +75,12 @@ Handler siteHandler(
   DisplayCopies copies, {
   Sessions? sessions,
   Assistant? assistant,
+  Staging? staging,
   String assets = 'web/dist',
 }) {
   final router = Router();
+  final uploads =
+      staging ?? Staging(p.join(p.dirname(copies.cacheDir), 'staging'));
 
   Renderer render(Request r) => Renderer(
     site.tree,
@@ -889,6 +894,241 @@ Handler siteHandler(
         html(render(r).changes(await site.store.recentChanges())),
   );
 
+  // ------------------------------------------------------------- photos
+
+  router.get('/media/add', (Request r) async {
+    if (editor(r) == null) return notAllowed(r);
+    final person = site.tree.people[r.url.queryParameters['person'] ?? ''];
+    return html(
+      render(r).addPhotos(person, help: await helpUnavailable() == null),
+    );
+  });
+
+  // The browser sends each chosen file here as it is chosen, so the photos
+  // can be previewed, and their backs read, before they are added.
+  router.post('/media/staging', (Request r) async {
+    if (editor(r) == null) return notAllowed(r);
+    final saved = await uploads.save(r.read());
+    if (saved == null) {
+      return jsonError(
+        'That is not a photo Prosapia can store (JPEG, HEIC, PNG or TIFF, '
+        'up to 32 MB).',
+        status: 400,
+      );
+    }
+    return Response.ok(
+      jsonEncode({'token': saved.token, 'kind': saved.kind}),
+      headers: {'content-type': 'application/json'},
+    );
+  });
+
+  router.get('/media/staging/<token>/preview', (Request r, String token) async {
+    if (editor(r) == null) return notAllowed(r);
+    final file = uploads.file(token);
+    if (file == null) return Response.notFound('no such upload');
+    return Response.ok(
+      await uploads.preview(file, 480),
+      headers: {'content-type': 'image/jpeg', 'cache-control': 'private'},
+    );
+  });
+
+  router.post('/media/transcribe', (Request r) async {
+    if (editor(r) == null) return notAllowed(r);
+    final body = (jsonDecode(await r.readAsString()) as Map)
+        .cast<String, Object?>();
+    // A back not yet added, by its upload token, or one already stored.
+    List<int>? jpeg;
+    final staged = uploads.file('${body['token']}');
+    if (staged != null) {
+      jpeg = await uploads.preview(staged, 1568);
+    } else if (site.tree.media['${body['key']}'] case final media?) {
+      jpeg = (await copies.get(
+        media,
+        await site.store.localFile(media),
+        1920,
+      ))?.readAsBytesSync();
+    }
+    if (jpeg == null) return jsonError('There is no such photo.', status: 404);
+    return helping(() => assistant!.transcribeBack(jpeg!));
+  });
+
+  /// The people with these ids, by id and name.
+  List<({String id, String name})> shown(Iterable<String> ids) => [
+    for (final id in ids)
+      if (site.tree.people[id] case final p?) (id: p.id, name: p.name),
+  ];
+
+  /// A photo's file, with [details] written into it, ready to store.
+  Future<MediaWrite> prepare(
+    File source,
+    Media media,
+    PhotoDetails details,
+  ) async {
+    final work = Directory.systemTemp.createTempSync('prosapia_photo');
+    final file = source.copySync(p.join(work.path, media.fileName));
+    await writeMetadata(file, media.key, details);
+    media
+      ..title = details.title
+      ..date = details.date
+      ..place = details.place
+      ..description = details.back
+      ..set = details.set
+      ..setIndex = details.setIndex;
+    media.people
+      ..clear()
+      ..addAll([if (!media.isBack) ...details.people.map((p) => p.id)]);
+    return MediaWrite(media, file);
+  }
+
+  String? text(Object? value) {
+    final s = value is String ? value.trim() : '';
+    return s.isEmpty ? null : s;
+  }
+
+  router.post('/media/add', (Request r) async {
+    final member = editor(r);
+    if (member == null) return notAllowed(r);
+    final body = (jsonDecode(await r.readAsString()) as Map)
+        .cast<String, Object?>();
+    final photos = ((body['photos'] as List?) ?? const [])
+        .cast<Map<String, Object?>>();
+    if (photos.isEmpty) return jsonError('Choose a photo first.', status: 400);
+    final taken = {for (final m in site.tree.media.values) m.id};
+    final set = photos.length > 1 ? newId('s', (id) => false) : null;
+    final writes = <MediaWrite>[];
+    for (final (i, photo) in photos.indexed) {
+      final front = uploads.file('${photo['front']}');
+      if (front == null) {
+        return jsonError('A photo was not uploaded. Please choose it again.');
+      }
+      final back = photo['back'] == null
+          ? null
+          : uploads.file('${photo['back']}');
+      final id = newId('m', taken.contains);
+      taken.add(id);
+      final details = PhotoDetails(
+        title: text(photo['title']),
+        date: text(photo['date']),
+        place: text(photo['place']),
+        back: back == null ? null : text(photo['backText']),
+        people: shown(((photo['people'] as List?) ?? const []).cast<String>()),
+        set: set,
+        setIndex: set == null ? null : i + 1,
+      );
+      for (final (file, isBack) in [
+        (front, false),
+        if (back != null) (back, true),
+      ]) {
+        final archival = await uploads.archival(file);
+        writes.add(
+          await prepare(
+            archival,
+            Media(
+              id,
+              isBack: isBack,
+              extension: p.extension(archival.path).substring(1) == 'heic'
+                  ? 'heic'
+                  : 'jpg',
+              location: '',
+            ),
+            details,
+          ),
+        );
+      }
+    }
+    final first = writes.first.media;
+    await site.store.saveMedia(
+      writes,
+      author: member,
+      summary: photos.length == 1
+          ? 'Add a photo${first.title == null ? '' : ': ${first.title}'}'
+          : 'Add ${photos.length} photos',
+    );
+    await site.reload();
+    final person = site.tree.people['${body['person']}'];
+    return Response.ok(
+      jsonEncode({
+        'location': person != null
+            ? '/people/${person.id}'
+            : '/media/${first.key}',
+      }),
+      headers: {'content-type': 'application/json'},
+    );
+  });
+
+  router.get('/media/<key>/edit', (Request r, String key) async {
+    if (editor(r) == null) return notAllowed(r);
+    final media = site.tree.media[key];
+    if (media == null || media.isBack) {
+      return missing(r, 'No photo has the id $key.');
+    }
+    return html(
+      render(r).editPhoto(media, help: await helpUnavailable() == null),
+    );
+  });
+
+  router.post('/media/<key>/edit', (Request r, String key) async {
+    final member = editor(r);
+    if (member == null) return notAllowed(r);
+    final media = site.tree.media[key];
+    if (media == null || media.isBack) {
+      return missing(r, 'No photo has the id $key.');
+    }
+    final fields = await formAll(r);
+    String? field(String name) => text(fields[name]?.firstOrNull);
+    final back = site.tree.media['${media.id}-back'];
+    final details = PhotoDetails(
+      title: field('title'),
+      date: field('date'),
+      place: field('place'),
+      back: back == null ? null : field('back'),
+      people: shown(fields['people'] ?? const []),
+      set: media.set,
+      setIndex: media.setIndex,
+    );
+    final writes = [
+      for (final m in [media, ?back])
+        await prepare(
+          await site.store.localFile(m),
+          Media(
+            m.id,
+            isBack: m.isBack,
+            extension: m.extension,
+            location: m.location,
+          ),
+          details,
+        ),
+    ];
+    await site.store.saveMedia(
+      writes,
+      author: member,
+      summary: 'Change the details of ${media.title ?? 'a photo'}',
+    );
+    await site.reload();
+    return seeOther('/media/$key');
+  });
+
+  router.post('/media/<key>/main', (Request r, String key) async {
+    final member = editor(r);
+    if (member == null) return notAllowed(r);
+    final media = site.tree.media[key];
+    final person = site.tree.people[(await form(r))['person'] ?? ''];
+    if (media == null || person == null) {
+      return missing(r, 'There is no such photo or person.');
+    }
+    final source = setFact(person.source, 'Photo', media.key);
+    if (source == null) return seeOther('/media/$key');
+    final result = await site.store.savePerson(
+      Person.fromSource(person.id, person.directory, source),
+      basedOn: person.revision,
+      author: member,
+      summary: 'Use ${media.title ?? 'a photo'} as the main photo',
+    );
+    await site.reload();
+    if (!result.saved) return changedMeanwhile(r, result);
+    return seeOther('/people/${person.id}');
+  });
+
   router.get('/media', (Request r) => html(render(r).mediaIndex()));
   router.get('/media/<key>', (Request r, String key) {
     final media = site.tree.media[key];
@@ -949,15 +1189,21 @@ Handler siteHandler(
 }
 
 /// A new person id, not used by anyone in [tree] or deleted from it.
-String newPersonId(Tree tree, [Random? random]) {
+String newPersonId(Tree tree, [Random? random]) => newId(
+  'p',
+  (id) => tree.people.containsKey(id) || tree.deleted.containsKey(id),
+  random,
+);
+
+/// A new id such as `m-x2k9ab`: [prefix], then six characters that are
+/// easy to read aloud, not [taken].
+String newId(String prefix, bool Function(String) taken, [Random? random]) {
   const alphabet = '23456789abcdefghjkmnpqrstvwxyz'; // no 0/o, 1/i/l, u
   final rng = random ?? Random.secure();
   while (true) {
     final id =
-        'p-${List.generate(6, (_) => alphabet[rng.nextInt(alphabet.length)]).join()}';
-    if (!tree.people.containsKey(id) && !tree.deleted.containsKey(id)) {
-      return id;
-    }
+        '$prefix-${List.generate(6, (_) => alphabet[rng.nextInt(alphabet.length)]).join()}';
+    if (!taken(id)) return id;
   }
 }
 

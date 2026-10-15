@@ -119,6 +119,7 @@ $body
     final actions = [
       if (_canEdit) '<a href="/people/${p.id}/edit">Edit</a>',
       if (_canEdit) '<a href="/people/${p.id}/memory">Add a memory</a>',
+      if (_canEdit) '<a href="/media/add?person=${p.id}">Add photos</a>',
       if (editable) '<a href="/people/${p.id}/history">History</a>',
       if (_canEdit) '<a href="/people/${p.id}/delete">Delete</a>',
     ];
@@ -182,7 +183,10 @@ $body
 
     final media = preview
         ? const <Media>[]
-        : [for (final key in index.mediaOf(p.id)) tree.media[key]!];
+        : [
+            for (final key in index.mediaOf(p.id))
+              if (!tree.media[key]!.isBack) tree.media[key]!,
+          ];
     if (media.isNotEmpty) {
       sb.write('<h2>Photos and documents</h2>${gallery(media)}');
     }
@@ -542,46 +546,131 @@ $body
     return sb.toString();
   }
 
-  String mediaIndex() => page(
-    'Photos',
-    '<h1>Photos and documents</h1>'
-        '<p class="lead">${tree.media.length} files. Titles and names are read from each file\'s embedded metadata.</p>'
-        '${gallery(tree.media.values)}',
-  );
+  String mediaIndex() {
+    final fronts = tree.media.values.where((m) => !m.isBack).toList();
+    return page(
+      'Photos',
+      '<h1>Photos and documents</h1>'
+          '${_canEdit ? '<p class="actions"><a href="/media/add">Add photos</a></p>' : ''}'
+          '<p class="lead">${fronts.length} files. Titles and names are read from each file\'s embedded metadata.</p>'
+          '${gallery(fronts)}',
+    );
+  }
 
+  /// A photo, with its back beside it when it has one, what is known about
+  /// it, and the others added with it.
   String media(Media m) {
+    final front = m.isBack ? tree.media[m.id] ?? m : m;
+    final back = tree.media['${front.id}-back'];
     final sb = StringBuffer('<article class="media">');
-    sb.write('<h1>${esc(m.title ?? 'Untitled')}</h1>');
-    if (m.isImage) {
+    if (_canEdit && !front.isBack) {
       sb.write(
-        '<a href="/media/${m.key}/file"><img src="/media/${m.key}/display?w=1920" alt="${esc(m.title ?? '')}"></a>',
-      );
-    } else {
-      sb.write(
-        '<p><a class="file" href="/media/${m.key}/file">Open the ${m.extension.toUpperCase()} file</a></p>',
+        '<p class="actions"><a href="/media/${front.key}/edit">Edit details</a></p>',
       );
     }
-    final other = tree.media[m.isBack ? m.id : '${m.id}-back'];
-    if (other != null) {
+    sb.write('<h1>${esc(front.title ?? 'Untitled')}</h1>');
+    final facts = [
+      if (front.date != null) date(TreeDate.parse(front.date!)),
+      if (front.place != null)
+        '<span class="place-ref">${esc(front.place)}</span>',
+    ];
+    if (facts.isNotEmpty) sb.write('<p class="lead">${facts.join(' · ')}</p>');
+    String image(Media x, String label) => x.isImage
+        ? '<figure><a href="/media/${x.key}/file"><img src="/media/${x.key}/display?w=1920" alt="${esc(front.title ?? '')}, $label"></a>${back == null ? '' : '<figcaption>$label</figcaption>'}</figure>'
+        : '<p><a class="file" href="/media/${x.key}/file">Open the ${x.extension.toUpperCase()} file</a></p>';
+    sb.write(
+      '<div class="sides${back == null ? '' : ' two'}">${image(front, 'Front')}${back == null ? '' : image(back, 'Back')}</div>',
+    );
+    final writing = front.description ?? back?.description;
+    if (writing != null) {
       sb.write(
-        '<p><a href="/media/${other.key}">See the ${other.isBack ? 'back' : 'front'}</a></p>',
+        '${back == null ? '' : '<h2>Written on the back</h2>'}<p class="description">${esc(writing)}</p>',
       );
     }
-    if (m.description != null) {
-      sb.write('<p class="description">${esc(m.description)}</p>');
-    }
-    if (m.people.isNotEmpty) {
-      sb.write('<h2>People shown</h2><ul>');
-      for (final id in m.people) {
-        sb.write('<li>${personLink(id, years: true)}</li>');
+    if (front.people.isNotEmpty) {
+      sb.write('<h2>People shown</h2><ul class="shown">');
+      for (final id in front.people) {
+        final person = tree.people[id];
+        final main =
+            _canEdit &&
+                person != null &&
+                person.photo != front.key &&
+                front.isImage
+            ? ' <form method="post" action="/media/${front.key}/main"><input type="hidden" name="person" value="$id"><button>Use as ${esc(person.name)}\'s main photo</button></form>'
+            : '';
+        sb.write('<li>${personLink(id, years: true)}$main</li>');
       }
       sb.write('</ul>');
     }
+    if (front.set != null) {
+      final set =
+          tree.media.values
+              .where(
+                (x) => x.set == front.set && !x.isBack && x.key != front.key,
+              )
+              .toList()
+            ..sort((a, b) => (a.setIndex ?? 0).compareTo(b.setIndex ?? 0));
+      if (set.isNotEmpty) {
+        sb.write('<h2>Added with it</h2>${gallery(set)}');
+      }
+    }
     sb.write(
-      '<p class="meta">${m.key}.${m.extension}${m.width == null ? '' : ' · ${m.width} × ${m.height}'} · <a href="/media/${m.key}/file">original file</a></p>',
+      '<p class="meta">${front.key}.${front.extension}${front.width == null ? '' : ' · ${front.width} × ${front.height}'} · <a href="/media/${front.key}/file">original file</a>${back == null ? '' : ' · <a href="/media/${back.key}/file">back</a>'}</p>',
     );
     sb.write('</article>');
-    return page(m.title ?? 'Untitled', sb.toString());
+    return page(front.title ?? 'Untitled', sb.toString());
+  }
+
+  /// The form for adding photos, from [person]'s page when given. The
+  /// browser code in photos.ts uploads each file as it is chosen.
+  String addPhotos(Person? person, {required bool help}) =>
+      page(person == null ? 'Add photos' : 'Add photos of ${person.name}', '''
+<h1>Add photos${person == null ? '' : ' of ${esc(person.name)}'}</h1>
+<p class="lead">Choose one photo or several. What you type here applies to all of them; you can change it for any one below.</p>
+<form class="memory add-photos" data-person="${person?.id ?? ''}" data-help="$help">
+  <label for="shared_date">When, if you know</label>
+  <input id="shared_date" name="date" maxlength="80" placeholder="about 1949">
+  <label for="shared_place">Where</label>
+  <input id="shared_place" name="place" maxlength="200" placeholder="Hartford, CT">
+  <label>Who is in them</label>
+  <div class="people-picker" data-name="people" data-initial="${esc(jsonEncode([
+        if (person != null) {'id': person.id, 'name': person.name},
+      ]))}"></div>
+  <label for="files">Photos</label>
+  <input id="files" type="file" multiple accept="image/jpeg,image/heic,image/png,image/tiff,.heic,.tif,.tiff">
+  <div class="photo-list"></div>
+  <p class="message" role="alert" hidden></p>
+  <div class="save"><button class="primary" disabled>Add the photos</button> <a href="${person == null ? '/media' : '/people/${person.id}'}">Cancel</a></div>
+</form>
+<script type="module" src="/assets/photos.js"></script>''');
+
+  /// The form for changing what is known about a photo.
+  String editPhoto(Media m, {required bool help}) {
+    final back = tree.media['${m.id}-back'];
+    final people = [
+      for (final id in m.people)
+        if (tree.people[id] case final p?) {'id': p.id, 'name': p.name},
+    ];
+    return page('Edit ${m.title ?? 'a photo'}', '''
+<h1>Edit: ${esc(m.title ?? 'Untitled')}</h1>
+<p class="lead">These details are written into the photo file itself, so a copy that leaves Prosapia still carries them.</p>
+<form class="memory edit-photo" method="post" action="/media/${m.key}/edit" data-help="$help">
+  ${m.isImage ? '<img class="thumb" src="/media/${m.key}/display?w=480" alt="">' : ''}
+  <label for="title">Caption</label>
+  <input id="title" name="title" value="${esc(m.title ?? '')}" maxlength="200">
+  <label for="date">When</label>
+  <input id="date" name="date" value="${esc(m.date ?? '')}" maxlength="80" placeholder="about 1949">
+  <label for="place">Where</label>
+  <input id="place" name="place" value="${esc(m.place ?? '')}" maxlength="200">
+  <label>Who is in it</label>
+  <div class="people-picker" data-name="people" data-initial="${esc(jsonEncode(people))}"></div>
+  ${back == null ? '' : '''<label for="back">Written on the back</label>
+  ${back.isImage ? '<img class="thumb" src="/media/${back.key}/display?w=480" alt="The back">' : ''}
+  <textarea id="back" name="back" spellcheck="true">${esc(back.description ?? m.description ?? '')}</textarea>
+  ${help ? '<div class="help tidy" data-key="${back.key}"><button type="button" class="transcribe">Claude: Transcribe</button></div>' : ''}'''}
+  <div class="save"><button class="primary">Save</button> <a href="/media/${m.key}">Cancel</a></div>
+</form>
+<script type="module" src="/assets/photos.js"></script>''');
   }
 
   // ---------------------------------------------------------------- search
@@ -941,11 +1030,18 @@ ${r.deleted ? '' : '<details class="whole"><summary>The whole page as it was</su
                         '${personLink(e.key)} <a class="years" href="/people/${e.key}/revisions/${e.value}">(what changed)</a>',
                   )
                   .join(', ');
+        // A front and its back are one photo.
+        final photos = c.media.where((key) => !key.endsWith('-back')).toList();
+        final media = [
+          for (final key in photos.take(5))
+            '<a href="/media/$key">${esc(tree.media[key]?.title ?? 'a photo')}</a>',
+          if (photos.length > 5) '${photos.length - 5} more',
+        ].join(', ');
         final undo = _undoable(c)
             ? '<form method="post" action="/changes/${c.id}/undo"><button>Undo</button></form>'
             : '';
         sb.write(
-          '<tr><td>${time(c.at)}</td><td>${esc(c.by)}</td><td>${esc(c.summary)}</td><td>$pages</td><td>$undo</td></tr>',
+          '<tr><td>${time(c.at)}</td><td>${esc(c.by)}</td><td>${esc(c.summary)}</td><td>$pages${pages.isNotEmpty && media.isNotEmpty ? ', ' : ''}$media</td><td>$undo</td></tr>',
         );
       }
       sb.write('</table>');
@@ -959,6 +1055,7 @@ ${r.deleted ? '' : '<details class="whole"><summary>The whole page as it was</su
   /// offered.
   bool _undoable(Change c) =>
       _canEdit &&
+      c.media.isEmpty &&
       c.pages.length <= 10 &&
       c.pages.entries.every(
         (e) => (tree.people[e.key] ?? tree.deleted[e.key])?.revision == e.value,
@@ -1134,6 +1231,39 @@ label.check { display: flex; gap: 8px; align-items: center; color: var(--text); 
 label.check input { width: auto; }
 .whole { margin-top: 16px; font: 14px system-ui, sans-serif; }
 .whole summary { cursor: pointer; color: var(--muted); }
+.sides { display: grid; gap: 16px; }
+.sides.two { grid-template-columns: 1fr 1fr; }
+@media (max-width: 640px) { .sides.two { grid-template-columns: 1fr; } }
+.sides figure { margin: 0; }
+.sides figcaption { font: 13px system-ui, sans-serif; color: var(--muted); margin-top: 4px; }
+.media .sides img { max-width: 100%; }
+.shown form { display: inline; margin-left: 8px; }
+.shown button { font-size: 13px; }
+img.thumb { display: block; max-width: 240px; max-height: 240px; border-radius: 4px; margin-top: 10px;
+  border: 1px solid var(--line); }
+.people-picker { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--surface); position: relative; }
+.people-picker .chip { display: inline-flex; gap: 4px; align-items: center; padding: 2px 4px 2px 10px;
+  border-radius: 12px; background: var(--bg); border: 1px solid var(--line); font: 14px system-ui, sans-serif; }
+.people-picker .chip button { border: none; background: none; padding: 0 6px; color: var(--muted); }
+.memory .people-picker input { flex: 1; min-width: 160px; border: none; padding: 4px; font: 15px system-ui, sans-serif;
+  background: transparent; width: auto; }
+.people-picker .suggestions { position: absolute; top: 100%; left: 0; z-index: 10; min-width: 280px; margin-top: 4px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 4px 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15); font: 14px system-ui, sans-serif; }
+.people-picker .suggestions div { padding: 6px 12px; cursor: pointer; }
+.people-picker .suggestions div.active, .people-picker .suggestions div:hover { background: var(--bg); }
+.people-picker .suggestions span { display: block; color: var(--muted); font-size: 12px; }
+.photo-list { display: grid; gap: 16px; margin-top: 12px; }
+.photo-card { display: grid; grid-template-columns: 160px 1fr; gap: 16px; padding: 12px;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+@media (max-width: 640px) { .photo-card { grid-template-columns: 1fr; } }
+.photo-card img { width: 160px; max-height: 200px; object-fit: contain; border-radius: 4px; background: var(--bg); }
+.photo-card .status { font: 13px system-ui, sans-serif; color: var(--muted); }
+.photo-card label { margin-top: 8px; }
+.memory .photo-card textarea, .edit-photo textarea { height: 7em; }
+.photo-card button { font: 13px system-ui, sans-serif; }
+.photo-card .add-back { font: 13px system-ui, sans-serif; margin-top: 10px; display: inline-block; }
 .similar { list-style: none; padding: 0; font: 15px/1.5 system-ui, sans-serif; }
 .similar li { margin-bottom: 8px; }
 .similar button { margin-left: 8px; font-size: 13px; }

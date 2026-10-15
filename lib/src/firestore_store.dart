@@ -205,6 +205,52 @@ class FirestoreStore extends TreeStore {
   }
 
   @override
+  Future<void> saveMedia(
+    List<MediaWrite> files, {
+    required Member author,
+    required String summary,
+  }) async {
+    final storage = app.storage().bucket(bucketName).storage;
+    final batch = _db.batch();
+    for (final w in files) {
+      final object = 'trees/$treeId/media/${w.media.fileName}';
+      final bytes = w.file.readAsBytesSync();
+      await storage.uploadObject(
+        bucketName,
+        object,
+        bytes,
+        metadata: gcs.ObjectMetadata(
+          contentType:
+              contentTypes[w.media.extension] ?? 'application/octet-stream',
+        ),
+      );
+      w.media.size = bytes.length;
+      // Keep the new file as the local copy, so it is not fetched again.
+      final cached = File(p.join(cacheDir, 'originals', w.media.fileName));
+      cached.parent.createSync(recursive: true);
+      File('${cached.path}.tmp')
+        ..writeAsBytesSync(bytes)
+        ..renameSync(cached.path);
+      batch.set(
+        _tree.collection('media').doc(w.media.key),
+        w.media.toMap(location: object),
+      );
+    }
+    batch.set(_tree.collection('changes').doc(), {
+      'pages': <String, int>{},
+      'media': [for (final w in files) w.media.key],
+      'author': author.email,
+      'authorName': ?author.name,
+      'summary': summary,
+      'at': FieldValue.serverTimestamp,
+    });
+    batch.set(_tree, {
+      'version': const FieldValue.increment(1),
+    }, options: const SetOptions.merge());
+    await batch.commit();
+  }
+
+  @override
   Future<List<Revision>> history(String personId) async {
     final snapshot = await _tree
         .collection('people')
@@ -251,6 +297,7 @@ class FirestoreStore extends TreeStore {
     summary: data['summary'] as String,
     at: _time(data['at']),
     pages: ((data['pages'] as Map?) ?? const {}).cast<String, int>(),
+    media: ((data['media'] as List?) ?? const []).cast<String>(),
     summaryBy: data['summaryBy'] as String?,
   );
 

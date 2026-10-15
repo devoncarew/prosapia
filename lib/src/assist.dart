@@ -133,6 +133,24 @@ class Assistant {
     ),
   );
 
+  /// Transcribes the writing on the back of a photo, given as a JPEG.
+  Future<Reply> transcribeBack(List<int> jpeg) => _clean(
+    claude.write(
+      Model.writer,
+      images: [jpeg],
+      system:
+          'You transcribe the writing on the backs of old family photos, for '
+          'a family-history wiki.',
+      user:
+          'This is the back of a photo. Transcribe the writing on it exactly '
+          'as written, keeping its line breaks, spelling and abbreviations. '
+          'Write [illegible] for a word you cannot read, and [?] after a '
+          'word you are unsure of. Ignore printed processing marks unless '
+          'they include a date. If there is no writing, reply with nothing. '
+          'Reply with only the transcription.',
+    ),
+  );
+
   /// A one-line summary of a change from each page's text before and after.
   Future<Reply> summarize(
     List<({String name, String before, String after})> pages,
