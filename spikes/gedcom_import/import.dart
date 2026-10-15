@@ -5,17 +5,27 @@
 // of the matching .ftmb backup, writing what is known about each into the file.
 //
 // Usage:
-//   dart run import.dart <export.ged> <out-dir> [backup.ftmb]
+//   dart run import.dart [--name=<tree name>] <export.ged> <out-dir> [backup.ftmb]
 //
 // Needs exiftool and unzip when a backup is given.
 
 import 'dart:convert';
 import 'dart:io';
 
-void main(List<String> args) {
+void main(List<String> arguments) {
+  // A --name=... option names the tree; everything else is positional.
+  final nameOption = arguments.where((a) => a.startsWith('--name='));
+  final treeName = nameOption.isEmpty
+      ? 'Imported tree'
+      : nameOption.first.substring('--name='.length);
+  final args = [
+    for (final a in arguments)
+      if (!a.startsWith('--name=')) a,
+  ];
   if (args.length < 2) {
     stderr.writeln(
-      'usage: dart run import.dart <export.ged> <out-dir> [backup.ftmb]',
+      'usage: dart run import.dart [--name=<tree name>] <export.ged> <out-dir> '
+      '[backup.ftmb]',
     );
     exit(64);
   }
@@ -158,7 +168,7 @@ void main(List<String> args) {
 
   write(
     '$outDir/tree.yaml',
-    'name: Carew sample tree\nimported_from: ${args[0].split('/').last}\n',
+    'name: $treeName\nimported_from: ${args[0].split('/').last}\n',
   );
 
   // Photos.

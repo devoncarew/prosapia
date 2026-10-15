@@ -18,3 +18,6 @@ It prints a report of what was imported and what was not. Findings are in
 [docs/content-model.md](../../docs/content-model.md#what-the-sample-import-showed).
 
 Needs `exiftool` and `unzip`.
+
+The full process for loading a real tree into the production project, which starts with
+this script, is in [docs/loading.md](../../docs/loading.md).
