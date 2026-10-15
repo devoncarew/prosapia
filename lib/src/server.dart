@@ -8,7 +8,6 @@ import 'auth.dart';
 import 'firestore_store.dart' show contentTypes;
 import 'images.dart';
 import 'index.dart';
-import 'page_source.dart';
 import 'render.dart';
 import 'store.dart';
 import 'tree.dart';
@@ -151,11 +150,9 @@ Handler siteHandler(
       r,
       id,
       (person, member) async => html(
-        render(r).editPerson(
-          person,
-          source: personSource(person),
-          basedOn: person.revision,
-        ),
+        render(
+          r,
+        ).editPerson(person, source: person.source, basedOn: person.revision),
       ),
     ),
   );
@@ -163,19 +160,13 @@ Handler siteHandler(
   router.post(
     '/people/<id>/preview',
     (Request r, String id) => editing(r, id, (person, member) async {
-      try {
-        final draft = parsePersonSource(
-          await r.readAsString(),
-          id: id,
-          directory: person.directory,
-        );
-        return html(render(r).personArticle(draft, withMedia: false));
-      } on FormatException catch (e) {
-        return html(
-          '<p class="message">${Renderer.esc(e.message)}</p>',
-          status: 422,
-        );
-      }
+      // Reading a page never fails; what cannot be read shows as such.
+      final draft = Person.fromSource(
+        id,
+        person.directory,
+        (await r.readAsString()).replaceAll('\r\n', '\n'),
+      );
+      return html(render(r).personArticle(draft, withMedia: false));
     }),
   );
 
@@ -197,15 +188,9 @@ Handler siteHandler(
         status: 422,
       );
 
-      final Person draft;
-      try {
-        draft = parsePersonSource(source, id: id, directory: person.directory);
-      } on FormatException catch (e) {
-        return again(e.message);
-      }
+      final draft = Person.fromSource(id, person.directory, source);
       if (summary.isEmpty) return again('Add a few words on what you changed.');
-      if (basedOn == person.revision &&
-          personSource(draft) == personSource(person)) {
+      if (basedOn == person.revision && source.trim() == person.source.trim()) {
         return seeOther('/people/$id'); // nothing changed
       }
 
@@ -273,15 +258,11 @@ Handler siteHandler(
       // the memory to their version instead.
       for (var attempt = 0; attempt < 4; attempt++) {
         final current = site.tree.people[id]!;
-        final draft =
-            parsePersonSource(
-                personSource(current),
-                id: id,
-                directory: current.directory,
-              )
-              ..body = current.body.isEmpty
-                  ? section
-                  : '${current.body}\n\n$section';
+        final draft = Person.fromSource(
+          id,
+          current.directory,
+          '${current.source.trimRight()}\n\n$section\n',
+        );
         final result = await site.store.savePerson(
           draft,
           basedOn: current.revision,
@@ -353,11 +334,16 @@ Handler siteHandler(
       final number = int.tryParse((await form(r))['number'] ?? '');
       final old = number == null ? null : await site.store.revision(id, number);
       if (old == null) return missing(r, 'There is no such version.');
-      final draft = parsePersonSource(
-        old.source,
-        id: id,
-        directory: person.directory,
-      );
+      if (old.source.startsWith('---')) {
+        return html(
+          render(r).forbidden(
+            'Version $number is in the page format Prosapia used before, and '
+            'cannot be restored directly. Copy what you need from it instead.',
+          ),
+          status: 409,
+        );
+      }
+      final draft = Person.fromSource(id, person.directory, old.source);
       // Restoring is itself a new version, so nothing is ever lost.
       final result = await site.store.savePerson(
         draft,

@@ -5,6 +5,7 @@ import 'package:markdown/markdown.dart' as md;
 import 'dates.dart';
 import 'diff.dart';
 import 'index.dart';
+import 'page_syntax.dart';
 import 'store.dart';
 import 'tree.dart';
 
@@ -63,14 +64,18 @@ $body
 
   String home() {
     final groups = <String, List<Person>>{};
-    for (final id in index.peopleByName()) {
-      final p = tree.people[id]!;
-      groups.putIfAbsent(p.surname ?? '', () => []).add(p);
+    final people = index.peopleByName().map((id) => tree.people[id]!).toList()
+      ..sort((a, b) {
+        final c = surnameOf(a).compareTo(surnameOf(b));
+        return c != 0 ? c : a.name.compareTo(b.name);
+      });
+    for (final p in people) {
+      groups.putIfAbsent(surnameOf(p), () => []).add(p);
     }
     final sb = StringBuffer()
       ..write('<h1>${esc(tree.name)}</h1>')
       ..write(
-        '<p class="lead">${tree.people.length} people, ${tree.unions.length} partnerships, ${tree.media.length} photos and documents.</p>',
+        '<p class="lead">${tree.people.length} people, ${tree.media.length} photos and documents.</p>',
       );
     if (tree.problems.isNotEmpty) {
       sb.write(
@@ -83,9 +88,7 @@ $body
     }
     sb.write('<div class="surnames">');
     groups.forEach((surname, people) {
-      sb.write(
-        '<section><h2>${esc(surname.isEmpty ? 'No surname recorded' : surname)}</h2><ul>',
-      );
+      sb.write('<section><h2>${esc(surname)}</h2><ul>');
       for (final p in people) {
         sb.write('<li>${personLink(p.id, years: true)}</li>');
       }
@@ -93,6 +96,12 @@ $body
     });
     sb.write('</div>');
     return page('People', sb.toString());
+  }
+
+  /// The last word of a person's name, for grouping the list of people.
+  static String surnameOf(Person p) {
+    final words = p.name.trim().split(RegExp(r'\s+'));
+    return words.length > 1 ? words.last : 'Other';
   }
 
   // ---------------------------------------------------------------- person
@@ -115,6 +124,16 @@ $body
   String personArticle(Person p, {bool withMedia = true}) {
     final sb = StringBuffer();
     sb.write('<article class="person">');
+    final issues = issuesOf(p);
+    if (issues.isNotEmpty && (_canEdit || !requiresViewer)) {
+      sb.write(
+        '<details class="issues"><summary>${issues.length == 1 ? 'One thing' : '${issues.length} things'} on this page could not be read</summary><ul>',
+      );
+      for (final issue in issues) {
+        sb.write('<li>${esc(issue)}</li>');
+      }
+      sb.write('</ul></details>');
+    }
     sb.write(_infobox(p));
     sb.write('<h1>${esc(p.name)}</h1>');
     if (p.years.isNotEmpty) sb.write('<p class="lead">${p.years}</p>');
@@ -131,7 +150,7 @@ $body
     if (dated.isNotEmpty) {
       sb.write('<h2>Timeline</h2><table class="timeline">');
       for (final e in dated) {
-        sb.write('<tr><th>${esc(e.date.display)}</th><td>${e.html}</td></tr>');
+        sb.write('<tr><th>${date(e.date)}</th><td>${e.html}</td></tr>');
       }
       sb.write('</table>');
     }
@@ -153,68 +172,118 @@ $body
     return sb.toString();
   }
 
+  /// Whether pages are only for signed-in members (otherwise the tree is a
+  /// local set of files, and its reader is its editor).
+  bool get requiresViewer => viewer != null;
+
+  /// Everything on [p]'s page that could not be read, including references
+  /// to people who are not in the tree.
+  List<String> issuesOf(Person p) => [
+    ...p.issues,
+    for (final r in [...p.parents, ...p.children, ...p.siblings, ...p.partners])
+      if (r.id != null && !tree.people.containsKey(r.id))
+        'No one in the tree has the id ${r.id}.',
+    for (final c in p.couples)
+      if (c.partner?.id != null && !tree.people.containsKey(c.partner!.id))
+        'No one in the tree has the id ${c.partner!.id}.',
+    for (final m in proseRef.allMatches(p.body))
+      if (!tree.people.containsKey('p-${m[1]!.split('-').last}'))
+        'No one in the tree matches @${m[1]}.',
+  ];
+
+  /// A date as typed, with how it was read shown on hover.
+  String date(TreeDate d) => d.understood
+      ? '<span class="date" title="Read as: ${esc(d.meaning)}">${esc(d.display)}</span>'
+      : '<span class="unresolved" title="Not read as a date">${esc(d.display)}</span>';
+
+  /// A person named in a fact line: linked when they have a page.
+  String ref(PersonRef r, {bool years = false}) {
+    final q = r.qualifier == null
+        ? ''
+        : ' <span class="years">(${esc(r.qualifier)})</span>';
+    if (r.id != null) {
+      if (tree.people.containsKey(r.id)) {
+        return personLink(r.id!, years: years) + q;
+      }
+      return '<span class="unresolved" title="No one in the tree has this id">${esc(r.id)}</span>$q';
+    }
+    return '<span class="named" title="No page yet">${esc(r.name)}</span>$q';
+  }
+
+  /// The marriage of [a] and [b], stated on either page.
+  CoupleEvent? marriageOf(String a, String b) {
+    for (final (who, other) in [(a, b), (b, a)]) {
+      final p = tree.people[who];
+      if (p == null) continue;
+      for (final c in p.couples) {
+        if (c.partner?.id == other && c.kind.toLowerCase() == 'married') {
+          return c;
+        }
+      }
+    }
+    return null;
+  }
+
   String _infobox(Person p) {
     final rows = <(String, String)>[];
-    void row(String label, String html) {
+    void row(String label, Iterable<String> items) {
+      final html = items.where((x) => x.isNotEmpty).join('<br>');
       if (html.isNotEmpty) rows.add((label, html));
     }
 
     String event(Event? e) => e == null
         ? ''
         : [
-            if (e.date != null) esc(e.date!.display),
+            if (e.date != null) date(e.date!),
             if (e.place != null) esc(e.place),
           ].join('<br>');
 
-    if (p.alsoKnownAs.isNotEmpty) {
-      row('Also known as', esc(p.alsoKnownAs.join(', ')));
+    String qualified(String id, List<PersonRef> stated, {bool years = false}) {
+      final q = stated
+          .where((r) => r.id == id && r.qualifier != null)
+          .firstOrNull
+          ?.qualifier;
+      return personLink(id, years: years) +
+          (q == null ? '' : ' <span class="years">(${esc(q)})</span>');
     }
-    row('Born', event(p.born));
-    row('Died', event(p.died));
-    row(
-      'Parents',
-      p.parents
-          .map(
-            (l) =>
-                personLink(l.id) +
-                (l.relationship == null
-                    ? ''
-                    : ' <span class="years">(${esc(l.relationship)})</span>'),
-          )
-          .join('<br>'),
-    );
-    row(
-      'Partners',
-      index
-          .partnershipsOf(p.id)
-          .map((uid) {
-            final u = tree.unions[uid]!;
-            final other = u.partners.firstWhere(
-              (x) => x != p.id,
-              orElse: () => p.id,
-            );
-            final year = u.married?.date?.year;
-            return personLink(other) +
-                (year == null
-                    ? ''
-                    : ' <span class="years">(married $year)</span>');
-          })
-          .join('<br>'),
-    );
-    row(
-      'Children',
-      index
-          .childrenOf(p.id)
-          .map((id) => personLink(id, years: true))
-          .join('<br>'),
-    );
-    row(
-      'Siblings',
-      index
-          .siblingsOf(p.id)
-          .map((id) => personLink(id, years: true))
-          .join('<br>'),
-    );
+
+    Iterable<String> named(List<PersonRef> refs, {bool years = false}) => [
+      for (final r in refs)
+        if (r.id == null || !tree.people.containsKey(r.id))
+          ref(r, years: years),
+    ];
+
+    if (p.alsoKnownAs.isNotEmpty) {
+      row('Also known as', [esc(p.alsoKnownAs.join(', '))]);
+    }
+    row('Born', [event(p.born)]);
+    row('Christened', [event(p.christened)]);
+    row('Died', [event(p.died)]);
+    row('Buried', [event(p.buried)]);
+    row('Parents', [
+      for (final id in index.parentsOf(p.id)) qualified(id, p.parents),
+      ...named(p.parents),
+    ]);
+    row('Partners', [
+      for (final id in index.partnersOf(p.id))
+        personLink(id) +
+            switch (marriageOf(p.id, id)?.event.date?.year) {
+              null => '',
+              final year => ' <span class="years">(married $year)</span>',
+            },
+      ...named(p.partners),
+      for (final c in p.couples)
+        if (c.partner != null && c.partner!.id == null) ref(c.partner!),
+    ]);
+    row('Children', [
+      for (final id in index.childrenOf(p.id))
+        qualified(id, const [], years: true),
+      ...named(p.children),
+    ]);
+    row('Siblings', [
+      for (final id in index.siblingsOf(p.id)) personLink(id, years: true),
+      ...named(p.siblings),
+    ]);
 
     final photo = p.photo == null ? null : tree.media[p.photo];
     if (rows.isEmpty && photo == null) return '';
@@ -232,31 +301,43 @@ $body
     return sb.toString();
   }
 
-  /// A life in order: structured events, family events, and dated headings
-  /// from the prose. Facts with no date are returned separately.
+  /// A life in order: life events, other facts, marriages, children's
+  /// births, and dated headings from the prose. Facts with no date, and
+  /// notes, are returned separately.
   (List<({TreeDate date, String html})>, List<String>) _timeline(Person p) {
     final dated = <({TreeDate date, String html})>[];
     final undated = <String>[];
-    void add(TreeDate? date, String html) =>
-        date == null ? undated.add(html) : dated.add((date: date, html: html));
+    void add(TreeDate? date, String html) => date == null || !date.understood
+        ? undated.add(date == null ? html : '$html, ${this.date(date)}')
+        : dated.add((date: date, html: html));
     String at(String? place) =>
         place == null ? '' : ' <span class="place">${esc(place)}</span>';
 
     if (p.born?.date != null) add(p.born!.date, 'Born${at(p.born!.place)}');
+    if (p.christened != null) {
+      add(p.christened!.date, 'Christened${at(p.christened!.place)}');
+    }
     for (final f in p.facts) {
-      final label = f.type[0].toUpperCase() + f.type.substring(1);
+      final people = f.people.map(ref).join(', ');
       add(
         f.event.date,
-        '<span class="kind">$label</span>${f.value == null ? '' : ' ${esc(f.value)}'}${at(f.event.place)}',
+        '<span class="kind">${esc(f.label)}</span> ${esc(f.description)}'
+        '${people.isEmpty ? '' : ' with $people'}${at(f.event.place)}',
       );
     }
-    for (final uid in index.partnershipsOf(p.id)) {
-      final u = tree.unions[uid]!;
-      if (u.married == null) continue;
-      final other = u.partners.firstWhere((x) => x != p.id, orElse: () => p.id);
+    // Couple events stated on this page, and on partners' pages about this
+    // person.
+    final couples = <(CoupleEvent, PersonRef?)>[
+      for (final c in p.couples) (c, c.partner),
+      for (final other in tree.people.values)
+        if (other.id != p.id)
+          for (final c in other.couples)
+            if (c.partner?.id == p.id) (c, PersonRef.page(other.id)),
+    ];
+    for (final (c, partner) in couples) {
       add(
-        u.married!.date,
-        'Married ${personLink(other)}${at(u.married!.place)}',
+        c.event.date,
+        '${esc(c.kind)}${partner == null ? '' : ' ${ref(partner)}'}${at(c.event.place)}',
       );
     }
     for (final id in index.childrenOf(p.id)) {
@@ -266,13 +347,17 @@ $body
       }
     }
     for (final m in RegExp(
-      r'^##\s+((?:\d{1,2} )?(?:[A-Za-z]{3,9} )?\d{4})\s*[:–-]\s*(.+)$',
+      r'^##\s+(.+?)\s*[:–-]\s*(.+)$',
       multiLine: true,
     ).allMatches(p.body)) {
-      final year = RegExp(r'\d{4}').firstMatch(m[1]!)![0]!;
-      add(TreeDate(year), esc(m[2]));
+      final d = TreeDate.parse(m[1]!);
+      if (d.understood) add(d, esc(m[2]));
     }
     if (p.died?.date != null) add(p.died!.date, 'Died${at(p.died!.place)}');
+    if (p.buried != null) add(p.buried!.date, 'Buried${at(p.buried!.place)}');
+    for (final note in p.notes) {
+      undated.add('<span class="kind">Note</span> ${esc(note)}');
+    }
 
     // A stable sort keeps birth first and death last among equal dates.
     final sorted = [for (final (i, e) in dated.indexed) (i, e)]
@@ -283,13 +368,26 @@ $body
     return ([for (final (_, e) in sorted) e], undated);
   }
 
-  /// Renders page prose. Links between people and to media are written as
-  /// relative file paths so they work on GitHub; here they become site URLs.
+  /// Renders page prose: `@` references become links to people, and
+  /// `[date: …]` and `[place: …]` are marked for display.
   String markdown(String source) {
+    final marked = source
+        .replaceAllMapped(proseRef, (m) {
+          final id = 'p-${m[1]!.split('-').last}';
+          final person = tree.people[id];
+          return person == null
+              ? '<span class="unresolved" title="No one in the tree matches this">@${m[1]}</span>'
+              : '<a href="/people/$id">${esc(person.name)}</a>';
+        })
+        .replaceAllMapped(proseMarked, (m) {
+          if (m[1]!.toLowerCase() == 'date') return date(TreeDate.parse(m[2]!));
+          return '<span class="place-ref">${esc(m[2])}</span>';
+        });
     final html = md.markdownToHtml(
-      source,
+      marked,
       extensionSet: md.ExtensionSet.gitHubWeb,
     );
+    // Links written as relative file paths in older pages still work.
     return html
         .replaceAllMapped(
           RegExp(r'href="[^"]*?([a-z0-9]{6})/index\.md"'),
@@ -695,7 +793,11 @@ mark { background: var(--mark); color: inherit; }
                  font-weight: 600; letter-spacing: 0.05em; }
 .media img { max-width: 100%; max-height: 80vh; border: 1px solid var(--line); border-radius: 4px; }
 .description { white-space: pre-line; }
-.problems { font: 14px/1.4 system-ui, sans-serif; margin-bottom: 16px; }
+.problems, .issues { font: 14px/1.4 system-ui, sans-serif; margin-bottom: 16px; }
+.issues summary { color: var(--muted); cursor: pointer; }
+.unresolved { text-decoration: underline dotted; text-underline-offset: 3px; color: var(--muted); cursor: help; }
+.named { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
+.date { cursor: help; }
 .actions { display: flex; gap: 16px; margin: 0 0 12px; font: 14px system-ui, sans-serif; }
 .editor .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
 .editor label, .editor .label, .memory label { display: block; font: 13px/1.4 system-ui, sans-serif;

@@ -103,13 +103,36 @@ Settled since:
 - **The export keeps this syntax.** Genealogy tools exchange GEDCOM, not YAML, so there
   is no reason to convert the facts.
 
-Still to settle in milestone 13:
+Settled at the start of milestone 13:
 
-- The vocabulary of fact names, how a fact with several parts (date, place, people) is
-  written, and how unknown names are kept.
-- Whether the fact block is fenced by `---` lines. Markdown tools such as GitHub read a
-  fenced block as YAML, which fact lines are not, so they would show an error; unfenced,
-  the block runs to the first blank line and shows as plain text.
+- **The facts block starts with a `Name:` line** and runs to the first blank line. There
+  are no `---` fences, so the exported files show as plain text, not as broken YAML.
+- **One line per fact.** Repeat a label for more of the same kind, such as several
+  `Occupation:` lines. Relationship lines are the exception: `Parents:`, `Children:`,
+  `Partner:` and `Siblings:` take a comma-separated list.
+- **The parts of a line are separated by commas.** Life events (`Born`, `Christened`,
+  `Died`, `Buried`) read as date then place, unmarked:
+  `Born: 6 January 1911, Brooklyn, NY, USA`. Other facts read as what, when, where: the
+  first part is the fact itself, any part that reads as a date is its date, and a place
+  must be marked `[place: …]`, since "Carew Corporation" or "US Navy" is not a place.
+  Unmarked text that fits nowhere stays part of the description.
+- **A marriage is its own line:**
+  `Married: @dwyer-frances-davidson-ka2b3c, 7 January 1945, [place: Trinity Episcopal Church, Hartford, CT]`,
+  read like `Born:`. It implies the partnership, so a `Partner:` line is needed only for
+  couples with no recorded marriage. `Divorced:` and similar two-person events take the
+  same shape. Milestone 15 may later make these shorthand for fuller events.
+- **Relationship lines hold references and names only.** Prosapia reads the `@`
+  references and plain names, and one qualifier in parentheses for the kind of
+  relationship: `Parents: @behler-paul-ww9wcn (adopted)`. Any other text on the line is
+  shown as written and marked as not understood, with a hint, such as suggesting a
+  `Married:` line for "married 1945".
+- **The vocabulary:** `Name`, `Also known as`, `Sex`; `Born`, `Christened`, `Died`,
+  `Buried`, `Married`, `Divorced`; `Parents`, `Children`, `Partner`, `Siblings`;
+  `Occupation`, `Education`, `Residence`, `Degree`, `Graduated`, `Title`, `Note`. Any
+  other label is kept as a fact of that kind and shown as written.
+- **What was typed is what is kept.** A page is stored exactly as typed. Prosapia reads
+  structure from it each time, and shows how it understood a date rather than rewriting
+  it.
 
 ### Proposed
 

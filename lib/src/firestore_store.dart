@@ -6,7 +6,7 @@ import 'package:google_cloud_firestore/google_cloud_firestore.dart';
 import 'package:google_cloud_storage/google_cloud_storage.dart' as gcs;
 import 'package:path/path.dart' as p;
 
-import 'page_source.dart';
+import 'legacy.dart';
 import 'store.dart';
 import 'tree.dart';
 
@@ -16,9 +16,8 @@ import 'tree.dart';
 /// ```
 /// trees/{tree}                 name, version
 ///   members/{email}            role, name
-///   people/{id}                structured fields, body, directory, revision
+///   people/{id}                source (the page as written), directory, revision
 ///     revisions/{number}       every saved version: source, author, summary, at
-///   unions/{id}
 ///   media/{key}                what each file says about itself
 ///   changes/{auto}             the log: author, summary, at, pages
 /// ```
@@ -74,7 +73,6 @@ class FirestoreStore extends TreeStore {
 
     final results = await Future.wait([
       _tree.collection('people').get(),
-      _tree.collection('unions').get(),
       _tree.collection('media').get(),
     ]);
     void each(
@@ -90,15 +88,19 @@ class FirestoreStore extends TreeStore {
       }
     }
 
-    each(results[0], (data) {
-      final person = _person(data);
+    for (final doc in results[0].docs) {
+      final data = doc.data();
+      if (data['source'] is! String) {
+        tree.problems.add(
+          '${doc.ref.path} is in the old format; convert it with '
+          'tool/migrate_tree.dart',
+        );
+        continue;
+      }
+      final person = _person(doc.id, data);
       tree.people[person.id] = person;
-    });
+    }
     each(results[1], (data) {
-      final union = Union.fromMap(data);
-      tree.unions[union.id] = union;
-    });
-    each(results[2], (data) {
       final media = Media.fromMap(data);
       tree.media[media.key] = media;
     });
@@ -123,25 +125,19 @@ class FirestoreStore extends TreeStore {
     return file;
   }
 
-  static Person _person(Map<String, Object?> data) {
-    final fields = {...data}
-      ..remove('body')
-      ..remove('directory')
-      ..remove('revision');
-    return Person.fromMap(
-      fields,
-      data['body'] as String? ?? '',
-      data['directory'] as String? ?? data['id'] as String,
-    )..revision = data['revision'] as int? ?? 0;
-  }
+  static Person _person(String id, Map<String, Object?> data) =>
+      Person.fromSource(
+        id,
+        data['directory'] as String? ?? id,
+        data['source'] as String,
+        revision: data['revision'] as int? ?? 0,
+      );
 
-  static Map<String, Object?> _personDoc(Person person, int revision) =>
-      _plain({
-        ...person.toMap(),
-        'body': person.body,
-        'directory': person.directory,
-        'revision': revision,
-      });
+  static Map<String, Object?> _personDoc(Person person, int revision) => {
+    'source': person.source,
+    'directory': person.directory,
+    'revision': revision,
+  };
 
   // ---------------------------------------------------------------- editing
 
@@ -172,7 +168,7 @@ class FirestoreStore extends TreeStore {
       tx.set(ref, _personDoc(person, next));
       tx.set(ref.collection('revisions').doc('$next'), {
         'number': next,
-        'source': personSource(person),
+        'source': person.source,
         ...stamp,
       });
       tx.set(_tree.collection('changes').doc(), {
@@ -285,7 +281,7 @@ class FirestoreStore extends TreeStore {
       writes.add((ref, _personDoc(person, 1)));
       writes.add((
         ref.collection('revisions').doc('1'),
-        {'number': 1, 'source': personSource(person), ...stamp},
+        {'number': 1, 'source': person.source, ...stamp},
       ));
     }
     writes.add((
@@ -295,12 +291,6 @@ class FirestoreStore extends TreeStore {
         ...stamp,
       },
     ));
-    for (final union in tree.unions.values) {
-      writes.add((
-        _tree.collection('unions').doc(union.id),
-        _plain(union.toMap()),
-      ));
-    }
 
     final storage = app.storage().bucket(bucketName).storage;
     var uploaded = 0, reused = 0;
@@ -369,6 +359,68 @@ class FirestoreStore extends TreeStore {
     } on gcs.NotFoundException {
       return null;
     }
+  }
+
+  /// Converts every page still in the old format (structured fields plus
+  /// separate partnership records) to the page syntax. Each converted page
+  /// gets a new revision, and the change is logged as one entry. Returns how
+  /// many pages were converted.
+  Future<int> convertFromOldFormat({required String by}) async {
+    final people = await _tree.collection('people').get();
+    final unions = await _tree.collection('unions').get();
+    final old =
+        <
+          String,
+          ({Map<dynamic, dynamic> fields, String body, String directory})
+        >{};
+    final revisions = <String, int>{};
+    for (final doc in people.docs) {
+      final data = doc.data();
+      if (data['source'] is String) continue;
+      old[doc.id] = (
+        fields: data,
+        body: data['body'] as String? ?? '',
+        directory: data['directory'] as String? ?? doc.id,
+      );
+      revisions[doc.id] = data['revision'] as int? ?? 0;
+    }
+    if (old.isEmpty) return 0;
+    final converted = convertLegacy(old, [
+      for (final u in unions.docs) u.data(),
+    ]);
+
+    final stamp = {
+      'author': by,
+      'summary': 'Converted to the new page syntax',
+      'at': FieldValue.serverTimestamp,
+    };
+    final writes =
+        <(DocumentReference<Map<String, Object?>>, Map<String, Object?>)>[];
+    final pages = <String, int>{};
+    converted.forEach((id, source) {
+      final next = revisions[id]! + 1;
+      final ref = _tree.collection('people').doc(id);
+      writes.add((
+        ref,
+        {'source': source, 'directory': old[id]!.directory, 'revision': next},
+      ));
+      writes.add((
+        ref.collection('revisions').doc('$next'),
+        {'number': next, 'source': source, ...stamp},
+      ));
+      pages[id] = next;
+    });
+    writes.add((_tree.collection('changes').doc(), {'pages': pages, ...stamp}));
+    for (var i = 0; i < writes.length; i += 400) {
+      final batch = _db.batch();
+      for (final (ref, data) in writes.skip(i).take(400)) {
+        batch.set(ref, data);
+      }
+      await batch.commit();
+    }
+    await _db.recursiveDelete(_tree.collection('unions'));
+    await _tree.update({'version': const FieldValue.increment(1)});
+    return converted.length;
   }
 
   Future<void> setMember(String email, Role role, {String? name}) => _tree

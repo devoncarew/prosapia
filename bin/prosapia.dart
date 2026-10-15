@@ -82,8 +82,7 @@ Future<void> main(List<String> arguments) async {
   final watch = Stopwatch()..start();
   final site = await Site.load(store);
   stdout.writeln(
-    'Loaded ${site.tree.people.length} people, ${site.tree.unions.length} partnerships '
-    'and ${site.tree.media.length} media files in ${watch.elapsedMilliseconds} ms.',
+    'Loaded ${site.tree.people.length} people and ${site.tree.media.length} media files in ${watch.elapsedMilliseconds} ms.',
   );
   for (final problem in site.tree.problems) {
     stderr.writeln('  could not read $problem');
