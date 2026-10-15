@@ -10,6 +10,7 @@ import 'assist.dart';
 import 'auth.dart';
 import 'claude.dart';
 import 'completion.dart';
+import 'file_store.dart' show idFromDirectory;
 import 'firestore_store.dart' show contentTypes;
 import 'images.dart';
 import 'index.dart';
@@ -165,7 +166,20 @@ Handler siteHandler(
     router.post('/sign-out', sessions.signOut);
   }
 
-  router.get('/', (Request r) => html(render(r).home()));
+  // Members who have not seen the welcome page are shown it first.
+  final welcomed = <String>{};
+  router.get('/', (Request r) async {
+    final member = Sessions.memberOf(r);
+    if (member != null &&
+        !member.welcomed &&
+        !welcomed.contains(member.email)) {
+      welcomed.add(member.email);
+      await site.store.markWelcomed(member);
+      return html(render(r).welcome());
+    }
+    return html(render(r).home());
+  });
+  router.get('/welcome', (Request r) => html(render(r).welcome()));
   router.get(
     '/search',
     (Request r) => html(render(r).search(r.url.queryParameters['q'] ?? '')),
@@ -549,9 +563,37 @@ Handler siteHandler(
           .where((role) => role.name == fields['role'])
           .firstOrNull;
       if (role == null) return settingsPage(r, error: 'Choose a role.');
-      await site.store.setMember(email, role);
+      final person = site.tree.people[fields['person'] ?? ''];
+      await site.store.setMember(email, role, person: person?.id);
+      // A new member gets an invitation to send.
+      if (fields['action'] == 'invite') {
+        return seeOther(
+          '/settings/invitation?email=${Uri.encodeQueryComponent(email)}',
+        );
+      }
     }
     return seeOther('/settings#members');
+  });
+
+  /// The site's own address, as the visitor sees it: through Firebase
+  /// Hosting, the request reaches the server under another name.
+  String siteAddress(Request r) {
+    final host = r.headers['x-forwarded-host'] ?? r.requestedUri.authority;
+    final local = host.startsWith('localhost') || host.startsWith('127.');
+    return '${local ? 'http' : 'https'}://$host/';
+  }
+
+  router.get('/settings/invitation', (Request r) async {
+    final me = owner(r);
+    if (me == null) return notAllowed(r);
+    final email = r.url.queryParameters['email'] ?? '';
+    final member = (await site.store.members())
+        .where((m) => m.email == email)
+        .firstOrNull;
+    if (member == null) return missing(r, 'No member has that address.');
+    return html(
+      render(r).invitation(member, from: me, address: siteAddress(r)),
+    );
   });
 
   router.post('/settings', (Request r) async {
@@ -1212,6 +1254,28 @@ Handler siteHandler(
 
   Handler handler = (Request request) async {
     await site.refreshIfChanged();
+    final segments = request.url.pathSegments;
+    if (segments.length >= 2 && segments[0] == 'people') {
+      final slug = segments[1];
+      final id = idFromDirectory(slug);
+      final person = site.tree.people[id] ?? site.tree.deleted[id];
+      // A page is shown at its readable address; any other address that
+      // ends in its id leads there.
+      if (segments.length == 2 &&
+          request.method == 'GET' &&
+          person != null &&
+          slug != person.directory) {
+        return Response.found(
+          Uri(
+            path: '/people/${person.directory}',
+            query: request.url.hasQuery ? request.url.query : null,
+          ).toString(),
+        );
+      }
+      if (slug != id) {
+        request = _withPath(request, ['people', id, ...segments.skip(2)]);
+      }
+    }
     return router.call(request);
   };
   if (sessions != null) handler = sessions.middleware(handler);
@@ -1250,3 +1314,15 @@ String changeHash(List<({String name, String before, String after})> pages) {
   }
   return hash.toRadixString(16).padLeft(8, '0');
 }
+
+/// [request] as if it had asked for [segments]: a readable address such
+/// as `/people/carew-howard-tbczm8/edit` is handled as `/people/p-tbczm8/edit`.
+Request _withPath(Request request, List<String> segments) => Request(
+  request.method,
+  request.requestedUri.replace(pathSegments: segments),
+  protocolVersion: request.protocolVersion,
+  headers: request.headers,
+  body: request.read(),
+  encoding: request.encoding,
+  context: request.context,
+);

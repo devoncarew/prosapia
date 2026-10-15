@@ -12,3 +12,5 @@
 - remove or revise "Your unsaved changes from ... have been brought back"
 - show progress while waiting on Claude (an indeterminate progress bar or spinner) for
   Draft, Revise, Revise selection, Tidy up and Transcribe
+- send invitations from a shared address (a Google Group or similar) rather than the
+  owner's own email
