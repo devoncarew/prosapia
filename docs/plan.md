@@ -43,37 +43,6 @@ Goal: the family historian keeps their real tree comfortably, on a desktop, with
 YAML. Nobody else is invited yet; the real tree is loaded and used privately. Editing on
 a phone is not a goal yet; viewing on one is.
 
-#### Milestone 13: the page syntax and its editor
-
-Status: the first half is done. Pages are stored as written and read in the page syntax;
-the real tree and the test tree are converted, with the old text kept in each page's
-history; `@` references, dates and places render, and anything unreadable is listed on
-the page. Still to do: the editor's highlighting, completion and legend, people
-completion in the search box, gentle checks, and keeping unsaved input.
-
-Journeys 4 and 8. The syntax is decided in
-[content-model.md](content-model.md#page-syntax): facts as "Name: value" lines, `@`
-references to people, `[date: …]` and `[place: …]`.
-
-- Start with a short prototype on the real tree to settle the open details: the id form
-  after `@`, the fact names, and how a fact with a date, a place and people is written.
-- Read and write pages in the new syntax, forgivingly: an unreadable line is kept and
-  shown as unresolved. Convert existing pages from YAML, as a logged change.
-- Render `@` references as linked names, and dates and places for display; show anything
-  unresolved with an explanation.
-- Forgiving dates inside fact lines: accept the ways people write dates ("about 1925",
-  "spring 1925", "the 1880s", "14 March 1887", "3/14/1887", "between 1880 and 1885",
-  "bapt. 1891"), show how each was understood, and ask only when a date is truly
-  ambiguous.
-- In the editor: syntax highlighting, completion after `@` (people, with years and
-  parents to tell namesakes apart) and inside `[place: …]` (places already in the tree),
-  and a short legend. The same people completion powers the search box.
-- Gentle checks: implausible dates produce a question, never a refusal.
-- Unsaved input survives a closed tab.
-
-Done when: a birth date can be corrected and an occupation added by editing fact lines,
-a person can be referenced by typing `@` and part of their name, and no page shows YAML.
-
 #### Milestone 14: relationships in the text
 
 Journeys 2 and 3. Builds on the page syntax from milestone 13; the design is in
@@ -309,6 +278,13 @@ Uses not yet scheduled; the rules every use follows are in
 
 Newest first.
 
+- **Milestone 13, the page syntax and its editor.** Pages are stored exactly as written,
+  as "Name: value" fact lines and markdown, and read forgivingly: dates are understood
+  in many forms, `@` references link people, relationships stated on either page count,
+  and anything unreadable or implausible is listed on the page. The editor highlights
+  the syntax, completes people, places and labels, shows a legend, and keeps unsaved
+  text; the search box suggests people. The real tree was converted with its history
+  kept.
 - **Milestone 12, loading the real family tree.** The Carew family tree, 203 people and
   135 photos and documents, is loaded into the production project as tree `carew`,
   visible only to its owner; the loader is now safe to rerun, and

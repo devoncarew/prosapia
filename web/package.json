@@ -3,12 +3,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild src/sign_in.ts src/editor.ts --bundle --format=esm --target=es2022 --minify --outdir=dist",
-    "watch": "esbuild src/sign_in.ts src/editor.ts --bundle --format=esm --target=es2022 --outdir=dist --watch",
+    "build": "esbuild src/sign_in.ts src/editor.ts src/search.ts --bundle --format=esm --target=es2022 --minify --outdir=dist",
+    "watch": "esbuild src/sign_in.ts src/editor.ts src/search.ts --bundle --format=esm --target=es2022 --outdir=dist --watch",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.14",
     "firebase": "^13.0.0"
   },
   "devDependencies": {

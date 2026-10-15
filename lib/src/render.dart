@@ -41,12 +41,13 @@ class Renderer {
 <header>
   <a class="site" href="/">${esc(tree.name)}</a>
   <nav><a href="/">People</a> <a href="/media">Photos</a>${editable ? ' <a href="/changes">Recent changes</a>' : ''}</nav>
-  <form action="/search"><input type="search" name="q" value="${esc(query)}" placeholder="Search" aria-label="Search"></form>
+  <form action="/search" class="search"><input type="search" name="q" autocomplete="off" value="${esc(query)}" placeholder="Search" aria-label="Search"></form>
   ${viewer == null ? '' : '<form class="account" method="post" action="/sign-out"><span title="${esc(viewer!.email)} · ${viewer!.role.name}">${esc(viewer!.name ?? viewer!.email)}</span> <button>Sign out</button></form>'}
 </header>
 <main>
 $body
 </main>
+<script type="module" src="/assets/search.js"></script>
 </body>
 </html>
 ''';
@@ -124,15 +125,20 @@ $body
   String personArticle(Person p, {bool withMedia = true}) {
     final sb = StringBuffer();
     sb.write('<article class="person">');
-    final issues = issuesOf(p);
-    if (issues.isNotEmpty && (_canEdit || !requiresViewer)) {
-      sb.write(
-        '<details class="issues"><summary>${issues.length == 1 ? 'One thing' : '${issues.length} things'} on this page could not be read</summary><ul>',
-      );
-      for (final issue in issues) {
-        sb.write('<li>${esc(issue)}</li>');
+    if (_canEdit || !requiresViewer) {
+      for (final (items, what) in [
+        (issuesOf(p), 'could not be read'),
+        (checksOf(p), 'may be worth checking'),
+      ]) {
+        if (items.isEmpty) continue;
+        sb.write(
+          '<details class="issues"><summary>${items.length == 1 ? 'One thing' : '${items.length} things'} on this page $what</summary><ul>',
+        );
+        for (final item in items) {
+          sb.write('<li>${esc(item)}</li>');
+        }
+        sb.write('</ul></details>');
       }
-      sb.write('</ul></details>');
     }
     sb.write(_infobox(p));
     sb.write('<h1>${esc(p.name)}</h1>');
@@ -190,6 +196,39 @@ $body
       if (!tree.people.containsKey('p-${m[1]!.split('-').last}'))
         'No one in the tree matches @${m[1]}.',
   ];
+
+  /// Dates that look unlikely. These are questions, never errors: real
+  /// records are messy, and the editor may know better.
+  List<String> checksOf(Person p) {
+    int? year(Event? e) => e?.date?.understood == true ? e!.date!.year : null;
+    final born = year(p.born), died = year(p.died), buried = year(p.buried);
+    final now = DateTime.now().year;
+    return [
+      if (born != null && born > now) 'Born in $born, which is in the future.',
+      if (born != null && died != null && died < born)
+        'Died in $died, before being born in $born.',
+      if (died != null && buried != null && buried < died)
+        'Buried in $buried, before dying in $died.',
+      if (born != null && died != null && died - born > 110)
+        'Lived ${died - born} years.',
+      for (final id in index.parentsOf(p.id))
+        ...() {
+          final parent = tree.people[id]!;
+          final pb = year(parent.born), pd = year(parent.died);
+          return [
+            if (born != null && pb != null && born - pb < 12)
+              '${parent.name} was ${born - pb} when ${p.name} was born.',
+            if (born != null && pb != null && born - pb > 70)
+              '${parent.name} was ${born - pb} when ${p.name} was born.',
+            if (born != null && pd != null && born > pd + 1)
+              'Born in $born, after ${parent.name} died in $pd.',
+          ];
+        }(),
+      for (final c in p.couples)
+        if (born != null && year(c.event) != null && year(c.event)! - born < 14)
+          '${c.kind} in ${year(c.event)}, at about ${year(c.event)! - born}.',
+    ];
+  }
 
   /// A date as typed, with how it was read shown on hover.
   String date(TreeDate d) => d.understood
@@ -515,8 +554,23 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
   <input type="hidden" name="based_on" value="$basedOn">
   <div class="panes">
     <div class="pane">
-      <label for="source">Page text. Facts go between the dashed lines at the top; the story goes below, in <a href="https://commonmark.org/help/" target="_blank" rel="noopener">markdown</a>.</label>
+      <label for="source">Facts first, one per line, starting with <code>Name:</code>; then a blank line and the story.</label>
       <textarea id="source" name="source" spellcheck="true" required>${esc(source)}</textarea>
+      <details class="legend" open>
+        <summary>How to write a page</summary>
+        <dl>
+          <dt><code>Born: 6 January 1911, Brooklyn, NY</code></dt>
+          <dd>A fact: a label, a colon, then its parts separated by commas. Dates can be written as you would say them: <code>about 1925</code>, <code>spring 1925</code>, <code>the 1880s</code>.</dd>
+          <dt><code>Occupation: teacher, 1908 to 1920, [place: Scranton, PA]</code></dt>
+          <dd>Other facts read as what, when, where. Mark a place with <code>[place: …]</code>.</dd>
+          <dt><code>Parents: @</code> then a name</dt>
+          <dd>Type <code>@</code> and part of a name to link a person already in the tree. A plain name means someone without a page yet.</dd>
+          <dt><code>Married: @…, 1945, Hartford, CT</code></dt>
+          <dd>Relationships: <code>Parents</code>, <code>Children</code>, <code>Partner</code>, <code>Siblings</code>, <code>Married</code>.</dd>
+          <dt>A blank line</dt>
+          <dd>Ends the facts. Below it, write in <a href="https://commonmark.org/help/" target="_blank" rel="noopener">markdown</a>; <code>[date: …]</code> and <code>[place: …]</code> mark dates and places in the story.</dd>
+        </dl>
+      </details>
     </div>
     <div class="pane">
       <span class="label">Preview</span>
@@ -798,6 +852,30 @@ mark { background: var(--mark); color: inherit; }
 .unresolved { text-decoration: underline dotted; text-underline-offset: 3px; color: var(--muted); cursor: help; }
 .named { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
 .date { cursor: help; }
+.legend { margin-top: 12px; font: 13px/1.5 system-ui, sans-serif; color: var(--muted); }
+.legend summary { cursor: pointer; }
+.legend dt { margin-top: 8px; color: var(--text); }
+.legend dd { margin: 2px 0 0 0; }
+.legend code, label code { font-size: 12px; }
+.editor .cm-editor { height: 70vh; border: 1px solid var(--line); border-radius: 6px; background: var(--surface);
+  font: 14px/1.6 ui-monospace, Menlo, monospace; }
+.editor .cm-editor.cm-focused { outline: 2px solid var(--link); outline-offset: -1px; }
+.editor .cm-scroller { font-family: inherit; }
+.cm-label { color: var(--link); font-weight: 600; }
+.cm-ref { color: var(--link); text-decoration: underline; text-underline-offset: 3px; }
+.cm-marked { color: #8a5a00; }
+@media (prefers-color-scheme: dark) { .cm-marked { color: #e0b35a; } }
+.cm-heading { font-weight: 700; }
+.cm-tooltip-autocomplete { font: 13px system-ui, sans-serif; }
+.cm-completionDetail { color: var(--muted); margin-left: 8px; font-style: normal; }
+.cm-tooltip-autocomplete ul li[aria-selected] .cm-completionDetail { color: inherit; opacity: 0.85; }
+.search-suggestions { position: absolute; z-index: 10; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 6px; margin-top: 4px; min-width: 260px; max-width: 420px; padding: 4px 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+.search-suggestions a { display: block; padding: 6px 12px; color: var(--text); }
+.search-suggestions a span { color: var(--muted); font-size: 12px; display: block; }
+.search-suggestions a.active, .search-suggestions a:hover { background: var(--bg); text-decoration: none; }
+header form { position: relative; }
 .actions { display: flex; gap: 16px; margin: 0 0 12px; font: 14px system-ui, sans-serif; }
 .editor .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
 .editor label, .editor .label, .memory label { display: block; font: 13px/1.4 system-ui, sans-serif;

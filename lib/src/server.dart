@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -5,6 +6,7 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
 import 'auth.dart';
+import 'completion.dart';
 import 'firestore_store.dart' show contentTypes;
 import 'images.dart';
 import 'index.dart';
@@ -20,6 +22,7 @@ class Site {
   final TreeStore store;
   Tree tree;
   Index index;
+  late Completion completion = Completion(tree, index);
   int _version;
   DateTime _checked = DateTime.now();
   Future<void>? _refreshing;
@@ -53,6 +56,7 @@ class Site {
     final old = index;
     this.tree = tree;
     index = Index.build(tree);
+    completion = Completion(tree, index);
     _version = version;
     old.close();
   }
@@ -354,6 +358,22 @@ Handler siteHandler(
       await site.reload();
       return seeOther(result.saved ? '/people/$id' : '/people/$id/history');
     }),
+  );
+
+  // Completion for the editor and the search box.
+  Response json(Object value) => Response.ok(
+    jsonEncode(value),
+    headers: {'content-type': 'application/json', 'cache-control': 'no-store'},
+  );
+  router.get(
+    '/api/people',
+    (Request r) =>
+        json(site.completion.people(r.url.queryParameters['q'] ?? '')),
+  );
+  router.get(
+    '/api/places',
+    (Request r) =>
+        json(site.completion.places(r.url.queryParameters['q'] ?? '')),
   );
 
   router.get(

@@ -29,6 +29,7 @@ Future<void> main(List<String> args) async {
         for (final f in p.facts) f.event.date,
       ].nonNulls)
         if (!d.understood) 'Date not understood: "${d.raw}"',
+      for (final check in render.checksOf(p)) 'To check: $check',
     ];
     if (issues.isEmpty) continue;
     count++;
