@@ -58,6 +58,7 @@ void main() {
     expect(meta['Title'], 'Ann & Thomas, at the lake');
     expect(meta['Description'], 'Lake Compounce\nJune 1949');
     expect(meta['DateCreated'], '1949:06');
+    expect(meta['Coverage'], 'about June 1949');
     expect(meta['LocationShown'], [
       {'LocationName': 'Hartford, CT'},
     ]);
@@ -100,6 +101,7 @@ void main() {
     for (final cleared in [
       'Description',
       'DateCreated',
+      'Coverage',
       'LocationShown',
       'Relation',
       'PersonInImage',

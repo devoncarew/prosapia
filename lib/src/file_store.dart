@@ -76,6 +76,7 @@ class FileStore extends TreeStore {
       '-XMP-dc:Description',
       '-XMP-iptcExt:PersonInImageWDetails',
       '-XMP-photoshop:DateCreated',
+      '-XMP-dc:Coverage',
       '-XMP-iptcExt:LocationShown',
       '-XMP-dc:Relation',
       '-ImageWidth',
@@ -105,7 +106,9 @@ class FileStore extends TreeStore {
       item.width = meta['ImageWidth'] as int?;
       item.height = meta['ImageHeight'] as int?;
       item.size = file.lengthSync();
-      item.date = dateFromExif(meta['DateCreated']?.toString());
+      item.date =
+          meta['Coverage']?.toString() ??
+          dateFromExif(meta['DateCreated']?.toString());
       final shown = meta['LocationShown'];
       if (shown is List && shown.isNotEmpty && shown.first is Map) {
         item.place = (shown.first as Map)['LocationName']?.toString();

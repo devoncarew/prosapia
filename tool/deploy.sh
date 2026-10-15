@@ -26,6 +26,23 @@ gcloud run deploy "$SERVICE" \
   --max-instances 2 \
   --allow-unauthenticated
 
+# The nightly export runs from the same image as a Cloud Run job, started
+# by Cloud Scheduler (set up once; see docs/deploying.md).
+IMAGE=$(gcloud run services describe "$SERVICE" --project "$PROJECT" \
+  --region "$REGION" --format 'value(spec.template.spec.containers[0].image)')
+gcloud run jobs deploy prosapia-export \
+  --image "$IMAGE" \
+  --project "$PROJECT" \
+  --region "$REGION" \
+  --service-account "prosapia-server@$PROJECT.iam.gserviceaccount.com" \
+  --set-env-vars "GOOGLE_CLOUD_PROJECT=$PROJECT,PROSAPIA_TREE=$TREE,PROSAPIA_EXPORT_REPO=${EXPORT_REPO:-git@github.com:devoncarew/prosapia-$TREE.git}" \
+  --set-secrets "GITHUB_EXPORT_KEY=github-export-key:latest" \
+  --command /app/bin/prosapia \
+  --args export \
+  --memory 2Gi \
+  --task-timeout 30m \
+  --max-retries 1
+
 # Hosting serves the site's address and forwards every request to Cloud
 # Run. It only changes when firebase.json does, but deploying it is cheap.
 firebase deploy --only hosting --project "$PROJECT"

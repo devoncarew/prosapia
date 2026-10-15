@@ -9,7 +9,7 @@ The field names below were checked with exiftool 13.55 in milestone 6.
 <!-- prettier-ignore -->
 | What we know | Where it goes in the file |
 | --- | --- |
-| When it was taken, possibly only a year | XMP `photoshop:DateCreated`, which accepts a year or year and month. A date such as "about 1949" is written as its year; the words as typed are kept in Prosapia's record. A camera's EXIF `DateTimeOriginal` is left as it is |
+| When it was taken, possibly only a year | XMP `photoshop:DateCreated`, which accepts a year or year and month. A date such as "about 1949" is written there as its year, and the words as typed go in XMP `dc:coverage`. A camera's EXIF `DateTimeOriginal` is left as it is |
 | Who is in it | IPTC `Person Shown` (XMP `iptcExt:PersonInImage`), one entry per name |
 | Where each person is in the frame | IPTC Image Regions, one named region per face |
 | Text written on the back | XMP `dc:description`, transcribed as written, in both the front and the back file |

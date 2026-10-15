@@ -52,6 +52,8 @@ List<String> metadataArgs(String key, PhotoDetails details) {
     '-XMP-dc:Title=${title ?? ''}',
     '-XMP-dc:Description=${back ?? ''}',
     '-XMP-photoshop:DateCreated=${date ?? ''}',
+    // DateCreated takes no words, so the date as typed is kept too.
+    '-XMP-dc:Coverage=${value(details.date) ?? ''}',
     place == null
         ? '-XMP-iptcExt:LocationShown='
         : '-XMP-iptcExt:LocationShown=[{LocationName=${_escape(place)}}]',
