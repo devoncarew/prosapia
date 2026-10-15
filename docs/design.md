@@ -52,6 +52,11 @@ rules shape every use:
 - **The record says so.** A revision that began as a model's draft is marked as such,
   with the model's name, so anyone reading the history can tell.
 
+One exception is under consideration (see the [plan](plan.md)): a model writing the
+one-line summary of a change after it is saved. A summary describes a change rather than
+adding to the record, so it would need no review, and it would be marked as
+model-written.
+
 ## Open questions
 
 None of these blocks current work. Each is discussed in the document named after it.
