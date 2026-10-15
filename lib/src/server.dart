@@ -513,15 +513,45 @@ Handler siteHandler(
     return member?.role == Role.owner ? member : null;
   }
 
+  Future<Response> settingsPage(Request r, {String? error}) async => html(
+    render(r).settings(
+      await site.store.helpSettings(),
+      spent: await site.store.spentThisMonth(),
+      available: assistant != null,
+      members: await site.store.members(),
+      error: error,
+    ),
+    status: error == null ? 200 : 422,
+  );
+
   router.get('/settings', (Request r) async {
     if (owner(r) == null) return notAllowed(r);
-    return html(
-      render(r).settings(
-        await site.store.helpSettings(),
-        spent: await site.store.spentThisMonth(),
-        available: assistant != null,
-      ),
-    );
+    return settingsPage(r);
+  });
+
+  router.post('/settings/members', (Request r) async {
+    final me = owner(r);
+    if (me == null) return notAllowed(r);
+    final fields = await form(r);
+    final email = (fields['email'] ?? '').trim().toLowerCase();
+    final action = fields['action'] ?? 'set';
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      return settingsPage(r, error: 'That is not an email address.');
+    }
+    // An owner cannot lock themselves out.
+    if (email == me.email) {
+      return settingsPage(r, error: 'You cannot change your own membership.');
+    }
+    if (action == 'remove') {
+      await site.store.removeMember(email);
+    } else {
+      final role = Role.values
+          .where((role) => role.name == fields['role'])
+          .firstOrNull;
+      if (role == null) return settingsPage(r, error: 'Choose a role.');
+      await site.store.setMember(email, role);
+    }
+    return seeOther('/settings#members');
   });
 
   router.post('/settings', (Request r) async {

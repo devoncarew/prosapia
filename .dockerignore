@@ -1,0 +1,14 @@
+# Only what the Dockerfile copies is needed; keep the build context small
+# and keep family data and secrets out of it.
+*
+!pubspec.yaml
+!pubspec.lock
+!bin/
+!lib/
+!web/package.json
+!web/package-lock.json
+!web/src/
+!web/tsconfig.json
+!web/eslint.config.js
+!config/
+!docs/writing.md

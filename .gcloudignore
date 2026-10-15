@@ -1,0 +1,14 @@
+# Files sent to Cloud Build: only what the Dockerfile copies. Keeps family
+# data and secrets out of the build.
+*
+!pubspec.yaml
+!pubspec.lock
+!bin/
+!lib/
+!web/package.json
+!web/package-lock.json
+!web/src/
+!web/tsconfig.json
+!web/eslint.config.js
+!config/
+!docs/writing.md
