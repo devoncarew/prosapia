@@ -63,8 +63,9 @@ change records whether its summary was written by a model, but entries are not m
 one by one; pages that list changes carry a single note, such as "Change summaries by
 Claude Haiku".
 
-What may be sent to a model about living people is open; it is settled in milestone 16,
-before any of their pages are sent.
+A request for help sends the page being edited, the names, years and references of the
+relatives it mentions, and its photo captions. Living people's pages are treated like
+any other; a member asking for help on a page has chosen to send it.
 
 ## Open questions
 

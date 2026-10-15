@@ -24,7 +24,8 @@ Serve a tree from Firestore (members sign in with Google):
 ''';
 
 Future<void> main(List<String> arguments) async {
-  final env = Platform.environment;
+  // Settings in .env apply unless the environment sets them too.
+  final env = {...readDotEnv('.env'), ...Platform.environment};
   final parser = ArgParser()
     ..addOption('port', abbr: 'p', defaultsTo: env['PORT'] ?? '8080')
     ..addOption(
@@ -164,4 +165,25 @@ Future<void> main(List<String> arguments) async {
     'Serving ${site.tree.name} at http://localhost:${server.port}'
     '${sessions == null ? ' (from files, no sign-in)' : ' (from Firestore, sign-in required)'}',
   );
+}
+
+/// Reads `NAME=value` lines from [path], if it exists. Blank lines and lines
+/// starting with `#` are skipped, and quotes around a value are removed.
+Map<String, String> readDotEnv(String path) {
+  final file = File(path);
+  if (!file.existsSync()) return const {};
+  final settings = <String, String>{};
+  for (final line in file.readAsLinesSync()) {
+    if (line.trimLeft().startsWith('#')) continue;
+    final m = RegExp(r'^\s*([A-Za-z_]\w*)\s*=\s*(.*?)\s*$').firstMatch(line);
+    if (m == null) continue;
+    var value = m[2]!;
+    if (value.length >= 2 &&
+        (value.startsWith('"') || value.startsWith("'")) &&
+        value.endsWith(value[0])) {
+      value = value.substring(1, value.length - 1);
+    }
+    settings[m[1]!] = value;
+  }
+  return settings;
 }

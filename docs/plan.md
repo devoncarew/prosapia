@@ -58,9 +58,8 @@ Journeys 5 and 7. The rules every use follows are in
 [writing.md](writing.md).
 
 - **Claude, in two tiers:** Claude Haiku for summaries and tidying, and a stronger
-  Claude model for writing, chosen by trying them on real requests. Try them on the
-  invented tree and on pages of people who have died; settle in design.md what may be
-  sent about living people before their pages are.
+  Claude model for writing, chosen by trying them on real requests, starting with the
+  invented tree.
 - **The foundation.** The server calls the model, never the browser, with an API key
   kept out of the repository. An owner switches the feature on for their tree; each
   call's cost is recorded, with a monthly limit.
@@ -78,9 +77,10 @@ Journeys 5 and 7. The rules every use follows are in
 - **Replace, then undo.** The model's text replaces what it acted on in the editor as
   one step, so undo restores the original exactly; the new text stays marked until it is
   kept or undone. Nothing is saved until the person saves.
-- **Automatic change summaries.** When a change is saved without a summary, the fast
-  model writes it, so the editor need not; one typed by the editor is kept as written.
-  The editor's actions become Publish and Discard.
+- **Automatic change summaries.** The editor no longer asks for a summary: the fast
+  model writes one as the change is saved. If it is unavailable, slow or fails, the
+  summary is "Change" and a short hash, such as "Change a867eb56". The editor's actions
+  become Publish and Discard.
 - **The history.** A revision saved with help from the model says so ("with help from
   Claude"). Model-written summaries are not marked one by one; Recent changes and the
   history carry one note, "Change summaries by Claude Haiku". Selecting a version shows

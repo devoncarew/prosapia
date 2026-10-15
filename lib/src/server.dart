@@ -106,22 +106,27 @@ Handler siteHandler(
     return reply;
   }
 
-  /// A one-line summary of a change, written by the fast model; null if
-  /// it could not be written.
-  Future<Reply?> summaryOf(
+  /// A one-line summary of an edit, written by the fast model and named
+  /// in [by]. If the model is not available, is slow or fails, the summary
+  /// is "Change" and a short hash of the new text, such as `Change
+  /// a867eb56`, and [by] is null.
+  Future<({String text, String? by})> summaryOf(
     List<({String name, String before, String after})> pages,
   ) async {
-    if (await helpUnavailable() != null) return null;
-    try {
-      final reply = await spend(
-        assistant!.summarize(pages),
-      ).timeout(const Duration(seconds: 20));
-      final line = reply.text.split('\n').first.trim();
-      if (reply.refused || line.isEmpty || line.length > 120) return null;
-      return Reply(line, reply.model, cost: reply.cost, refused: false);
-    } on Exception {
-      return null;
+    if (await helpUnavailable() == null) {
+      try {
+        final reply = await spend(
+          assistant!.summarize(pages),
+        ).timeout(const Duration(seconds: 8));
+        final line = reply.text.split('\n').first.trim();
+        if (!reply.refused && line.isNotEmpty && line.length <= 120) {
+          return (text: line, by: reply.model.id);
+        }
+      } on Exception catch (e) {
+        stderr.writeln('Summary not written: $e');
+      }
     }
+    return (text: 'Change ${changeHash(pages)}', by: null);
   }
 
   Response html(String body, {int status = 200}) => Response(
@@ -259,46 +264,23 @@ Handler siteHandler(
     (Request r, String id) => editing(r, id, (person, member) async {
       final fields = await form(r);
       final source = (fields['source'] ?? '').replaceAll('\r\n', '\n');
-      var summary = (fields['summary'] ?? '').trim();
       final helpedBy = Model.byId(fields['helped_by'])?.id;
       final basedOn = int.tryParse(fields['based_on'] ?? '') ?? person.revision;
-      final help = await helpUnavailable() == null;
-      Response again(String error) => html(
-        render(r).editPerson(
-          person,
-          source: source,
-          basedOn: basedOn,
-          summary: summary,
-          error: error,
-          help: help,
-          helpedBy: helpedBy,
-        ),
-        status: 422,
-      );
 
       final draft = Person.fromSource(id, person.directory, source);
       if (basedOn == person.revision && source.trim() == person.source.trim()) {
         return seeOther('/people/$id'); // nothing changed
       }
-      String? summaryBy;
-      if (summary.isEmpty) {
-        final written = await summaryOf([
-          (name: person.name, before: person.source, after: source),
-        ]);
-        if (written == null) {
-          return again('Add a few words on what you changed.');
-        }
-        summary = written.text;
-        summaryBy = written.model.id;
-      }
-
+      final summary = await summaryOf([
+        (name: person.name, before: person.source, after: source),
+      ]);
       final result = await site.store.savePerson(
         draft,
         basedOn: basedOn,
         author: member,
-        summary: summary,
+        summary: summary.text,
         helpedBy: helpedBy,
-        summaryBy: summaryBy,
+        summaryBy: summary.by,
       );
       if (result.saved) {
         await site.reload();
@@ -312,8 +294,7 @@ Handler siteHandler(
           person,
           source: source,
           basedOn: result.conflictWith!,
-          summary: summary,
-          help: help,
+          help: await helpUnavailable() == null,
           helpedBy: helpedBy,
           conflict: theirs == null
               ? null
@@ -786,7 +767,6 @@ Handler siteHandler(
     '/people/<id>/delete',
     (Request r, String id) => editing(r, id, (person, member) async {
       final fields = await form(r);
-      final summary = (fields['summary'] ?? '').trim();
       final result = await site.store.saveChange(
         [
           PageWrite.delete(
@@ -805,7 +785,7 @@ Handler siteHandler(
             ),
         ],
         author: member,
-        summary: summary.isEmpty ? "Delete ${person.name}'s page" : summary,
+        summary: "Delete ${person.name}'s page",
       );
       await site.reload();
       if (!result.saved) return changedMeanwhile(r, result);
@@ -979,4 +959,18 @@ String newPersonId(Tree tree, [Random? random]) {
       return id;
     }
   }
+}
+
+/// Eight hex digits that identify a change by its new text and the time,
+/// for a summary when none could be written: `a867eb56`.
+String changeHash(List<({String name, String before, String after})> pages) {
+  // FNV-1a, 32 bits.
+  var hash = 0x811c9dc5;
+  final text =
+      '${DateTime.now().microsecondsSinceEpoch}'
+      '${pages.map((p) => p.after).join()}';
+  for (final unit in text.codeUnits) {
+    hash = ((hash ^ unit) * 0x01000193) & 0xffffffff;
+  }
+  return hash.toRadixString(16).padLeft(8, '0');
 }

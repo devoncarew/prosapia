@@ -626,7 +626,6 @@ $body
     Person p, {
     required String source,
     required int basedOn,
-    String summary = '',
     String? error,
     String? conflict,
     bool help = false,
@@ -656,8 +655,6 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
     <div id="preview" class="preview">${personArticle(p, preview: true)}</div>
   </div>
   <div class="save">
-    <label for="summary">What did you change?</label>
-    <input id="summary" name="summary" value="${esc(summary)}" maxlength="200"${help ? ' placeholder="Optional: Claude Haiku writes a summary if this is empty"' : ' required placeholder="Added her years in Wales"'}>
     <a class="button" href="/people/${p.id}">Discard</a>
     <button class="primary" title="Publish (⌘ Enter)">Publish <kbd>⌘ ⏎</kbd></button>
   </div>
@@ -769,8 +766,6 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}''');
     sb.write('''
 <form class="memory" method="post" action="/people/${p.id}/delete">
   <input type="hidden" name="based_on" value="${p.revision}">
-  <label for="summary">Why?</label>
-  <input id="summary" name="summary" value="Delete ${esc(p.name)}'s page" required maxlength="200">
   <div class="save"><button class="danger">Delete the page</button> <a href="/people/${p.id}">Cancel</a></div>
 </form>''');
     return page('Delete ${p.name}', sb.toString());
@@ -1023,7 +1018,7 @@ ${r.deleted ? '' : '<details class="whole"><summary>The whole page as it was</su
   }) => page('Settings', '''
 <h1>Settings</h1>
 <h2>Help from Claude</h2>
-<p>Members who can edit may ask Claude to draft or revise a page's story, and to tidy a memory. The text replaces what Claude was asked to act on in the editor, and nothing is saved until the member publishes it. Change summaries left empty are written by Claude Haiku.</p>
+<p>Members who can edit may ask Claude to draft or revise a page's story, and to tidy a memory. The text replaces what Claude was asked to act on in the editor, and nothing is saved until the member publishes it. Claude Haiku writes the one-line summary of each change.</p>
 ${available ? '' : '<p class="message">This server has no Anthropic API key, so help is not available whatever is set here. Set <code>ANTHROPIC_API_KEY</code> where the server runs.</p>'}
 <form class="memory" method="post" action="/settings">
   <label class="check"><input type="checkbox" name="help"${help.enabled ? ' checked' : ''}> Members may ask Claude for help</label>
@@ -1119,6 +1114,7 @@ a.deleted { color: var(--muted); text-decoration: line-through; }
 .help button:disabled { opacity: 0.45; }
 .help-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 8px 12px; margin: 8px 0;
   border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font: 14px system-ui, sans-serif; }
+.help-bar[hidden] { display: none; }
 .help-bar.error { border-color: #b3261e; }
 .help-bar input { flex: 1; min-width: 200px; font: 14px system-ui, sans-serif; padding: 5px 8px;
   border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); }
@@ -1198,6 +1194,7 @@ button.primary kbd { font: 12px system-ui, sans-serif; background: rgba(255,255,
 .save { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 16px;
   font: 14px system-ui, sans-serif; }
 .save label { margin: 0; min-height: 0; }
+.editor .save { justify-content: flex-end; }
 .save input { flex: 1; min-width: 240px; }
 .conflict { border: 1px solid #b3261e; border-radius: 6px; padding: 4px 16px 16px; margin: 12px 0;
   font: 15px/1.5 system-ui, sans-serif; }

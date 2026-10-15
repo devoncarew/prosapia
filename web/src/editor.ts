@@ -513,10 +513,6 @@ helpButtons?.addEventListener('click', (event) => {
 });
 writeTab.addEventListener('click', () => select('write'));
 previewTab.addEventListener('click', () => select('preview'));
-document.getElementById('summary')!.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter' && (event.metaKey || event.ctrlKey))
-    form.requestSubmit();
-});
 
 // Offer back any unsaved text from a closed tab.
 const draft = readDraft();

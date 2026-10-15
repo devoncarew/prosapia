@@ -46,10 +46,12 @@ Resized images and files fetched from storage go in `.prosapia_cache/`, which ca
 deleted at any time.
 
 Help from Claude needs an Anthropic API key in `ANTHROPIC_API_KEY` where the server
-runs, and an owner switching it on under Settings. Without a key, the editor offers no
-help and summaries must be typed. `ANTHROPIC_BASE_URL` points the server at another
-endpoint, such as a local stand-in for testing. The voice the model writes in is read
-from [docs/writing.md](docs/writing.md) when the server starts.
+runs, and an owner switching it on under Settings. Locally, put it in `.env` at the top
+of the repository, which is git-ignored and read when the server starts. Without a key,
+the editor offers no help and each change is summarized as "Change" and a short hash.
+`ANTHROPIC_BASE_URL` points the server at another endpoint, such as a local stand-in for
+testing. The voice the model writes in is read from [docs/writing.md](docs/writing.md)
+when the server starts.
 
 ### Against the real Firebase project
 
