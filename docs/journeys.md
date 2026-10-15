@@ -27,8 +27,10 @@ These apply to every journey that adds or changes something.
   editor may know something the checks do not.
 - **Nothing typed is lost.** Unsaved input survives a closed tab or a dropped
   connection. Every save can be undone.
-- **Never show the plumbing.** No YAML, ids or GEDCOM tags in the normal path. Editing
-  the page as text stays available for the historian who wants it.
+- **Plain text, lightly marked.** A page is "Name: value" fact lines and prose, with `@`
+  for people and `[date: …]` and `[place: …]` where marking helps. No YAML or GEDCOM
+  tags. Ids appear only after `@` in the editor, inserted by completion; readers see
+  names.
 - **Help, with consent.** A language model may turn a sentence into fields or draft a
   paragraph, but its work is always shown for the person to accept or change before
   anything is saved.
@@ -46,7 +48,8 @@ picking Chicago, Illinois from the places already in the tree. They add her sist
 name from the people in the tree, and optionally a sentence or two and a photo. The
 event appears on Margaret's timeline, and on her sister's.
 
-Milestones: 15 (events), 13 (forgiving dates and places), 16 (from a sentence).
+Milestones: 15 (events), 13 (forgiving dates and places), 17 (from a sentence). All
+after opening to the family.
 
 ### 2. Add a child to someone's page
 
@@ -73,11 +76,11 @@ Milestone: 14.
 
 _A cousin knows Margaret's birth year is wrong: 1887, not 1888._
 
-They click the birth date in Margaret's infobox, change it, and say briefly why. If the
-change contradicts a cited source, Prosapia mentions it. The old value stays in the
+They choose Edit on Margaret's page, change the `Born:` line, and say briefly why. If
+the change contradicts a cited source, Prosapia mentions it. The old value stays in the
 history.
 
-Milestones: 13 (editing facts directly).
+Milestone: 13.
 
 ### 5. Write or expand a biography
 
@@ -90,7 +93,7 @@ current page; the historian edits it and saves. The history records that the tex
 as a model's draft. The same flow tidies a passage, or weaves loose memories into an
 existing biography.
 
-Milestone: 17.
+Milestone: 16 (drafting); 17 (weaving memories, tidying).
 
 ### 6. Add a photo with its back
 
@@ -110,7 +113,8 @@ _At a family gathering, someone remembers a story about their grandfather._
 On their phone they open his page, choose **Add a memory**, type or dictate it, and
 save. Date and place are optional. It appears at once, attributed to them.
 
-Milestones: 15 (memories with dates, places and people), 18 (phone-friendly).
+Milestones: 15 (memories with dates, places and people), 19 (editing on a phone). Both
+after opening to the family; until then, memories are added from a desktop.
 
 ### 8. Find someone
 

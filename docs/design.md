@@ -21,6 +21,7 @@ Work that is scheduled, and work known but not yet scheduled, is in the [plan](p
 | Who is the first user? | One family, one tree, a handful of invited relatives. The simplifications this allows are removed step by step so the tool becomes general purpose |
 | How are edits reviewed? | They are not: members with write access edit directly. Every edit is logged, attributed and reversible instead |
 | How is per-page visibility enforced? | By the server, which is the only thing that reads the database. Designing the levels themselves is deferred |
+| How are pages written? | Facts as "Name: value" lines, then markdown prose. People are `@` references to an id, shown by name; dates and places are `[date: …]` and `[place: …]`; anything unreadable is shown as unresolved. Details are in [content-model.md](content-model.md#page-syntax) |
 | How are photos stored? | JPEGs and HEICs as they are; uncompressed scans as JPEG; a front and back as two files paired by name and embedded id |
 
 ### Why not git

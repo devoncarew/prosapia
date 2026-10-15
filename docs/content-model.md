@@ -33,6 +33,58 @@ She sailed from New York in June with her cousin [Owen Price](../price-owen-4h8w
 - Folding such entries into timelines or summaries is the job of the viewing layer, not
   the contributor.
 
+### Page syntax
+
+Direction set, to be built in milestone 13. It replaces the YAML block shown above,
+which is what the code reads today. A page is still facts on top and prose below, but
+both are written in a looser syntax that a relative can learn from the page in front of
+them:
+
+```markdown
+Name: Margaret Ellen Hughes
+Born: [date: 14 March 1887], [place: Scranton, Pennsylvania]
+Died: about 1961
+Parents: @hughes-thomas-3f8d1a, @price-ann-9c4e2b
+Occupation: schoolteacher, 1908 to 1920
+
+Margaret grew up above her father's hardware store.
+
+## 1923: Trip to Wales
+
+She sailed from New York with her cousin @price-owen-4h8w2r to visit her mother's
+family in [place: Cardiff, Wales].
+```
+
+- **Facts are "Name: value" lines.** Easy to read, easy to add to by copying the line
+  above, and close to the YAML they replace without its strictness. A line Prosapia
+  cannot read is kept and shown as unresolved, never rejected.
+- **People are `@` references to a person's id.** Typing `@` offers people by name, with
+  years to tell namesakes apart, and inserts the id. The editor shows the id; the
+  rendered page shows the person's name, linked. To mention someone without linking,
+  write their name as plain text.
+- **Dates and places are `[date: …]` and `[place: …]`.** Inside a fact line they give
+  the fact its date and place; Prosapia also tries to read an unmarked value there, such
+  as "about 1961". In prose they are marked for display and for listing places, and
+  nothing more.
+- **Relationships are stated only in fact lines,** such as `Parents:` and `Partner:`. A
+  person mentioned in prose is a link, never a claim about the family.
+- **Prose does not join the timeline by itself.** A date inside a sentence does not put
+  the sentence on the timeline; only facts and dated headings do. This may loosen later.
+- **Unresolved is visible, never an error.** An `@` id that matches nobody, a date that
+  cannot be read, or a fact line in an unknown shape is shown with a dotted underline
+  and an explanation, and listed when saving.
+- **Learned in context.** Syntax highlighting and completion in the editor, and a short
+  legend beside it.
+
+Still to settle in milestone 13:
+
+- Which id form follows `@`: the readable directory name (`@hughes-thomas-3f8d1a`) or
+  the bare id (`@p-3f8d1a`). The readable form is easier to check by eye.
+- The vocabulary of fact names, how a fact with several parts (date, place, people) is
+  written, and how unknown names are kept.
+- Whether the exported files keep this syntax as it is, or convert the facts back to
+  YAML for other tools.
+
 ### Proposed
 
 - **Stable opaque ids** (`p-7k2m9x`) name people, sources and media. Names change and
@@ -56,10 +108,8 @@ She sailed from New York in June with her cousin [Owen Price](../price-owen-4h8w
 - **Uncertain dates use the GEDCOM 7.0 date grammar** (`ABT 1961`, `BET 1880 AND 1885`),
   so import and export need no translation.
 - **Places are free text** in the first version, as written in the source.
-- **Links between people are relative markdown links**
-  (`[Owen Price](../price-owen-4h8w2r/index.md)`), not bare ids or wiki syntax. They
-  work when the exported files are read on GitHub, and Prosapia resolves them to the
-  person's current name.
+- **Links between people are relative markdown links** in the current format. Superseded
+  by `@` references; see Page syntax above.
 - **The file reads well raw; Prosapia renders on top.** GitHub's own markdown view of
   the exported files is a plain fallback reader. The Prosapia server adds the infobox
   from the structured facts, citation markers and derived views. It does not reorder the

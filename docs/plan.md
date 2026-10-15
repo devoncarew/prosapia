@@ -30,13 +30,18 @@ links to, not here.
 ## Planned releases
 
 Milestones are grouped into releases. Each release is a point where Prosapia is usable
-for something new; the milestones within it are listed in the order they will be worked.
-The [user journeys](journeys.md) describe what the editing work is aiming at.
+for something new; releases, and the milestones within them, are listed in the order
+they will be worked. Work whose design is clear comes earlier; work whose design is
+still forming comes later. The [user journeys](journeys.md) describe what the editing
+work is aiming at.
 
-### Release A: editing that forgives
+Releases A to C come before relatives are invited. Release D follows.
 
-Goal: the family historian can keep their real tree comfortably, without touching raw
-text. Nobody else is invited yet, so the tree can be loaded early and used privately.
+### Release A: the core of editing
+
+Goal: the family historian keeps their real tree comfortably, on a desktop, without
+YAML. Nobody else is invited yet, so the real tree can be loaded early and used
+privately. Editing on a phone is not a goal yet; viewing on one is.
 
 #### Milestone 12: loading the real family tree
 
@@ -61,32 +66,13 @@ only to its owner, loaded by following the written steps.
 This is separate from milestone 7, which imports a GEDCOM file through the browser into
 a tree already in use.
 
-#### Milestone 13: editing facts without raw text
-
-Journeys 4 and 8, and the groundwork for the rest.
-
-- Edit a person's facts in a form: names, sex, birth, death, and the list of other facts
-  (add, remove, reorder). Editing the page as text stays available.
-- Forgiving dates: accept the ways people write dates ("about 1925", "spring 1925", "the
-  1880s", "14 March 1887", "3/14/1887", "between 1880 and 1885", "bapt. 1891"), show how
-  each was understood, store the standard form, and ask only when a date is truly
-  ambiguous.
-- Places complete from the places already in the tree; free text is always accepted.
-- People complete by name, showing years and parents so namesakes can be told apart. The
-  same completion powers the search box.
-- Gentle checks: implausible dates produce a question, never a refusal.
-- Unsaved input survives a closed tab.
-
-Done when: a birth date can be corrected and an occupation added, by typing dates the
-way people say them, without seeing any raw text, on a phone-sized screen as well as a
-desktop one.
-
 #### Milestone 14: adding people and relationships
 
 Journeys 2 and 3.
 
-- Add a child, parent, partner or sibling from a person's page, with only a name
-  required; the other parent or partnership is offered from what the tree holds.
+- Add a child, parent, partner or sibling from a person's page, in a small dialog with
+  only a name required; the other parent or partnership is offered from what the tree
+  holds.
 - Before creating someone, check for an existing person with a similar name and dates,
   and offer to link to them instead.
 - Edit partnerships: dates, places, how and when they ended, their order.
@@ -97,50 +83,50 @@ Journeys 2 and 3.
 Done when: a new child can be added to an existing couple in under a minute, appears
 among both parents' children and their siblings, and can be undone in one step.
 
-#### Milestone 15: events and memories
+#### Milestone 13: the page syntax and its editor
 
-Journeys 1 and 7.
+Journeys 2, 4 and 8. The syntax is decided in
+[content-model.md](content-model.md#page-syntax): facts as "Name: value" lines, `@`
+references to people, `[date: …]` and `[place: …]`.
 
-- Add an event to someone's life: a kind (moved, married, served, emigrated, graduated,
-  or anything else), a forgiving date and place, the other people involved, and
-  optionally some words and a photo.
-- An event involving several people appears on each of their timelines. Settle the
-  shared-events question in [content-model.md](content-model.md) to do this.
-- Memories gain an optional date, place and people, and show on the timeline when dated.
+- Start with a short prototype on the real tree to settle the open details: the id form
+  after `@`, the fact names, and how a fact with a date, a place and people is written.
+- Read and write pages in the new syntax, forgivingly: an unreadable line is kept and
+  shown as unresolved. Convert existing pages from YAML, as a logged change.
+- Render `@` references as linked names, and dates and places for display; show anything
+  unresolved with an explanation.
+- Forgiving dates inside fact lines: accept the ways people write dates ("about 1925",
+  "spring 1925", "the 1880s", "14 March 1887", "3/14/1887", "between 1880 and 1885",
+  "bapt. 1891"), show how each was understood, and ask only when a date is truly
+  ambiguous.
+- In the editor: syntax highlighting, completion after `@` (people, with years and
+  parents to tell namesakes apart) and inside `[place: …]` (places already in the tree),
+  and a short legend. The same people completion powers the search box.
+- Gentle checks: implausible dates produce a question, never a refusal.
+- Unsaved input survives a closed tab.
 
-Done when: an event with two people involved, entered from one person's page, appears on
-both people's timelines.
+Done when: a birth date can be corrected and an occupation added by editing fact lines,
+a person can be referenced by typing `@` and part of their name, and no page shows YAML.
 
-### Release B: writing with help
+### Release B: help and photos
 
-Goal: a language model takes the drudgery out of entering and writing, under the rules
-in [design.md](design.md#language-models).
+Goal: the most useful language-model feature, and the ability to add photos, before
+relatives arrive.
 
-#### Milestone 16: language-model foundation and entry from a sentence
+#### Milestone 16: language-model foundation and biography drafts
 
-- Choose the model provider, Claude or Gemini, by trying both on the tasks below; the
+Journey 5. The rules every use follows are in [design.md](design.md#language-models).
+
+- Choose the model provider, Claude or Gemini, by trying both on biography drafting; the
   server calls it, never the browser.
 - An owner switches the feature on for their tree. Each call's cost is recorded, with a
   monthly limit.
-- Entry from a sentence: typing "Margaret moved to Chicago with her sister in spring
-  1925" proposes an event with its fields filled, for the person to check and change
-  before saving. The same for "Add a child" and for facts.
+- Draft a biography from a person's facts, memories and photo captions, shown beside the
+  current page for editing before it is saved.
 - Revisions that began as a model's draft record the model's name.
 
-Done when: journeys 1 and 2 can each start from one typed sentence, and nothing the
-model proposes is saved without the person confirming it.
-
-#### Milestone 17: biographies with help
-
-Journey 5.
-
-- Draft a biography from a person's facts, events, memories and photo captions, shown
-  beside the current page for editing before it is saved.
-- Weave loose memories into an existing biography, as a proposed edit.
-- Tidy or shorten a passage, or turn an imported note into prose.
-
 Done when: a usable draft can be produced and saved for a person with only facts, and
-for one with several memories.
+for one with several memories, and the history shows which revisions began as drafts.
 
 #### Milestone 6: photos in the app
 
@@ -166,7 +152,8 @@ transcription and pairing.
 
 ### Release C: open to the family
 
-Goal: relatives are invited and can contribute without help.
+Goal: relatives are invited, can find their way around, and can contribute from a
+desktop.
 
 #### Milestone 5: deploy and backup
 
@@ -187,18 +174,51 @@ repository, loaded by the server in file mode, renders the same site.
 
 #### Milestone 18: a relative's first visit
 
-Journey 10, and journey 7 on a phone.
+Journey 10.
 
 - An invitation email that says who invited them and what Prosapia is.
 - A first page after sign-in that orients a newcomer: their own page or their nearest
   relative's, and one easy thing to do.
-- Every page usable on a phone, especially adding a memory.
+- Every page readable on a phone.
 - A way to report a mistake without editing, for those who would rather not.
 
-Done when: a relative who has never seen Prosapia can accept an invitation and add a
-memory from a phone without help.
+Done when: a relative who has never seen Prosapia can accept an invitation, find their
+own family, and add a memory without help.
 
-### Not yet in a release
+### Release D: after opening
+
+Goal: richer entry and more help, shaped by how the family actually uses Prosapia.
+
+#### Milestone 15: events and memories
+
+Journeys 1 and 7.
+
+- Add an event to someone's life: a kind (moved, married, served, emigrated, graduated,
+  or anything else), a forgiving date and place, the other people involved, and
+  optionally some words and a photo.
+- An event involving several people appears on each of their timelines. Settle the
+  shared-events question in [content-model.md](content-model.md), and how an event is
+  written in the page syntax, to do this.
+- Memories gain an optional date, place and people, and show on the timeline when dated.
+
+Done when: an event with two people involved, entered from one person's page, appears on
+both people's timelines.
+
+#### Milestone 17: more help from the model
+
+- Entry from a sentence: typing "Margaret moved to Chicago with her sister in spring
+  1925" proposes fact lines or an event, for the person to check before saving.
+- Weave loose memories into an existing biography, as a proposed edit.
+- Tidy or shorten a passage, or turn an imported note into prose.
+
+Done when: journeys 1 and 2 can each start from one typed sentence, and nothing the
+model proposes is saved without the person confirming it.
+
+#### Milestone 19: editing on a phone
+
+- Adding a memory, correcting a fact and tagging a photo work comfortably on a phone.
+
+Done when: journey 7 works on a phone.
 
 #### Milestone 7: GEDCOM import
 
