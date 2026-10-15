@@ -28,7 +28,8 @@ tool/deploy.sh
 
 Cloud Build builds the image from the repository, and Cloud Run starts it in place of
 the old one. Only the files the Dockerfile needs are sent
-([.gcloudignore](../.gcloudignore)), so `data/` and `.env` never leave your machine.
+([.gcloudignore](../.gcloudignore)), so `data/`, `.env` and anything else git ignores
+never leave your machine.
 
 ## One-time setup
 
@@ -67,16 +68,26 @@ Done once per project, in this order. Each step changes the production project.
      --project prosapia-ea818
    ```
 
-4. **Deploy** with `tool/deploy.sh`. The first build takes a few minutes.
+4. **Let Cloud Build build.** In a new project the default account Cloud Build uses
+   cannot read the uploaded source until it has the builder role:
 
-5. **Switch on database backups**, kept for two weeks:
+   ```
+   NUMBER=$(gcloud projects describe prosapia-ea818 --format 'value(projectNumber)')
+   gcloud projects add-iam-policy-binding prosapia-ea818 --condition None \
+     --member "serviceAccount:$NUMBER-compute@developer.gserviceaccount.com" \
+     --role roles/cloudbuild.builds.builder
+   ```
+
+5. **Deploy** with `tool/deploy.sh`. The first build takes a few minutes.
+
+6. **Switch on database backups**, kept for two weeks:
 
    ```
    gcloud firestore backups schedules create --database='(default)' \
      --recurrence=daily --retention=14d --project prosapia-ea818
    ```
 
-6. **Attach the domain.** In the Firebase console, under Hosting, add the custom domain
+7. **Attach the domain.** In the Firebase console, under Hosting, add the custom domain
    `prosapia.app` and put the DNS records it gives at the registrar. Then, under
    Authentication, Settings, Authorized domains, add `prosapia.app` so Google sign-in
    works there. Until then the site is at `https://prosapia-ea818.web.app`.

@@ -1,14 +1,10 @@
-# Files sent to Cloud Build: only what the Dockerfile copies. Keeps family
-# data and secrets out of the build.
-*
-!pubspec.yaml
-!pubspec.lock
-!bin/
-!lib/
-!web/package.json
-!web/package-lock.json
-!web/src/
-!web/tsconfig.json
-!web/eslint.config.js
-!config/
-!docs/writing.md
+# Files sent to Cloud Build. Everything git ignores stays behind, which
+# keeps family data (data/), secrets (.env), node_modules and caches on
+# this machine; so do the parts of the repository the build does not use.
+#!include:.gitignore
+.git
+.github/
+spikes/
+test/
+tool/
+hosting/
