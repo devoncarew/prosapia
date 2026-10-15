@@ -253,7 +253,20 @@ class FirestoreStore extends TreeStore {
   /// Earlier revisions and log entries are not cleared; this is for setting
   /// a tree up, not for routine use. Files larger than [maxMediaBytes] are
   /// skipped.
-  Future<({int records, int uploaded, int skipped})> replaceWith(
+  /// Whether a tree with this id exists.
+  Future<bool> exists() async => (await _tree.get()).exists;
+
+  /// Deletes the tree's pages, their history, partnerships, media records
+  /// and change log. Members are kept, and so are files in storage, which
+  /// [replaceWith] reuses when they are unchanged.
+  Future<void> clearRecords() async {
+    for (final name in ['people', 'unions', 'media', 'changes']) {
+      await _db.recursiveDelete(_tree.collection(name));
+    }
+  }
+
+  Future<({int records, int uploaded, int reused, List<String> skipped})>
+  replaceWith(
     Tree tree,
     TreeStore source, {
     int maxMediaBytes = 50 * 1000 * 1000,
@@ -290,15 +303,23 @@ class FirestoreStore extends TreeStore {
     }
 
     final storage = app.storage().bucket(bucketName).storage;
-    var uploaded = 0, skipped = 0;
+    var uploaded = 0, reused = 0;
+    final skipped = <String>[];
     for (final media in tree.media.values) {
       final object = 'trees/$treeId/media/${media.fileName}';
       final file = await source.localFile(media);
-      if (file.lengthSync() > maxMediaBytes) {
-        skipped++;
-        progress?.call(
-          'skipped ${media.fileName} (${file.lengthSync() ~/ 1000000} MB)',
-        );
+      final size = file.lengthSync();
+      if (size > maxMediaBytes) {
+        skipped.add('${media.fileName} (${size ~/ 1000000} MB)');
+        continue;
+      }
+      // A rerun need not upload again what is already there.
+      if (await _storedSize(object) == size) {
+        reused++;
+        writes.add((
+          _tree.collection('media').doc(media.key),
+          _plain(media.toMap(location: object)),
+        ));
         continue;
       }
       await storage.uploadObject(
@@ -328,7 +349,26 @@ class FirestoreStore extends TreeStore {
     }
     final previous = await version();
     await _tree.set({'name': tree.name, 'version': previous + 1});
-    return (records: writes.length, uploaded: uploaded, skipped: skipped);
+    return (
+      records: writes.length,
+      uploaded: uploaded,
+      reused: reused,
+      skipped: skipped,
+    );
+  }
+
+  /// The size of a stored file, or null if there is none.
+  Future<int?> _storedSize(String object) async {
+    try {
+      final meta = await app
+          .storage()
+          .bucket(bucketName)
+          .storage
+          .objectMetadata(bucketName, object);
+      return meta.size?.toInt();
+    } on gcs.NotFoundException {
+      return null;
+    }
   }
 
   Future<void> setMember(String email, Role role, {String? name}) => _tree

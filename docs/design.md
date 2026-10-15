@@ -9,6 +9,7 @@ still open. The details of each area are in their own documents:
 | [content-model.md](content-model.md) | Person pages, sources, GEDCOM                       |
 | [media.md](media.md)                 | Photos and other files                              |
 | [sharing.md](sharing.md)             | Privacy, sharing and trust                          |
+| [loading.md](loading.md)             | Loading a family's existing tree into production    |
 
 Work that is scheduled, and work known but not yet scheduled, is in the [plan](plan.md).
 

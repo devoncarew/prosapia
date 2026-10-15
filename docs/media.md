@@ -31,6 +31,7 @@ embedded id.
 | A JPEG, from a camera, phone or scanner | That file as it is. The pixels are never re-compressed; Prosapia adds metadata beside what the camera wrote |
 | An uncompressed scan, such as TIFF or PNG | A JPEG, encoded once at high quality. The uncompressed file is not kept |
 | A HEIC, the default from iPhones | That file as it is |
+| A PDF that only wraps one scanned JPEG | That JPEG, extracted unchanged. The PDF wrapper adds nothing, and photo tools read a JPEG better |
 | A front and a back | Two files, each handled by the rules above |
 
 JPEG is the archival format: it dates from 1992 and everything opens it. This is not

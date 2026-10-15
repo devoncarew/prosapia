@@ -76,14 +76,20 @@ family in [place: Cardiff, Wales].
 - **Learned in context.** Syntax highlighting and completion in the editor, and a short
   legend beside it.
 
+Settled since:
+
+- **The readable id form follows `@`:** `@hughes-thomas-3f8d1a`, the person's directory
+  name, which ends in their id. Only the trailing id is relied on.
+- **The export keeps this syntax.** Genealogy tools exchange GEDCOM, not YAML, so there
+  is no reason to convert the facts.
+
 Still to settle in milestone 13:
 
-- Which id form follows `@`: the readable directory name (`@hughes-thomas-3f8d1a`) or
-  the bare id (`@p-3f8d1a`). The readable form is easier to check by eye.
 - The vocabulary of fact names, how a fact with several parts (date, place, people) is
   written, and how unknown names are kept.
-- Whether the exported files keep this syntax as it is, or convert the facts back to
-  YAML for other tools.
+- Whether the fact block is fenced by `---` lines. Markdown tools such as GitHub read a
+  fenced block as YAML, which fact lines are not, so they would show an error; unfenced,
+  the block runs to the first blank line and shows as plain text.
 
 ### Proposed
 

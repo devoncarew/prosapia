@@ -6,8 +6,12 @@ import 'package:prosapia/src/file_store.dart';
 import 'package:prosapia/src/firestore_store.dart';
 import 'package:prosapia/src/store.dart';
 
-/// Loads a tree from files into Firestore and Cloud Storage, replacing the
-/// records of the tree with the same id, and adds its first owner.
+/// Loads a tree from files into Firestore and Cloud Storage, and names its
+/// members.
+///
+/// An existing tree is replaced only with `--replace`, which deletes its
+/// pages, history, partnerships, media records and change log first. Its
+/// members are kept, and photos already in storage are not uploaded again.
 Future<void> main(List<String> arguments) async {
   final env = Platform.environment;
   final parser = ArgParser()
@@ -27,6 +31,13 @@ Future<void> main(List<String> arguments) async {
       defaultsTo: env['GOOGLE_CLOUD_PROJECT'] ?? 'demo-prosapia',
     )
     ..addOption('bucket')
+    ..addFlag(
+      'replace',
+      negatable: false,
+      help:
+          'Replace an existing tree: its pages, history and change log are '
+          'deleted first. Members are kept.',
+    )
     ..addOption(
       'max-file-mb',
       defaultsTo: '50',
@@ -66,6 +77,21 @@ Future<void> main(List<String> arguments) async {
     bucketName: (args['bucket'] as String?) ?? '$project.firebasestorage.app',
     cacheDir: '.prosapia_cache',
   );
+  final treeId = args['tree'] as String;
+  if (await store.exists()) {
+    if (!(args['replace'] as bool)) {
+      stderr.writeln(
+        'Tree "$treeId" already exists in "$project". Loading again replaces its '
+        'pages, their history and its change log, including any edits made '
+        'since it was loaded. Rerun with --replace to do that.',
+      );
+      await app.close();
+      exit(1);
+    }
+    stdout.writeln('Clearing the existing records of tree "$treeId"...');
+    await store.clearRecords();
+  }
+
   final watch = Stopwatch()..start();
   final result = await store.replaceWith(
     tree,
@@ -80,8 +106,12 @@ Future<void> main(List<String> arguments) async {
     }
   }
   stdout.writeln(
-    'Loaded "${tree.name}" as tree "${args['tree']}": ${result.records} records, '
-    '${result.uploaded} files uploaded, ${result.skipped} skipped, in ${watch.elapsed.inSeconds} s.',
+    'Loaded "${tree.name}" as tree "$treeId": ${result.records} records; '
+    'files: ${result.uploaded} uploaded, ${result.reused} already there, '
+    '${result.skipped.length} skipped; in ${watch.elapsed.inSeconds} s.',
   );
+  for (final file in result.skipped) {
+    stdout.writeln('  skipped, over the size limit: $file');
+  }
   await app.close();
 }
