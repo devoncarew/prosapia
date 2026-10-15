@@ -11,13 +11,13 @@ flowchart TD
     hosting["Firebase Hosting<br/>domain, HTTPS, caching"]
     server["Prosapia server on Cloud Run<br/>Dart; holds the tree and a search index in memory"]
     auth["Firebase Authentication<br/>sign-in with Google"]
-    firestore[("Firestore<br/>people, partnerships, sources, rolls,<br/>revisions, members, change log")]
+    firestore[("Firestore<br/>people, sources, media records,<br/>revisions, members, change log")]
     storage[("Cloud Storage<br/>photos and large files,<br/>metadata embedded in each file")]
     job["Nightly export<br/>started by Cloud Scheduler"]
     backup["Private GitHub repository<br/>the tree as markdown files, one commit per change"]
     browser --> hosting --> server
     browser -. "signs in" .-> auth
-    browser -. "uploads photos directly" .-> storage
+    server -. "stores photos" .-> storage
     server -- "checks sign-in" --> auth
     server <--> firestore
     server <--> storage
@@ -60,9 +60,9 @@ One family's usage should sit within the free allowances or cost very little.
 
 ## Storage and versioning
 
-Direction set: the database is the record. Each tree's people, partnerships, sources and
-rolls are Firestore documents; photos and large files are objects in Cloud Storage. Git
-and GitHub are no longer the store: most relatives have a Google account and no GitHub
+Direction set: the database is the record. Each tree's people, sources and media records
+are Firestore documents; photos and large files are objects in Cloud Storage. Git and
+GitHub are no longer the store: most relatives have a Google account and no GitHub
 account, and Prosapia would have had to build its own sign-in and editing screens in any
 case.
 
@@ -72,7 +72,6 @@ trees/{tree}
   people/{p-7k2m9x}            the page as written; a deleted page is marked so
     revisions/{revision}       every saved version: text, author, time, summary
   sources/{s-1900-census}
-  rolls/{r-8d2k5n}
   media/{m-5t1q8z}             where the file is, and what it says about itself
   changes/{change}             the log: who changed what, when, and why
   usage/{yyyy-mm}              what help from a language model cost that month
@@ -93,7 +92,6 @@ tree/
   media/
     m-5t1q8z.jpg        (a photo's front)
     m-5t1q8z-back.jpg   (its back)
-  rolls/     r-8d2k5n.md   (an optional group of related photos)
   tree.yaml  (tree name and settings)
 ```
 

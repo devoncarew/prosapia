@@ -316,6 +316,10 @@ class Media {
         ..width = map['width'] as int?
         ..height = map['height'] as int?
         ..size = map['size'] as int?
+        ..date = map['date'] as String?
+        ..place = map['place'] as String?
+        ..set = map['set'] as String?
+        ..setIndex = map['setIndex'] as int?
         ..people.addAll(((map['people'] as List?) ?? const []).cast<String>());
 
   /// Ids written into a file's metadata carry this prefix, so they can be
@@ -333,8 +337,21 @@ class Media {
   /// Cloud Storage. Only the store interprets it.
   final String location;
   String? title;
+
+  /// For a photo with writing on its back, the transcription of it. It is
+  /// kept in both files, so the words survive if the back is lost.
   String? description;
   int? width, height, size;
+
+  /// When it was taken, as typed: "about 1949".
+  String? date;
+
+  /// Where it was taken, as typed.
+  String? place;
+
+  /// The set it was added with, and its place in that set's order.
+  String? set;
+  int? setIndex;
 
   /// Ids of the people shown, from the file's embedded metadata.
   final people = <String>[];
@@ -355,6 +372,10 @@ class Media {
     if (width != null) 'width': width,
     if (height != null) 'height': height,
     if (size != null) 'size': size,
+    if (date != null) 'date': date,
+    if (place != null) 'place': place,
+    if (set != null) 'set': set,
+    if (setIndex != null) 'setIndex': setIndex,
     'people': people,
   };
 }

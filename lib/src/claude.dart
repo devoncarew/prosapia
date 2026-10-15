@@ -76,12 +76,14 @@ class Claude {
   final http.Client _http;
   final Uri _endpoint;
 
-  /// Sends one request: [system] instructions and a single [user] message.
-  /// Retries rate limits, overloads and server errors.
+  /// Sends one request: [system] instructions and a single [user] message,
+  /// after any [images], which are JPEGs. Retries rate limits, overloads
+  /// and server errors.
   Future<Reply> write(
     Model model, {
     required String system,
     required String user,
+    List<List<int>> images = const [],
     String effort = 'medium',
     int maxTokens = 16000,
   }) async {
@@ -90,7 +92,23 @@ class Claude {
       'max_tokens': maxTokens,
       'system': system,
       'messages': [
-        {'role': 'user', 'content': user},
+        {
+          'role': 'user',
+          'content': images.isEmpty
+              ? user
+              : [
+                  for (final jpeg in images)
+                    {
+                      'type': 'image',
+                      'source': {
+                        'type': 'base64',
+                        'media_type': 'image/jpeg',
+                        'data': base64Encode(jpeg),
+                      },
+                    },
+                  {'type': 'text', 'text': user},
+                ],
+        },
       ],
       'output_config': {'effort': effort},
       // If the writing model declines, the API retries on a suitable one.

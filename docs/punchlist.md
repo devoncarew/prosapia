@@ -10,3 +10,5 @@
 
 - improve the styling of the history page
 - remove or revise "Your unsaved changes from ... have been brought back"
+- show progress while waiting on Claude (an indeterminate progress bar or spinner) for
+  Draft, Revise, Revise selection, Tidy up and Transcribe

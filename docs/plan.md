@@ -51,27 +51,7 @@ in the text). What remains before release B is using it on the real tree.
 Goal: the most useful language-model feature, and the ability to add photos, before
 relatives arrive.
 
-#### Milestone 6: photos in the app
-
-Journey 6.
-
-- Upload a front, an optional back and the related text, from the browser straight to
-  Cloud Storage. The server stores JPEGs and HEICs as they are, encodes uncompressed
-  scans to JPEG, names the pair, and writes the metadata into each file.
-- Offer a transcription of the back, and a suggested caption and rough date, from a
-  language model.
-- Tag the people in a photo using people completion; the names are written into the
-  file.
-- Verify the XMP and IPTC field names in [media.md](media.md) against the
-  specifications, and define Prosapia's own field for which side a file is.
-- Choose the JPEG quality for scans using a real full-resolution scanner output.
-- Front and back shown together wherever the photo appears.
-- Rolls: create one, add photos in order, and suggest a frame's date or place to the
-  rest.
-
-Done when: a photo added through the app shows on the right people's pages with its
-back, and both files downloaded from storage still carry their names, date,
-transcription and pairing.
+Its milestones are complete: 16 (help from a language model) and 6 (photos in the app).
 
 ### Release C: open to the family
 
@@ -172,6 +152,10 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 ### People and relationships
 
 - Merge two records that turn out to be the same person.
+- Choose the JPEG quality for scans from a real full-resolution scanner output; 92 is a
+  placeholder.
+- Upload files larger than Cloud Run's 32 MB request limit, such as large TIFF scans,
+  straight to storage with a signed upload address.
 - Undo a change that later edits have built on, by working out what to take back,
   instead of refusing as now.
 - Give a page to a plain name written elsewhere than a relationship line, such as a
@@ -218,7 +202,7 @@ Uses not yet scheduled; the rules every use follows are in
 - Documents (letters, certificates, census pages): previews and metadata for PDFs.
 - Video: store short clips, link to long ones, as proposed in [media.md](media.md).
 - Multi-page scanned PDFs, such as the two baby books: keep as one document, or store as
-  a roll of page images.
+  a set of page images.
 - Audio recordings.
 - Suggesting where faces are in a photo.
 - Check that embedded text survives email, photo services and messaging apps.
@@ -257,6 +241,12 @@ Uses not yet scheduled; the rules every use follows are in
 
 Newest first.
 
+- **Milestone 6, photos in the app.** Photos are added from a person's page or from
+  Photos, several at once with a shared date, place and people, and an optional back
+  that Claude can transcribe; a photo names the people in it rather than belonging to a
+  page, and photos added together form a set. Caption, date, place, people, the writing
+  on the back, the pairing and the set are written into the files, and can be changed
+  later without re-encoding the image.
 - **Milestone 16, help from a language model.** Claude can draft or revise a page's
   story, improve a selection, and tidy a memory; its text replaces what it acted on in
   the editor, with undo, and nothing is saved until the person publishes. Claude Haiku

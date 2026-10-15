@@ -4,20 +4,20 @@ What is known about a photo is written into the photo file, using existing metad
 standards, so a copy emailed to a cousin still says who is in it. Prosapia keeps the
 same facts in its database for searching, but the file is the authority.
 
-The field names below are from memory and should be checked against the current
-specifications in milestone 6 of the [plan](plan.md).
+The field names below were checked with exiftool 13.55 in milestone 6.
 
 <!-- prettier-ignore -->
 | What we know | Where it goes in the file |
 | --- | --- |
-| When it was taken, possibly only a year | XMP `photoshop:DateCreated`, which accepts a year or year and month; EXIF `DateTimeOriginal` only when the full date is known |
-| Who is in it | IPTC `Person Shown`, one entry per name |
+| When it was taken, possibly only a year | XMP `photoshop:DateCreated`, which accepts a year or year and month. A date such as "about 1949" is written as its year; the words as typed are kept in Prosapia's record. A camera's EXIF `DateTimeOriginal` is left as it is |
+| Who is in it | IPTC `Person Shown` (XMP `iptcExt:PersonInImage`), one entry per name |
 | Where each person is in the frame | IPTC Image Regions, one named region per face |
 | Text written on the back | XMP `dc:description`, transcribed as written, in both the front and the back file |
 | Caption or title | XMP `dc:title` |
-| Where it was taken | IPTC `Location Shown` |
+| Where it was taken | IPTC `Location Shown`, as its location name (XMP `iptcExt:LocationShown/LocationName`) |
 | Who holds the original, who scanned it | XMP `dc:source` and `dc:rights` |
-| Link back to Prosapia | The photo id in XMP `dc:identifier`; each person's id in the standard IPTC `Person Shown with Details` field. Which side this is (front or back) needs a field of Prosapia's own |
+| Link back to Prosapia | The file's id in XMP `dc:identifier`: `prosapia:m-5t1q8z` for a front, `prosapia:m-5t1q8z-back` for its back, so the side needs no field of its own. Each person's id in IPTC `Person Shown with Details` (XMP `iptcExt:PersonInImageWDetails`) |
+| The set it was added with | XMP `dc:relation`: `prosapia:set:s-4h8k2m#3`, the set and the photo's place in it |
 
 ## How a photo is stored
 
@@ -61,28 +61,33 @@ This replaces the earlier requirement that the two sides be physically one file.
 spike showed that every single-file option was either large, young, or lost the back
 when re-saved, while embedded text survived everywhere.
 
-### Rolls
+### Sets
 
-Direction set: photos may belong to a roll, a set of related images likely taken
-together. A roll is optional.
+Settled in milestone 6: photos added together are a set, such as the photos of one trip,
+one film or one album page. A set is not a record of its own and owns nothing.
 
-- **A roll is a small record**, like a source: an id, a title, a rough date, notes, and
-  its photos in order.
-- **A fact known for one frame can be suggested for the others**: the date, the place,
-  the occasion.
-- **Frame order is evidence** for dating and for who was present.
+- **Each file records its set and its place in it** in XMP `dc:relation`, as
+  `prosapia:set:s-4h8k2m#3`, so the grouping and order survive outside Prosapia.
+- **A date, place and people typed once apply to the whole set** when the photos are
+  added, and can then be changed for any one photo.
+- **A photo's page shows the others in its set**, in order.
 
-```
-rolls/
-  r-8d2k5n.md
-```
+This replaces rolls, which were to be small records of their own. A set does the same
+work without anything to create or manage.
+
+### Who a photo belongs to
+
+No one: a photo belongs to the tree. It names the people in it, and shows on each of
+their pages; a page can also show it as the main photo or place it in the story. Adding
+a photo from someone's page only tags them to start with.
 
 ### Where the files live
 
 Photos and other large files are stored in Cloud Storage, as they are, with their
-metadata embedded. The browser uploads directly to storage; the server then applies the
-rules above and writes the metadata into the file. The database keeps a small record per
-file so photos can be searched and listed without opening them.
+metadata embedded. The browser uploads each file to the server, which applies the rules
+above, writes the metadata into the file and stores it. Files over Cloud Run's 32 MB
+request limit will need a signed upload straight to storage; see the plan. The database
+keeps a small record per file so photos can be searched and listed without opening them.
 
 The nightly export copies photos into the exported repository under `media/`, using the
 names above. Very large files, such as video, are listed there but not copied.

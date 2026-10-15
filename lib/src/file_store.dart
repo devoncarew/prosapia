@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 
+import 'dates.dart';
 import 'store.dart';
 import 'tree.dart';
 
@@ -74,6 +75,9 @@ class FileStore extends TreeStore {
       '-XMP-dc:Title',
       '-XMP-dc:Description',
       '-XMP-iptcExt:PersonInImageWDetails',
+      '-XMP-photoshop:DateCreated',
+      '-XMP-iptcExt:LocationShown',
+      '-XMP-dc:Relation',
       '-ImageWidth',
       '-ImageHeight',
       dir,
@@ -101,6 +105,21 @@ class FileStore extends TreeStore {
       item.width = meta['ImageWidth'] as int?;
       item.height = meta['ImageHeight'] as int?;
       item.size = file.lengthSync();
+      item.date = dateFromExif(meta['DateCreated']?.toString());
+      final shown = meta['LocationShown'];
+      if (shown is List && shown.isNotEmpty && shown.first is Map) {
+        item.place = (shown.first as Map)['LocationName']?.toString();
+      }
+      final relations = meta['Relation'];
+      for (final relation in relations is List ? relations : [relations]) {
+        final set = RegExp(
+          '^${Media.idScheme}set:([a-z0-9-]+)#(\\d+)\$',
+        ).firstMatch('$relation');
+        if (set != null) {
+          item.set = set[1];
+          item.setIndex = int.parse(set[2]!);
+        }
+      }
       for (final person
           in (meta['PersonInImageWDetails'] as List?) ?? const []) {
         final ids = (person as Map)['PersonId'];
@@ -125,3 +144,17 @@ class FileStore extends TreeStore {
 /// A person's id from their directory name: `hughes-thomas-3f8d1a` gives
 /// `p-3f8d1a`.
 String idFromDirectory(String directory) => 'p-${directory.split('-').last}';
+
+/// A date as written by `photoshop:DateCreated`, `1949:06`, as a person
+/// would write it: `June 1949`.
+String? dateFromExif(String? value) {
+  final m = RegExp(
+    r'^(\d{4})(?::(\d{2}))?(?::(\d{2}))?',
+  ).firstMatch(value ?? '');
+  if (m == null) return null;
+  return [
+    if (m[3] != null) '${int.parse(m[3]!)}',
+    if (m[2] != null) TreeDate.months[int.parse(m[2]!) - 1],
+    m[1]!,
+  ].join(' ');
+}
