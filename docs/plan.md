@@ -230,6 +230,8 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 Uses not yet scheduled; the rules every use follows are in
 [design.md](design.md#language-models).
 
+- Suggesting the one-line summary of a change with a fast, inexpensive model, so the
+  editor's actions can become "Publish" and "Discard", as on GitHub.
 - Transcribing a scanned letter or certificate.
 - Checking: point out conflicts, such as a child born after a parent's death, beyond the
   simple checks in milestone 13.

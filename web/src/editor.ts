@@ -1,4 +1,4 @@
-// The page editor: the page's text on the left, a live preview on the right.
+// The page editor, with Write and Preview tabs.
 // The text is plain: facts as "Label: value" lines, then the story. The
 // editor helps without hiding that: it highlights labels, @ references and
 // marked dates and places; it completes people after @, places inside
@@ -137,7 +137,6 @@ async function people(
       label: p.name,
       detail: p.detail,
       apply: p.ref,
-      type: 'variable',
     })),
   };
 }
@@ -197,28 +196,40 @@ function labels(context: CompletionContext): CompletionResult | null {
     options: vocabulary.map((label) => ({
       label,
       apply: `${label}: `,
-      type: 'keyword',
     })),
   };
 }
 
-// ------------------------------------------------------------------ preview
+// ------------------------------------------------------------- write/preview
 
-let timer: number | undefined;
-let latest = 0;
+const writeTab = document.getElementById('tab-write')!;
+const previewTab = document.getElementById('tab-preview')!;
+const writePanel = document.getElementById('panel-write')!;
+const previewPanel = document.getElementById('panel-preview')!;
+let previewed = original;
 
-async function refreshPreview(text: string): Promise<void> {
-  const request = ++latest;
+async function showPreview(): Promise<void> {
+  const text = view.state.doc.toString();
+  if (text === previewed) return;
+  preview.classList.add('stale');
   const response = await fetch(previewUrl, {
     method: 'POST',
     headers: { 'content-type': 'text/plain' },
     body: text,
   });
-  const html = await response.text();
-  // A slower, older request must not overwrite a newer preview.
-  if (request !== latest) return;
-  preview.innerHTML = html;
+  preview.innerHTML = await response.text();
+  previewed = text;
   preview.classList.remove('stale');
+}
+
+function select(tab: 'write' | 'preview'): void {
+  const writing = tab === 'write';
+  writeTab.setAttribute('aria-selected', String(writing));
+  previewTab.setAttribute('aria-selected', String(!writing));
+  writePanel.hidden = !writing;
+  previewPanel.hidden = writing;
+  if (writing) view.focus();
+  else void showPreview();
 }
 
 // ------------------------------------------------------------------- drafts
@@ -267,7 +278,12 @@ const view = new EditorView({
     doc: original,
     extensions: [
       history(),
-      keymap.of([...defaultKeymap, ...historyKeymap]),
+      keymap.of([
+        // Save with Cmd+Enter or Ctrl+Enter, as on GitHub.
+        { key: 'Mod-Enter', run: () => (form.requestSubmit(), true) },
+        ...defaultKeymap,
+        ...historyKeymap,
+      ]),
       EditorView.lineWrapping,
       EditorView.contentAttributes.of({
         spellcheck: 'true',
@@ -283,18 +299,18 @@ const view = new EditorView({
         const text = update.state.doc.toString();
         textarea.value = text;
         writeDraft(text);
-        preview.classList.add('stale');
-        window.clearTimeout(timer);
-        timer = window.setTimeout(() => void refreshPreview(text), 400);
       }),
     ],
   }),
 });
 textarea.hidden = true;
 textarea.after(view.dom);
-document
-  .querySelector<HTMLLabelElement>('label[for=source]')
-  ?.addEventListener('click', () => view.focus());
+writeTab.addEventListener('click', () => select('write'));
+previewTab.addEventListener('click', () => select('preview'));
+document.getElementById('summary')!.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && (event.metaKey || event.ctrlKey))
+    form.requestSubmit();
+});
 
 // Offer back any unsaved text from a closed tab.
 const draft = readDraft();
