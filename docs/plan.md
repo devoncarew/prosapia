@@ -53,21 +53,24 @@ relatives arrive.
 
 #### Milestone 6: photos in the app
 
-Journey 6.
+Journey 6. A photo is not owned by a page: it names the people in it, and shows on each
+of their pages. See [media.md](media.md).
 
-- Upload a front, an optional back and the related text, from the browser straight to
-  Cloud Storage. The server stores JPEGs and HEICs as they are, encodes uncompressed
-  scans to JPEG, names the pair, and writes the metadata into each file.
-- Offer a transcription of the back, and a suggested caption and rough date, from a
-  language model.
-- Tag the people in a photo using people completion; the names are written into the
-  file.
-- Verify the XMP and IPTC field names in [media.md](media.md) against the
-  specifications, and define Prosapia's own field for which side a file is.
-- Choose the JPEG quality for scans using a real full-resolution scanner output.
-- Front and back shown together wherever the photo appears.
-- Rolls: create one, add photos in order, and suggest a frame's date or place to the
-  rest.
+- **Add photos** from a person's page, with that person already tagged, or from the
+  Photos page. Several at once: a date, place and people typed once apply to all of
+  them, and can be changed for any one.
+- **An optional back,** behind "Add the back", for the rare photo with writing on it,
+  and a transcription of it offered by Claude.
+- **Tag people by name,** with the same completion as the editor.
+- **Everything is written into the files:** caption, date, place, people, the
+  transcription of the back, the pairing of front and back, and the set.
+- **Sets replace rolls.** Photos added together are a set, recorded in each file with
+  its place in the order, so a photo's page shows the others taken with it.
+- **Change a photo's details later** from its page, rewriting the file's metadata
+  without re-encoding the image.
+- **Use a photo** as a person's main photo from the photo's page.
+- The server stores JPEGs and HEICs as they are and encodes uncompressed scans to JPEG.
+  Choose the JPEG quality using a real full-resolution scanner output.
 
 Done when: a photo added through the app shows on the right people's pages with its
 back, and both files downloaded from storage still carry their names, date,
@@ -172,6 +175,8 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 ### People and relationships
 
 - Merge two records that turn out to be the same person.
+- Upload files larger than Cloud Run's 32 MB request limit, such as large TIFF scans,
+  straight to storage with a signed upload address.
 - Undo a change that later edits have built on, by working out what to take back,
   instead of refusing as now.
 - Give a page to a plain name written elsewhere than a relationship line, such as a
@@ -218,7 +223,7 @@ Uses not yet scheduled; the rules every use follows are in
 - Documents (letters, certificates, census pages): previews and metadata for PDFs.
 - Video: store short clips, link to long ones, as proposed in [media.md](media.md).
 - Multi-page scanned PDFs, such as the two baby books: keep as one document, or store as
-  a roll of page images.
+  a set of page images.
 - Audio recordings.
 - Suggesting where faces are in a photo.
 - Check that embedded text survives email, photo services and messaging apps.
