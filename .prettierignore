@@ -1,5 +1,6 @@
 # Sample trees and other local data: a person's page is the family's text.
 data/
+test/fixtures/tree/
 .emulator_data/
 .prosapia_cache/
 

@@ -12,6 +12,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:prosapia/src/legacy.dart';
+
 void main(List<String> arguments) {
   // A --name=... option names the tree; everything else is positional.
   final nameOption = arguments.where((a) => a.startsWith('--name='));
@@ -185,6 +187,10 @@ void main(List<String> arguments) {
   } else {
     report.photosSkipped = objects.length;
   }
+
+  // Pages are written in the earlier format above, then converted to the
+  // page syntax, which also folds partnerships into the people's pages.
+  convertLegacyTreeDir(outDir);
 
   stdout.write(report);
 }

@@ -45,6 +45,12 @@ a phone is not a goal yet; viewing on one is.
 
 #### Milestone 13: the page syntax and its editor
 
+Status: the first half is done. Pages are stored as written and read in the page syntax;
+the real tree and the test tree are converted, with the old text kept in each page's
+history; `@` references, dates and places render, and anything unreadable is listed on
+the page. Still to do: the editor's highlighting, completion and legend, people
+completion in the search box, gentle checks, and keeping unsaved input.
+
 Journeys 4 and 8. The syntax is decided in
 [content-model.md](content-model.md#page-syntax): facts as "Name: value" lines, `@`
 references to people, `[date: …]` and `[place: …]`.

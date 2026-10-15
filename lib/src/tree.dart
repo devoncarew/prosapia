@@ -1,4 +1,5 @@
 import 'dates.dart';
+import 'page_syntax.dart';
 
 /// A family tree held in memory. It is loaded through a `TreeStore`, from
 /// files or from Firestore, and everything a reader sees is computed from it.
@@ -7,162 +8,279 @@ class Tree {
 
   final String name;
   final people = <String, Person>{};
-  final unions = <String, Union>{};
   final media = <String, Media>{};
 
   /// Records that could not be read, with the reason.
   final problems = <String>[];
 }
 
+/// Something that happened at a time and place: a birth, a burial, the date
+/// and place parts of any fact.
 class Event {
-  Event({this.date, this.place, this.note, this.coordinates});
-
-  static Event? fromMap(Object? map) {
-    if (map is! Map) return null;
-    final date = map['date'];
-    return Event(
-      // YAML reads a bare year as a number.
-      date: date == null ? null : TreeDate(date.toString()),
-      place: map['place'] as String?,
-      note: map['note'] as String?,
-      coordinates: (map['coordinates'] as List?)?.cast<num>().toList(),
-    );
-  }
+  Event({this.date, this.place});
 
   final TreeDate? date;
   final String? place;
-  final String? note;
 
-  /// Latitude and longitude of [place], when known.
-  final List<num>? coordinates;
-
-  Map<String, Object?> toMap() => {
-    if (note != null) 'note': note,
-    if (date != null) 'date': date!.raw,
-    if (place != null) 'place': place,
-    if (coordinates != null) 'coordinates': coordinates,
-  };
+  bool get isEmpty => date == null && place == null;
 }
 
-/// Something known about a person beyond birth and death: an occupation, a
-/// residence, a burial.
-class Fact {
-  Fact(this.type, this.value, this.event);
+/// A person named in a fact line: by `@` reference to their page, or by a
+/// plain name for someone who has no page.
+class PersonRef {
+  PersonRef.page(String this.id, {this.qualifier}) : name = null;
+  PersonRef.named(String this.name, {this.qualifier}) : id = null;
 
-  final String type;
-  final String? value;
+  /// The id of the person's page, for an `@` reference.
+  final String? id;
+
+  /// The name, for someone without a page.
+  final String? name;
+
+  /// The kind of relationship, when stated: `adopted`, `step`.
+  final String? qualifier;
+}
+
+/// A marriage, divorce or other event between two people.
+class CoupleEvent {
+  CoupleEvent(this.kind, this.partner, this.event);
+
+  /// The label as written: `Married`, `Divorced`.
+  final String kind;
+  final PersonRef? partner;
   final Event event;
-
-  Map<String, Object?> toMap() => {
-    'type': type,
-    if (value != null) 'value': value,
-    ...event.toMap()..remove('note'),
-  };
 }
 
-class ParentLink {
-  ParentLink(this.id, [this.relationship]);
+/// Anything else known about a person: an occupation, a residence, a title.
+class Fact {
+  Fact(this.label, this.description, this.event, this.people);
 
-  final String id;
-
-  /// Set when the parent is not a birth parent: `adopted`, `step`.
-  final String? relationship;
+  /// The label as written, such as `Occupation`.
+  final String label;
+  final String description;
+  final Event event;
+  final List<PersonRef> people;
 }
 
 class Person {
-  Person(this.id, this.name, this.directory);
+  Person._(this.id, this.directory, this.source);
 
-  /// Reads a person from its structured fields, which have the same shape in
-  /// a file's front matter and in a Firestore document.
-  factory Person.fromMap(
-    Map<dynamic, dynamic> map,
-    String body,
+  /// Reads a person from their page text. Never fails: anything that does
+  /// not fit is recorded in [issues] and shown on the page.
+  factory Person.fromSource(
+    String id,
     String directory,
-  ) {
-    final person = Person(map['id'] as String, map['name'] as String, directory)
-      ..surname = map['surname'] as String?
-      ..sex = map['sex'] as String?
-      ..born = Event.fromMap(map['born'])
-      ..died = Event.fromMap(map['died'])
-      ..photo = map['photo'] as String?
-      ..body = body;
-    person.alsoKnownAs.addAll(
-      ((map['also_known_as'] as List?) ?? const []).cast<String>(),
-    );
-    for (final parent in (map['parents'] as List?) ?? const []) {
-      person.parents.add(
-        parent is Map
-            ? ParentLink(
-                parent['id'] as String,
-                parent['relationship'] as String?,
-              )
-            : ParentLink(parent as String),
-      );
+    String source, {
+    int revision = 0,
+  }) {
+    final person = Person._(id, directory, source)..revision = revision;
+    final page = ParsedPage.parse(source);
+    person.body = page.body;
+    for (final line in page.strayLines) {
+      person.issues.add('Not a "Label: value" line: $line');
     }
-    for (final fact in (map['facts'] as List?) ?? const []) {
-      person.facts.add(
-        Fact(
-          (fact as Map)['type'] as String,
-          fact['value']?.toString(),
-          Event.fromMap(fact)!,
-        ),
-      );
+    if (page.facts.isEmpty) {
+      person.issues.add('The page does not start with a "Name:" line.');
     }
-    for (final key in map.keys) {
-      if (!_known.contains(key)) person.extra[key as String] = map[key];
+    for (final line in page.facts) {
+      person._read(line);
     }
     return person;
   }
 
-  static const _known = {
-    'id', 'name', 'surname', 'also_known_as', 'sex', 'born', 'died', //
-    'parents', 'photo', 'facts',
+  static const lifeEvents = {
+    'born',
+    'christened',
+    'baptized',
+    'died',
+    'buried',
+  };
+  static const coupleEvents = {'married', 'divorced', 'separated', 'engaged'};
+  static const relationships = {
+    'parents', 'parent', 'children', 'child', 'siblings', 'sibling', //
+    'partner', 'partners', 'spouse',
   };
 
-  final String id;
-  final String name;
+  void _read(FactLine line) {
+    final key = line.key;
+    switch (key) {
+      case 'name':
+        name = line.value;
+      case 'also known as':
+        alsoKnownAs.addAll(line.segments.map((s) => s.text));
+      case 'sex':
+        sex = line.value;
+      case 'photo':
+        photo = line.value;
+      case 'note':
+        notes.add(line.value);
+      case _ when lifeEvents.contains(key):
+        final event = _event(line, line.segments, placeUnmarked: true);
+        switch (key) {
+          case 'born':
+            born = event;
+          case 'died':
+            died = event;
+          case 'buried':
+            buried = event;
+          default:
+            christened = event;
+        }
+      case _ when coupleEvents.contains(key):
+        var segments = line.segments;
+        PersonRef? partner;
+        final first = segments.isEmpty ? null : segments.first;
+        if (first is RefSegment) {
+          partner = PersonRef.page(first.personId);
+          segments = segments.skip(1).toList();
+        } else if (first is TextSegment &&
+            !TreeDate.parse(first.text).understood) {
+          partner = PersonRef.named(first.text);
+          segments = segments.skip(1).toList();
+        }
+        couples.add(
+          CoupleEvent(
+            line.label,
+            partner,
+            _event(line, segments, placeUnmarked: true),
+          ),
+        );
+      case _ when relationships.contains(key):
+        final list = switch (key) {
+          'parents' || 'parent' => parents,
+          'children' || 'child' => children,
+          'siblings' || 'sibling' => siblings,
+          _ => partners,
+        };
+        for (final segment in line.segments) {
+          final ref = _ref(line, segment);
+          if (ref != null) list.add(ref);
+        }
+      default:
+        facts.add(_fact(line));
+    }
+  }
 
-  /// The person's directory in the file layout: a readable name ending in
-  /// the id. Only the trailing id is relied on.
+  static final _namedWithQualifier = RegExp(r'^(.*?)\s*\(([^)]*)\)$');
+
+  PersonRef? _ref(FactLine line, Segment segment) {
+    if (segment is RefSegment) {
+      return PersonRef.page(segment.personId, qualifier: segment.qualifier);
+    }
+    if (segment is TextSegment && !RegExp(r'\d').hasMatch(segment.text)) {
+      final m = _namedWithQualifier.firstMatch(segment.text);
+      return m == null
+          ? PersonRef.named(segment.text)
+          : PersonRef.named(m[1]!, qualifier: m[2]!.trim());
+    }
+    final hint =
+        line.key == 'partner' || line.key == 'partners' || line.key == 'spouse'
+        ? ' For a marriage, use a "Married:" line.'
+        : '';
+    issues.add('In "${line.label}:", "${segment.text}" is not a person.$hint');
+    return null;
+  }
+
+  /// Reads date and place parts. For life events an unmarked place is
+  /// expected; elsewhere a place must be marked.
+  Event _event(
+    FactLine line,
+    List<Segment> segments, {
+    required bool placeUnmarked,
+  }) {
+    TreeDate? date;
+    final place = <String>[];
+    for (final segment in segments) {
+      switch (segment) {
+        case DateSegment():
+          date ??= segment.date;
+          if (!segment.date.understood) {
+            issues.add(
+              'In "${line.label}:", "${segment.date.raw}" is not a date Prosapia can read.',
+            );
+          }
+        case PlaceSegment():
+          place.add(segment.place);
+        case TextSegment():
+          final asDate = TreeDate.parse(segment.text);
+          if (date == null && place.isEmpty && asDate.understood) {
+            date = asDate;
+          } else {
+            place.add(segment.text);
+          }
+        case RefSegment():
+          break;
+      }
+    }
+    return Event(date: date, place: place.isEmpty ? null : place.join(', '));
+  }
+
+  Fact _fact(FactLine line) {
+    TreeDate? date;
+    String? place;
+    final description = <String>[];
+    final people = <PersonRef>[];
+    for (final segment in line.segments) {
+      switch (segment) {
+        case DateSegment():
+          date ??= segment.date;
+        case PlaceSegment():
+          place ??= segment.place;
+        case RefSegment():
+          people.add(
+            PersonRef.page(segment.personId, qualifier: segment.qualifier),
+          );
+        case TextSegment():
+          // A part that is wholly a date is the fact's date; the rest
+          // describes the fact.
+          final asDate = TreeDate.parse(segment.text);
+          if (date == null && asDate.understood) {
+            date = asDate;
+          } else {
+            description.add(segment.text);
+          }
+      }
+    }
+    return Fact(
+      line.label,
+      description.join(', '),
+      Event(date: date, place: place),
+      people,
+    );
+  }
+
+  final String id;
+
+  /// The person's directory in the file layout, and what follows `@` in a
+  /// reference to them: a readable name ending in the id.
   final String directory;
-  String? surname;
-  String? sex;
-  Event? born;
-  Event? died;
-  String? photo;
-  String body = '';
+
+  /// The page exactly as written. Everything else here is read from it.
+  final String source;
 
   /// The number of the saved version this is. Zero when the store keeps no
   /// history.
   int revision = 0;
+
+  String name = '(no name)';
+  String? sex;
+  String? photo;
+  Event? born, christened, died, buried;
   final alsoKnownAs = <String>[];
-  final parents = <ParentLink>[];
+  final parents = <PersonRef>[];
+  final children = <PersonRef>[];
+  final siblings = <PersonRef>[];
+  final partners = <PersonRef>[];
+  final couples = <CoupleEvent>[];
   final facts = <Fact>[];
+  final notes = <String>[];
+  String body = '';
 
-  /// Fields this version of Prosapia does not interpret. They are kept so a
-  /// record survives a round trip unchanged.
-  final extra = <String, Object?>{};
+  /// What could not be read from the page, in words for its editors.
+  final issues = <String>[];
 
-  /// The structured fields, in the order they are written.
-  Map<String, Object?> toMap() => {
-    'id': id,
-    'name': name,
-    if (surname != null) 'surname': surname,
-    if (alsoKnownAs.isNotEmpty) 'also_known_as': alsoKnownAs,
-    if (sex != null) 'sex': sex,
-    if (born != null) 'born': born!.toMap(),
-    if (died != null) 'died': died!.toMap(),
-    if (parents.isNotEmpty)
-      'parents': [
-        for (final link in parents)
-          link.relationship == null
-              ? link.id
-              : {'id': link.id, 'relationship': link.relationship},
-      ],
-    if (photo != null) 'photo': photo,
-    if (facts.isNotEmpty) 'facts': [for (final f in facts) f.toMap()],
-    ...extra,
-  };
+  /// What a reference to this person looks like: `@hughes-thomas-3f8d1a`.
+  String get reference => '@$directory';
 
   /// `1911–1987`, `born 1950`, `died 1987`, or empty.
   String get years {
@@ -172,36 +290,6 @@ class Person {
     if (d != null) return 'died $d';
     return '';
   }
-}
-
-class Union {
-  Union(this.id, this.partners, this.married);
-
-  factory Union.fromMap(Map<dynamic, dynamic> map) {
-    final union = Union(
-      map['id'] as String,
-      (map['partners'] as List).cast<String>().toList(),
-      Event.fromMap(map['married']),
-    );
-    for (final key in map.keys) {
-      if (!const {'id', 'partners', 'married'}.contains(key)) {
-        union.extra[key as String] = map[key];
-      }
-    }
-    return union;
-  }
-
-  final String id;
-  final List<String> partners;
-  final Event? married;
-  final extra = <String, Object?>{};
-
-  Map<String, Object?> toMap() => {
-    'id': id,
-    'partners': partners,
-    if (married != null) 'married': married!.toMap(),
-    ...extra,
-  };
 }
 
 class Media {

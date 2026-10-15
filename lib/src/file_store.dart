@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 
-import 'page_source.dart';
 import 'store.dart';
 import 'tree.dart';
 
@@ -37,29 +36,24 @@ class FileStore extends TreeStore {
         : null;
     final tree = Tree(name ?? p.basename(root));
 
-    void read(File file, void Function(YamlMap yaml, String body) use) {
-      try {
-        final (yaml, body) = splitFrontMatter(file.readAsStringSync());
-        use(yaml, body);
-      } catch (e) {
-        tree.problems.add('${p.relative(file.path, from: root)}: $e');
-      }
-    }
-
     for (final dir in _list(p.join(root, 'people')).whereType<Directory>()) {
       final file = File(p.join(dir.path, 'index.md'));
       if (!file.existsSync()) continue;
-      read(file, (yaml, body) {
-        final person = Person.fromMap(yaml, body, p.basename(dir.path));
-        tree.people[person.id] = person;
-      });
-    }
-    for (final file in _list(p.join(root, 'unions')).whereType<File>()) {
-      if (!file.path.endsWith('.md')) continue;
-      read(file, (yaml, body) {
-        final union = Union.fromMap(yaml);
-        tree.unions[union.id] = union;
-      });
+      final directory = p.basename(dir.path);
+      final source = file.readAsStringSync();
+      if (source.startsWith('---')) {
+        tree.problems.add(
+          'people/$directory/index.md is in the old format; '
+          'convert it with tool/convert_tree.dart',
+        );
+        continue;
+      }
+      final person = Person.fromSource(
+        idFromDirectory(directory),
+        directory,
+        source,
+      );
+      tree.people[person.id] = person;
     }
     await _loadMedia(tree);
     return tree;
@@ -127,3 +121,7 @@ class FileStore extends TreeStore {
         : const [];
   }
 }
+
+/// A person's id from their directory name: `hughes-thomas-3f8d1a` gives
+/// `p-3f8d1a`.
+String idFromDirectory(String directory) => 'p-${directory.split('-').last}';
