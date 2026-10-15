@@ -51,47 +51,6 @@ in the text). What remains before release B is using it on the real tree.
 Goal: the most useful language-model feature, and the ability to add photos, before
 relatives arrive.
 
-#### Milestone 16: help from a language model
-
-Journeys 5 and 7. The rules every use follows are in
-[design.md](design.md#language-models); how the results should read is in
-[writing.md](writing.md).
-
-- **Claude, in two tiers:** Claude Haiku for summaries and tidying, and a stronger
-  Claude model for writing, chosen by trying them on real requests, starting with the
-  invented tree.
-- **The foundation.** The server calls the model, never the browser, with an API key
-  kept out of the repository. An owner switches the feature on for their tree; each
-  call's cost is recorded, with a monthly limit.
-- **A voice and a pattern.** [writing.md](writing.md) says how a biography should read,
-  and the pattern change summaries follow; both become the models' instructions.
-- **In the editor, actions named for the model and for what they act on:**
-  - _Claude: Draft_, when the story is empty: writes it from the page's facts, memories
-    and photo captions. It presents what the tree holds and adds nothing to it.
-  - _Claude: Revise_, when there is a story: rewrites the whole of it with the facts,
-    optionally guided by a sentence from the editor.
-  - _Claude: Revise selection_: rewrites only the selected text, with the goal inferred
-    from it and its surroundings. A list of facts or notes becomes a clear paragraph;
-    rough prose is tidied.
-- **On Add a memory,** _Claude: Tidy up_, keeping the teller's voice.
-- **Replace, then undo.** The model's text replaces what it acted on in the editor as
-  one step, so undo restores the original exactly; the new text stays marked until it is
-  kept or undone. Nothing is saved until the person saves.
-- **Automatic change summaries.** The editor no longer asks for a summary: the fast
-  model writes one as the change is saved. If it is unavailable, slow or fails, the
-  summary is "Change" and a short hash, such as "Change a867eb56". The editor's actions
-  become Publish and Discard.
-- **The history.** A revision saved with help from the model says so ("with Claude
-  Opus"). Model-written summaries are not marked one by one; Recent changes and the
-  history carry one note, "Change summaries by Claude Haiku". Selecting a version shows
-  what changed from the version before it, as a diff, and the option to compare two
-  chosen versions goes.
-
-Done when: a usable draft can be produced and saved for a person with only facts, and
-for one with several memories; a list of notes selected in a story becomes a paragraph;
-a change saved without a summary gets one; and the history shows which revisions had
-help, and what each version changed.
-
 #### Milestone 6: photos in the app
 
 Journey 6.
@@ -298,6 +257,12 @@ Uses not yet scheduled; the rules every use follows are in
 
 Newest first.
 
+- **Milestone 16, help from a language model.** Claude can draft or revise a page's
+  story, improve a selection, and tidy a memory; its text replaces what it acted on in
+  the editor, with undo, and nothing is saved until the person publishes. Claude Haiku
+  writes every change summary, so the editor no longer asks for one. Owners switch help
+  on with a monthly limit and each call's cost is recorded; the history shows which
+  revisions had help, and each version's diff from the one before.
 - **Milestone 14, relationships in the text.** A name typed in a `Children:`,
   `Parents:`, `Siblings:` or `Partner:` line shows on the page with an action to give
   that person a page, which first offers similar people already in the tree and starts

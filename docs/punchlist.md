@@ -9,3 +9,4 @@
 ## General
 
 - improve the styling of the history page
+- remove or revise "Your unsaved changes from ... have been brought back"
