@@ -776,7 +776,7 @@ h2 { font-size: 1.3em; font-weight: 500; margin: 1.8em 0 0.5em; padding-bottom: 
 .prose p { margin: 0 0 1em; }
 .timeline { border-collapse: collapse; }
 .timeline th { text-align: right; vertical-align: top; padding: 4px 16px 4px 0; font-weight: 400;
-               color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+               color: var(--muted); font-variant-numeric: tabular-nums; }
 .timeline td { padding: 4px 0; }
 .surnames { columns: 3 220px; column-gap: 32px; }
 .surnames section { break-inside: avoid; margin-bottom: 16px; }
