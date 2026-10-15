@@ -213,6 +213,8 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 ### Editing
 
 - A formatted editor for the story, for relatives who will not write markdown.
+- A normal form for a page's markdown: a light formatting pass, so equivalent pages are
+  written the same way.
 - Talk pages: a discussion thread per person.
 - Watchlist: follow a person and hear about changes.
 - Blame: for any sentence or fact, who added it and when.
@@ -230,8 +232,12 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 Uses not yet scheduled; the rules every use follows are in
 [design.md](design.md#language-models).
 
-- Suggesting the one-line summary of a change with a fast, inexpensive model, so the
-  editor's actions can become "Publish" and "Discard", as on GitHub.
+- Writing the one-line summary of a change automatically, after the save, with a fast,
+  inexpensive model, instead of asking the editor for it. Summaries are useful, but
+  writing them is toil. This would be the one model-written text that needs no review:
+  it describes a change rather than adding to the record, and is marked as
+  model-written. The editor's actions could then become "Publish" and "Discard", as on
+  GitHub.
 - Transcribing a scanned letter or certificate.
 - Checking: point out conflicts, such as a child born after a parent's death, beyond the
   simple checks in milestone 13.

@@ -9,3 +9,6 @@
 ## General
 
 - support nicknames (show "Scotty" after a name in index, ...)
+- history page: remove the option to compare two chosen versions
+- history page: selecting a version shows what changed from the version before it, as a
+  diff (git's format, or something a little friendlier)
