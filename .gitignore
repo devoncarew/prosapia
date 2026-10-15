@@ -11,4 +11,5 @@ ui-debug.log
 web/node_modules/
 web/dist/
 .emulator_data/
+.env
 node_modules/

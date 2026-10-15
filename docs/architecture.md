@@ -75,6 +75,7 @@ trees/{tree}
   rolls/{r-8d2k5n}
   media/{m-5t1q8z}             where the file is, and what it says about itself
   changes/{change}             the log: who changed what, when, and why
+  usage/{yyyy-mm}              what help from a language model cost that month
 ```
 
 ### The file layout remains, as the import and export format

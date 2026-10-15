@@ -3,7 +3,9 @@
 // editor helps without hiding that: it highlights labels, @ references and
 // marked dates and places; it completes people after @, places inside
 // [place: …] and labels at the start of a fact line; and it keeps unsaved
-// text if the tab is closed.
+// text if the tab is closed. When the tree allows it, Claude can draft or
+// revise the story, or a selection: its text replaces what it acted on as one
+// step, so undo restores the original.
 
 import {
   autocompletion,
@@ -11,8 +13,19 @@ import {
   type CompletionContext,
   type CompletionResult,
 } from '@codemirror/autocomplete';
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
-import { EditorState, RangeSetBuilder } from '@codemirror/state';
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  undo,
+} from '@codemirror/commands';
+import {
+  Compartment,
+  EditorState,
+  RangeSetBuilder,
+  StateEffect,
+  StateField,
+} from '@codemirror/state';
 import {
   Decoration,
   type DecorationSet,
@@ -232,6 +245,185 @@ function select(tab: 'write' | 'preview'): void {
   else void showPreview();
 }
 
+// ------------------------------------------------------------ help from Claude
+
+const helpButtons = document.querySelector<HTMLElement>('.help[data-url]');
+const helpBar = document.querySelector<HTMLElement>('.help-bar');
+const helpedBy = form.querySelector<HTMLInputElement>('input[name=helped_by]')!;
+const editable = new Compartment();
+
+/** Marks the text Claude wrote until it is kept or undone. */
+const markHelped = StateEffect.define<{ from: number; to: number } | null>();
+const helpedMark = Decoration.mark({ class: 'cm-helped' });
+const helpedField = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(marks, tr) {
+    for (const e of tr.effects) {
+      if (e.is(markHelped)) {
+        return e.value && e.value.to > e.value.from
+          ? Decoration.set([helpedMark.range(e.value.from, e.value.to)])
+          : Decoration.none;
+      }
+    }
+    // An undo takes Claude's text away, and the mark with it.
+    if (tr.isUserEvent('undo')) return Decoration.none;
+    return marks.map(tr.changes);
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
+/** Where the story starts: after the facts block and the blank line. */
+function storyStart(state: EditorState): number {
+  const facts = factLines(state);
+  if (facts.size === 0) return 0;
+  const last = state.doc.line(Math.max(...facts));
+  return Math.min(state.doc.length, last.to);
+}
+
+function storyIsEmpty(state: EditorState): boolean {
+  return state.sliceDoc(storyStart(state)).trim() === '';
+}
+
+function bar(
+  message: string,
+  actions: [string, () => void][] = [],
+  error = false,
+): void {
+  if (!helpBar) return;
+  helpBar.replaceChildren(message);
+  helpBar.classList.toggle('error', error);
+  for (const [label, run] of actions) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.addEventListener('click', run);
+    helpBar.append(' ', button);
+  }
+  helpBar.hidden = false;
+}
+
+function hideBar(): void {
+  if (helpBar) helpBar.hidden = true;
+}
+
+function updateHelpButtons(state: EditorState): void {
+  if (!helpButtons) return;
+  const empty = storyIsEmpty(state);
+  const button = (name: string) =>
+    helpButtons.querySelector<HTMLButtonElement>(`[data-request=${name}]`)!;
+  button('draft').hidden = !empty;
+  button('revise').hidden = empty;
+  button('selection').disabled = state.selection.main.empty;
+}
+
+interface HelpReply {
+  text?: string;
+  model?: string;
+  modelName?: string;
+  error?: string;
+}
+
+async function askClaude(
+  request: 'draft' | 'revise' | 'selection',
+  guidance = '',
+): Promise<void> {
+  const state = view.state;
+  const { from, to } = state.selection.main;
+  const [replaceFrom, replaceTo] =
+    request === 'selection'
+      ? [from, to]
+      : [storyStart(state), state.doc.length];
+  const before = helpedBy.value;
+  bar('Claude is writing…');
+  view.dispatch({
+    effects: editable.reconfigure(EditorView.editable.of(false)),
+  });
+  helpButtons?.querySelectorAll('button').forEach((b) => (b.disabled = true));
+  let reply: HelpReply;
+  try {
+    const response = await fetch(helpButtons!.dataset.url!, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        request,
+        source: state.doc.toString(),
+        from,
+        to,
+        guidance,
+      }),
+    });
+    reply = (await response.json()) as HelpReply;
+  } catch {
+    reply = {
+      error: 'Claude could not be reached just now. Please try again.',
+    };
+  } finally {
+    view.dispatch({
+      effects: editable.reconfigure(EditorView.editable.of(true)),
+    });
+    helpButtons
+      ?.querySelectorAll('button')
+      .forEach((b) => (b.disabled = false));
+    updateHelpButtons(view.state);
+  }
+  if (reply.error || reply.text === undefined) {
+    bar(reply.error ?? 'Something went wrong.', [['Close', hideBar]], true);
+    return;
+  }
+
+  // The story is separated from the facts by one blank line.
+  const insert =
+    request === 'selection'
+      ? reply.text
+      : `${replaceFrom === 0 ? '' : '\n\n'}${reply.text.trim()}\n`;
+  const start =
+    replaceFrom + (request === 'selection' || replaceFrom === 0 ? 0 : 2);
+  view.dispatch({
+    changes: { from: replaceFrom, to: replaceTo, insert },
+    effects: markHelped.of({ from: start, to: replaceFrom + insert.length }),
+    userEvent: 'input.help',
+    scrollIntoView: true,
+  });
+  helpedBy.value = reply.model ?? '';
+  const keep = () => {
+    view.dispatch({ effects: markHelped.of(null) });
+    hideBar();
+  };
+  bar(
+    `${reply.modelName ?? 'Claude'} wrote the marked text. ⌘Z or Undo restores what was there.`,
+    [
+      [
+        'Undo',
+        () => {
+          undo(view);
+          helpedBy.value = before;
+          hideBar();
+        },
+      ],
+      ['Keep', keep],
+    ],
+  );
+}
+
+function askForGuidance(): void {
+  if (!helpBar) return;
+  const input = document.createElement('input');
+  input.placeholder = 'Anything Claude should know? (optional)';
+  input.setAttribute('aria-label', 'Guidance for Claude');
+  bar('Revise the whole story.', [
+    ['Revise', () => void askClaude('revise', input.value)],
+    ['Cancel', hideBar],
+  ]);
+  helpBar.insertBefore(input, helpBar.querySelector('button'));
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      void askClaude('revise', input.value);
+    }
+  });
+  input.focus();
+}
+
 // ------------------------------------------------------------------- drafts
 
 interface Draft {
@@ -290,11 +482,16 @@ const view = new EditorView({
         'aria-label': 'Page text',
       }),
       highlighter,
+      helpedField,
+      editable.of(EditorView.editable.of(true)),
       autocompletion({
         override: [people, places, labels],
         activateOnTyping: true,
       }),
       EditorView.updateListener.of((update) => {
+        if (update.docChanged || update.selectionSet)
+          updateHelpButtons(update.state);
+        if (update.transactions.some((tr) => tr.isUserEvent('undo'))) hideBar();
         if (!update.docChanged) return;
         const text = update.state.doc.toString();
         textarea.value = text;
@@ -305,12 +502,17 @@ const view = new EditorView({
 });
 textarea.hidden = true;
 textarea.after(view.dom);
+updateHelpButtons(view.state);
+helpButtons?.addEventListener('click', (event) => {
+  const request = (event.target as HTMLElement).closest<HTMLButtonElement>(
+    'button[data-request]',
+  )?.dataset.request;
+  if (request === 'revise') askForGuidance();
+  else if (request === 'draft' || request === 'selection')
+    void askClaude(request);
+});
 writeTab.addEventListener('click', () => select('write'));
 previewTab.addEventListener('click', () => select('preview'));
-document.getElementById('summary')!.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter' && (event.metaKey || event.ctrlKey))
-    form.requestSubmit();
-});
 
 // Offer back any unsaved text from a closed tab.
 const draft = readDraft();

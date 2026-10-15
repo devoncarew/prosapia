@@ -4,7 +4,9 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:firebase_admin_sdk/firebase_admin_sdk.dart';
 import 'package:path/path.dart' as p;
+import 'package:prosapia/src/assist.dart';
 import 'package:prosapia/src/auth.dart';
+import 'package:prosapia/src/claude.dart';
 import 'package:prosapia/src/file_store.dart';
 import 'package:prosapia/src/firestore_store.dart';
 import 'package:prosapia/src/images.dart';
@@ -22,7 +24,8 @@ Serve a tree from Firestore (members sign in with Google):
 ''';
 
 Future<void> main(List<String> arguments) async {
-  final env = Platform.environment;
+  // Settings in .env apply unless the environment sets them too.
+  final env = {...readDotEnv('.env'), ...Platform.environment};
   final parser = ArgParser()
     ..addOption('port', abbr: 'p', defaultsTo: env['PORT'] ?? '8080')
     ..addOption(
@@ -121,6 +124,18 @@ Future<void> main(List<String> arguments) async {
     );
   }
 
+  // Help from Claude needs an API key; without one the editor offers none.
+  final apiKey = env['ANTHROPIC_API_KEY'];
+  final assistant = apiKey == null || apiKey.isEmpty
+      ? null
+      : Assistant(
+          Claude(
+            apiKey,
+            baseUrl: env['ANTHROPIC_BASE_URL'] ?? 'https://api.anthropic.com',
+          ),
+          WritingGuide.load(),
+        );
+
   final handler = const Pipeline()
       .addMiddleware(
         logRequests(
@@ -134,6 +149,7 @@ Future<void> main(List<String> arguments) async {
           site,
           DisplayCopies(p.join(cache, 'display')),
           sessions: sessions,
+          assistant: assistant,
         ),
       );
   // On Cloud Run the server must listen on every interface.
@@ -149,4 +165,25 @@ Future<void> main(List<String> arguments) async {
     'Serving ${site.tree.name} at http://localhost:${server.port}'
     '${sessions == null ? ' (from files, no sign-in)' : ' (from Firestore, sign-in required)'}',
   );
+}
+
+/// Reads `NAME=value` lines from [path], if it exists. Blank lines and lines
+/// starting with `#` are skipped, and quotes around a value are removed.
+Map<String, String> readDotEnv(String path) {
+  final file = File(path);
+  if (!file.existsSync()) return const {};
+  final settings = <String, String>{};
+  for (final line in file.readAsLinesSync()) {
+    if (line.trimLeft().startsWith('#')) continue;
+    final m = RegExp(r'^\s*([A-Za-z_]\w*)\s*=\s*(.*?)\s*$').firstMatch(line);
+    if (m == null) continue;
+    var value = m[2]!;
+    if (value.length >= 2 &&
+        (value.startsWith('"') || value.startsWith("'")) &&
+        value.endsWith(value[0])) {
+      value = value.substring(1, value.length - 1);
+    }
+    settings[m[1]!] = value;
+  }
+  return settings;
 }

@@ -24,6 +24,10 @@ plain, warm and exact. It is neither an obituary nor a eulogy.
   name. Refer to relatives with `@` references so they link, such as
   `her husband, @carew-joseph-j-x4k2ab`.
 - **Dates and places as the record gives them,** written naturally in the sentence.
+- **Other people's dates only when they matter to this life.** Give the subject's own
+  birth and death; for relatives, name them without their years. Mention a relative's
+  birth or death only when it shaped the subject's life, such as a parent who died in
+  the subject's childhood.
 - **Memories are attributed, not absorbed.** A memory is someone's account: "Her niece
   Ann remembers…", not stated as fact.
 - **Markdown:** plain paragraphs. Keep any existing dated `##` sections, which feed the

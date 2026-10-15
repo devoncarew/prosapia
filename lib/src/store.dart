@@ -34,20 +34,42 @@ abstract class TreeStore {
     required int basedOn,
     required Member author,
     required String summary,
+    String? helpedBy,
+    String? summaryBy,
   }) => saveChange(
     [PageWrite(person, basedOn: basedOn)],
     author: author,
     summary: summary,
+    helpedBy: helpedBy,
+    summaryBy: summaryBy,
   );
 
   /// Saves several pages as one change: a new page and the reference that
   /// names it, or a deletion and the pages that mentioned the person. All
   /// are written, as one entry in the log, or none are.
+  ///
+  /// [helpedBy] names the model that helped write the text, and [summaryBy]
+  /// the model that wrote the summary, when one did.
   Future<SaveResult> saveChange(
     List<PageWrite> pages, {
     required Member author,
     required String summary,
+    String? helpedBy,
+    String? summaryBy,
   }) => throw UnsupportedError('This store is read-only.');
+
+  /// Whether members may ask a language model for help, and the most it may
+  /// cost in a month.
+  Future<HelpSettings> helpSettings() async => const HelpSettings();
+
+  Future<void> setHelpSettings(HelpSettings settings) =>
+      throw UnsupportedError('This store is read-only.');
+
+  /// What calls to the model have cost this calendar month, in US dollars.
+  Future<double> spentThisMonth() async => 0;
+
+  /// Records the cost of one call to the model.
+  Future<void> recordCost(double dollars, {required String model}) async {}
 
   /// Every saved version of a person's page, newest first.
   Future<List<Revision>> history(String personId) async => const [];
@@ -64,6 +86,15 @@ abstract class TreeStore {
   Future<void> rememberName(Member member, String name) async {}
 
   Future<void> close() async {}
+}
+
+class HelpSettings {
+  const HelpSettings({this.enabled = false, this.monthlyLimit = 10});
+
+  final bool enabled;
+
+  /// US dollars.
+  final double monthlyLimit;
 }
 
 enum Role {
@@ -128,6 +159,8 @@ class Revision {
     required this.summary,
     required this.at,
     this.deleted = false,
+    this.helpedBy,
+    this.summaryBy,
   });
 
   final int number;
@@ -137,6 +170,12 @@ class Revision {
 
   /// Whether this version deleted the page.
   final bool deleted;
+
+  /// The model that helped write this version, if one did.
+  final String? helpedBy;
+
+  /// The model that wrote [summary], if one did.
+  final String? summaryBy;
   final String author;
   final String? authorName;
   final String summary;
@@ -154,6 +193,7 @@ class Change {
     required this.summary,
     required this.at,
     required this.pages,
+    this.summaryBy,
   });
 
   final String id;
@@ -164,6 +204,9 @@ class Change {
 
   /// The pages changed, each with the revision the change produced.
   final Map<String, int> pages;
+
+  /// The model that wrote [summary], if one did.
+  final String? summaryBy;
 
   String get by => authorName ?? author;
 }

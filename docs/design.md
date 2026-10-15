@@ -54,17 +54,18 @@ shape every use:
   text replaces what it was asked to act on, in the editor; the person reads it, edits
   or undoes it, and saves it as an edit under their own name. Each action says what it
   acts on: the whole story, or the selection.
-- **The history says so.** A revision saved with a model's help is marked "with help
-  from" the model, so anyone reading the history can tell.
+- **The history says so.** A revision saved with a model's help is marked "with" the
+  model, such as "with Claude Opus", so anyone reading the history can tell.
 
-The one-line summary of a change is the exception: a model may write it after the save,
-with no review. It describes a change rather than adding to the record. Each change
-records whether its summary was written by a model, but entries are not marked one by
-one; pages that list changes carry a single note, such as "Change summaries by Claude
-Haiku".
+The one-line summary of a change is the exception: a model may write it as the change is
+saved, with no review. It describes a change rather than adding to the record. Each
+change records whether its summary was written by a model, but entries are not marked
+one by one; pages that list changes carry a single note, such as "Change summaries by
+Claude Haiku".
 
-What may be sent to a model about living people is open; it is settled in milestone 16,
-before any of their pages are sent.
+A request for help sends the page being edited, the names, years and references of the
+relatives it mentions, and its photo captions. Living people's pages are treated like
+any other; a member asking for help on a page has chosen to send it.
 
 ## Open questions
 
