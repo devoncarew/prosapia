@@ -91,6 +91,18 @@ abstract class TreeStore {
   /// One entry in the log, by its id.
   Future<Change?> change(String id) async => null;
 
+  /// Everyone invited to the tree, by email address.
+  Future<List<Member>> members() async => const [];
+
+  /// Invites [email] with [role], or changes their role. A name already
+  /// recorded for them is kept.
+  Future<void> setMember(String email, Role role) =>
+      throw UnsupportedError('This store is read-only.');
+
+  /// Removes [email] from the tree. Their past edits keep their name.
+  Future<void> removeMember(String email) =>
+      throw UnsupportedError('This store is read-only.');
+
   /// Records the name Google gives for a member, for display in histories.
   Future<void> rememberName(Member member, String name) async {}
 

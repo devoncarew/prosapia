@@ -539,10 +539,26 @@ class FirestoreStore extends TreeStore {
     return converted.length;
   }
 
-  Future<void> setMember(String email, Role role, {String? name}) => _tree
+  @override
+  Future<List<Member>> members() async {
+    final snapshot = await _tree.collection('members').get();
+    return [
+      for (final doc in snapshot.docs)
+        if (Role.values.where((r) => r.name == doc.data()['role']).firstOrNull
+            case final role?)
+          Member(doc.id, role, name: doc.data()['name'] as String?),
+    ]..sort((a, b) => a.email.compareTo(b.email));
+  }
+
+  @override
+  Future<void> setMember(String email, Role role) => _tree
       .collection('members')
       .doc(email.toLowerCase())
-      .set({'role': role.name, 'name': ?name});
+      .set({'role': role.name}, options: const SetOptions.merge());
+
+  @override
+  Future<void> removeMember(String email) =>
+      _tree.collection('members').doc(email.toLowerCase()).delete();
 
   /// Records read from YAML use YAML's own map and list types; Firestore
   /// wants plain ones.

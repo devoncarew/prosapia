@@ -104,3 +104,8 @@ A person's page in a tree is the family's text, and Prosapia never re-wraps it.
   in [docs/](docs/).
 - **Changes.** Work happens on a branch and merges into `main` through a pull request
   once the checks pass.
+
+## Deploying
+
+Production runs on Cloud Run behind Firebase Hosting;
+[docs/deploying.md](docs/deploying.md) has the one-time setup and `tool/deploy.sh`.

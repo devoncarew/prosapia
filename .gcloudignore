@@ -1,0 +1,10 @@
+# Files sent to Cloud Build. Everything git ignores stays behind, which
+# keeps family data (data/), secrets (.env), node_modules and caches on
+# this machine; so do the parts of the repository the build does not use.
+#!include:.gitignore
+.git
+.github/
+spikes/
+test/
+tool/
+hosting/

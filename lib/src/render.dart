@@ -1117,8 +1117,22 @@ ${r.deleted ? '' : '<details class="whole"><summary>The whole page as it was</su
     HelpSettings help, {
     required double spent,
     required bool available,
+    List<Member> members = const [],
+    String? error,
   }) => page('Settings', '''
 <h1>Settings</h1>
+${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
+<h2 id="members">Members</h2>
+<p>Only the people listed here can open the tree, by signing in with Google using this email address. Owners can also change these settings; editors can edit pages and add photos; viewers can read. Changes take effect within a minute.</p>
+<table class="history members">
+${[for (final m in members) _memberRow(m)].join('\n')}
+</table>
+<form class="add-member" method="post" action="/settings/members">
+  <input name="email" type="email" required placeholder="cousin@example.com" aria-label="Email address">
+  ${_roleSelect(Role.editor)}
+  <button>Invite</button>
+</form>
+<p class="hint">Inviting adds them to this list; tell them the site's address, and they sign in with Google.</p>
 <h2>Help from Claude</h2>
 <p>Members who can edit may ask Claude to draft or revise a page's story, and to tidy a memory. The text replaces what Claude was asked to act on in the editor, and nothing is saved until the member publishes it. Claude Haiku writes the one-line summary of each change.</p>
 ${available ? '' : '<p class="message">This server has no Anthropic API key, so help is not available whatever is set here. Set <code>ANTHROPIC_API_KEY</code> where the server runs.</p>'}
@@ -1129,6 +1143,18 @@ ${available ? '' : '<p class="message">This server has no Anthropic API key, so 
   <p class="hint">Spent this month: \$${spent.toStringAsFixed(2)}. When the limit is reached, help stops until the next month.</p>
   <div class="save"><button class="primary">Save</button></div>
 </form>''');
+
+  String _roleSelect(Role selected) =>
+      '<select name="role" aria-label="Role">${[for (final role in Role.values) '<option value="${role.name}"${role == selected ? ' selected' : ''}>${role.name}</option>'].join()}</select>';
+
+  String _memberRow(Member m) {
+    final self = m.email == viewer?.email;
+    final form =
+        '<form method="post" action="/settings/members"><input type="hidden" name="email" value="${esc(m.email)}">';
+    return '<tr><td>${esc(m.name ?? '')}</td><td>${esc(m.email)}</td>'
+        '<td>${self ? '${m.role.name} (you)' : '$form${_roleSelect(m.role)} <button>Change</button></form>'}</td>'
+        '<td>${self ? '' : '$form<input type="hidden" name="action" value="remove"><button>Remove</button></form>'}</td></tr>';
+  }
 
   /// A short page that explains why something could not be done.
   String message(String title, String what) =>
@@ -1264,6 +1290,12 @@ img.thumb { display: block; max-width: 240px; max-height: 240px; border-radius: 
 .memory .photo-card textarea, .edit-photo textarea { height: 7em; }
 .photo-card button { font: 13px system-ui, sans-serif; }
 .photo-card .add-back { font: 13px system-ui, sans-serif; margin-top: 10px; display: inline-block; }
+.members form, .add-member { display: flex; gap: 8px; align-items: center; margin: 0; }
+.add-member { margin-top: 12px; max-width: 640px; }
+.add-member input { flex: 1; font: 15px system-ui, sans-serif; padding: 6px 10px; border: 1px solid var(--line);
+  border-radius: 6px; background: var(--surface); color: var(--text); }
+select { font: 14px system-ui, sans-serif; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--surface); color: var(--text); }
 .similar { list-style: none; padding: 0; font: 15px/1.5 system-ui, sans-serif; }
 .similar li { margin-bottom: 8px; }
 .similar button { margin-left: 8px; font-size: 13px; }

@@ -10,6 +10,7 @@ still open. The details of each area are in their own documents:
 | [media.md](media.md)                 | Photos and other files                              |
 | [sharing.md](sharing.md)             | Privacy, sharing and trust                          |
 | [loading.md](loading.md)             | Loading a family's existing tree into production    |
+| [deploying.md](deploying.md)         | Running the site on Cloud Run, and updating it      |
 | [writing.md](writing.md)             | How biographies and change summaries should read    |
 
 Work that is scheduled, and work known but not yet scheduled, is in the [plan](plan.md).

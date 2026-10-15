@@ -30,10 +30,14 @@ Future<void> main(List<String> arguments) async {
     ..addOption('port', abbr: 'p', defaultsTo: env['PORT'] ?? '8080')
     ..addOption(
       'cache',
-      defaultsTo: '.prosapia_cache',
+      defaultsTo: env['PROSAPIA_CACHE'] ?? '.prosapia_cache',
       help: 'Scratch space for display copies. Safe to delete.',
     )
-    ..addOption('tree', help: 'The id of a tree in Firestore.')
+    ..addOption(
+      'tree',
+      defaultsTo: env['PROSAPIA_TREE'],
+      help: 'The id of a tree in Firestore.',
+    )
     ..addOption(
       'project',
       defaultsTo: env['GOOGLE_CLOUD_PROJECT'] ?? 'demo-prosapia',
