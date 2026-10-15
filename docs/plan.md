@@ -5,9 +5,9 @@
 This is the working list of what Prosapia is building, what it might build, and what it
 has built. It has three parts:
 
-- **Planned milestones** are scheduled and detailed: each says what will be built and
-  how we will know it is done. They are listed in the order they will be worked; the
-  numbers are labels, not the order.
+- **Planned releases** group the scheduled milestones. Each milestone says what will be
+  built and how we will know it is done. Releases, and the milestones within them, are
+  listed in the order they will be worked; milestone numbers are labels, not the order.
 - **Known future work** is everything we know is needed or wanted but have not scheduled
   or detailed. One line each.
 - **Completed milestones** is a changelog: about one sentence per finished milestone,
@@ -17,8 +17,8 @@ Keeping it current:
 
 - **When work is discovered** that is not part of the milestone in hand, add a line to
   Known future work. Do not widen the current milestone.
-- **When work is scheduled**, move it out of Known future work into a new planned
-  milestone, with its tasks and a "Done when".
+- **When work is scheduled**, move it out of Known future work into a new milestone in a
+  release, with its tasks and a "Done when".
 - **When a milestone is completed**, delete its section and add a summary line to
   Completed milestones. Anything it left unfinished goes to Known future work.
 - **Milestone numbers are never reused**, so a number in a commit message or another
@@ -27,17 +27,141 @@ Keeping it current:
 Design decisions and their reasons live in [design.md](design.md) and the documents it
 links to, not here.
 
-## Planned milestones
+## Planned releases
 
-### Milestone 5: deploy and backup
+Milestones are grouped into releases. Each release is a point where Prosapia is usable
+for something new; releases, and the milestones within them, are listed in the order
+they will be worked. Work whose design is clear comes earlier; work whose design is
+still forming comes later. The [user journeys](journeys.md) describe what the editing
+work is aiming at.
 
-Put the site on the internet for one family, in the Firebase project `prosapia-ea818`.
+Releases A to C come before relatives are invited. Release D follows.
+
+### Release A: the core of editing
+
+Goal: the family historian keeps their real tree comfortably, on a desktop, without
+YAML. Nobody else is invited yet, so the real tree can be loaded early and used
+privately. Editing on a phone is not a goal yet; viewing on one is.
+
+#### Milestone 12: loading the real family tree
+
+A family arrives with a GEDCOM file and a backup holding its media; the sample backup is
+about 1 GB. Loading it now means the editing work that follows is shaped by real data,
+while only the owner can see it.
+
+- Decide the process. The simplest is that the owner runs the existing tools on their
+  own machine, pointed at the production project. Alternatives are uploading the backup
+  to a storage bucket for a one-off job to unpack, or selecting only the referenced
+  media in the browser.
+- Write the process down as steps someone else could follow, including the credentials
+  it needs.
+- Make the loader safe to rerun: skip media already uploaded, and say clearly that it
+  replaces the tree's records.
+- Apply the media rules on the way in: files over the size limit are skipped and listed,
+  and the file types the backup mislabels are handled.
+
+Done when: the real family tree, with its photos, is in the production project, visible
+only to its owner, loaded by following the written steps.
+
+This is separate from milestone 7, which imports a GEDCOM file through the browser into
+a tree already in use.
+
+#### Milestone 14: adding people and relationships
+
+Journeys 2 and 3.
+
+- Add a child, parent, partner or sibling from a person's page, in a small dialog with
+  only a name required; the other parent or partnership is offered from what the tree
+  holds.
+- Before creating someone, check for an existing person with a similar name and dates,
+  and offer to link to them instead.
+- Edit partnerships: dates, places, how and when they ended, their order.
+- Remove a person, with their links, as a change that can be undone.
+- A change that touches several records (a new person plus their links) is saved and
+  undone as one.
+
+Done when: a new child can be added to an existing couple in under a minute, appears
+among both parents' children and their siblings, and can be undone in one step.
+
+#### Milestone 13: the page syntax and its editor
+
+Journeys 2, 4 and 8. The syntax is decided in
+[content-model.md](content-model.md#page-syntax): facts as "Name: value" lines, `@`
+references to people, `[date: …]` and `[place: …]`.
+
+- Start with a short prototype on the real tree to settle the open details: the id form
+  after `@`, the fact names, and how a fact with a date, a place and people is written.
+- Read and write pages in the new syntax, forgivingly: an unreadable line is kept and
+  shown as unresolved. Convert existing pages from YAML, as a logged change.
+- Render `@` references as linked names, and dates and places for display; show anything
+  unresolved with an explanation.
+- Forgiving dates inside fact lines: accept the ways people write dates ("about 1925",
+  "spring 1925", "the 1880s", "14 March 1887", "3/14/1887", "between 1880 and 1885",
+  "bapt. 1891"), show how each was understood, and ask only when a date is truly
+  ambiguous.
+- In the editor: syntax highlighting, completion after `@` (people, with years and
+  parents to tell namesakes apart) and inside `[place: …]` (places already in the tree),
+  and a short legend. The same people completion powers the search box.
+- Gentle checks: implausible dates produce a question, never a refusal.
+- Unsaved input survives a closed tab.
+
+Done when: a birth date can be corrected and an occupation added by editing fact lines,
+a person can be referenced by typing `@` and part of their name, and no page shows YAML.
+
+### Release B: help and photos
+
+Goal: the most useful language-model feature, and the ability to add photos, before
+relatives arrive.
+
+#### Milestone 16: language-model foundation and biography drafts
+
+Journey 5. The rules every use follows are in [design.md](design.md#language-models).
+
+- Choose the model provider, Claude or Gemini, by trying both on biography drafting; the
+  server calls it, never the browser.
+- An owner switches the feature on for their tree. Each call's cost is recorded, with a
+  monthly limit.
+- Draft a biography from a person's facts, memories and photo captions, shown beside the
+  current page for editing before it is saved.
+- Revisions that began as a model's draft record the model's name.
+
+Done when: a usable draft can be produced and saved for a person with only facts, and
+for one with several memories, and the history shows which revisions began as drafts.
+
+#### Milestone 6: photos in the app
+
+Journey 6.
+
+- Upload a front, an optional back and the related text, from the browser straight to
+  Cloud Storage. The server stores JPEGs and HEICs as they are, encodes uncompressed
+  scans to JPEG, names the pair, and writes the metadata into each file.
+- Offer a transcription of the back, and a suggested caption and rough date, from a
+  language model.
+- Tag the people in a photo using people completion; the names are written into the
+  file.
+- Verify the XMP and IPTC field names in [media.md](media.md) against the
+  specifications, and define Prosapia's own field for which side a file is.
+- Choose the JPEG quality for scans using a real full-resolution scanner output.
+- Front and back shown together wherever the photo appears.
+- Rolls: create one, add photos in order, and suggest a frame's date or place to the
+  rest.
+
+Done when: a photo added through the app shows on the right people's pages with its
+back, and both files downloaded from storage still carry their names, date,
+transcription and pairing.
+
+### Release C: open to the family
+
+Goal: relatives are invited, can find their way around, and can contribute from a
+desktop.
+
+#### Milestone 5: deploy and backup
 
 - The server in a container on Cloud Run in `us-west1`, beside the database and storage,
   behind Firebase Hosting. On Cloud Run the server's credentials come from its service
   account, so no key file is needed there either.
-- Reserve `prosapia.app` (with the registrar already in use, Squarespace) and attach it.
-  Until then the site is at `prosapia-ea818.web.app`.
+- Attach `prosapia.app`, which is reserved. Until then the site is at
+  `prosapia-ea818.web.app`.
 - Confirm that a sign-in with a forged signature is refused. The emulators cannot test
   this.
 - Invite members by email address, and change or remove them, from the site.
@@ -45,55 +169,63 @@ Put the site on the internet for one family, in the Firebase project `prosapia-e
   commit per logged change, with its author.
 - Firestore's scheduled backups switched on.
 
-Done when: invited relatives can sign in at a real address and edit, and the exported
+Done when: invited relatives can sign in at `prosapia.app` and edit, and the exported
 repository, loaded by the server in file mode, renders the same site.
 
-### Milestone 12: loading a large existing tree
+#### Milestone 18: a relative's first visit
 
-A family arrives with a GEDCOM file and a backup holding its media; the sample backup is
-about 1 GB. Locally this is easy: the import spike reads both from disk. Once the site
-is hosted, a file that size cannot simply be uploaded through a web form and unpacked by
-the server.
+Journey 10.
 
-- Decide the process. The simplest is that a privileged person runs the existing tools
-  on their own machine, pointed at the production project, before the site is opened to
-  the family. Alternatives are uploading the backup to a storage bucket for a one-off
-  job to unpack, or selecting only the referenced media in the browser.
-- Whichever is chosen, write it down as steps someone else could follow, including the
-  credentials it needs.
-- Make the loader safe to rerun: skip media already uploaded, and say clearly that it
-  replaces the tree's records.
-- Apply the media rules on the way in: files over the size limit are skipped and listed,
-  and the file types the backup mislabels are handled.
+- An invitation email that says who invited them and what Prosapia is.
+- A first page after sign-in that orients a newcomer: their own page or their nearest
+  relative's, and one easy thing to do.
+- Every page readable on a phone.
+- A way to report a mistake without editing, for those who would rather not.
 
-Done when: the real family tree, with its photos, is loaded into the production project
-by following the written steps.
+Done when: a relative who has never seen Prosapia can accept an invitation, find their
+own family, and add a memory without help.
 
-This is separate from milestone 7, which is about importing a GEDCOM file through the
-browser into a tree that is already in use.
+### Release D: after opening
 
-### Milestone 6: photos in the app
+Goal: richer entry and more help, shaped by how the family actually uses Prosapia.
 
-- Upload a front, an optional back and the related text, from the browser straight to
-  Cloud Storage. The server stores JPEGs and HEICs as they are, encodes uncompressed
-  scans to JPEG, names the pair, and writes the metadata into each file.
-- Verify the XMP and IPTC field names in [media.md](media.md) against the
-  specifications, and define Prosapia's own field for which side a file is.
-- Choose the JPEG quality for scans using a real full-resolution scanner output.
-- Front and back shown together wherever the photo appears.
-- Rolls: create one, add photos in order, and suggest a frame's date or place to the
-  rest.
-- Tag the people in a photo; the names are written into the file.
+#### Milestone 15: events and memories
 
-Done when: a photo added through the app shows on the right people's pages with its
-back, and both files downloaded from storage still carry their names, date,
-transcription and pairing.
+Journeys 1 and 7.
 
-### Milestone 7: GEDCOM import
+- Add an event to someone's life: a kind (moved, married, served, emigrated, graduated,
+  or anything else), a forgiving date and place, the other people involved, and
+  optionally some words and a photo.
+- An event involving several people appears on each of their timelines. Settle the
+  shared-events question in [content-model.md](content-model.md), and how an event is
+  written in the page syntax, to do this.
+- Memories gain an optional date, place and people, and show on the timeline when dated.
+
+Done when: an event with two people involved, entered from one person's page, appears on
+both people's timelines.
+
+#### Milestone 17: more help from the model
+
+- Entry from a sentence: typing "Margaret moved to Chicago with her sister in spring
+  1925" proposes fact lines or an event, for the person to check before saving.
+- Weave loose memories into an existing biography, as a proposed edit.
+- Tidy or shorten a passage, or turn an imported note into prose.
+
+Done when: journeys 1 and 2 can each start from one typed sentence, and nothing the
+model proposes is saved without the person confirming it.
+
+#### Milestone 19: editing on a phone
+
+- Adding a memory, correcting a fact and tagging a photo work comfortably on a phone.
+
+Done when: journey 7 works on a phone.
+
+#### Milestone 7: GEDCOM import
 
 The spike in [spikes/gedcom_import](../spikes/gedcom_import/README.md) already converts
-a real GEDCOM 5.5.1 export into the file layout. This milestone makes it part of the
-app.
+a real GEDCOM 5.5.1 export into the file layout, and milestone 12 makes it the way a
+tree is first loaded. This milestone brings import into the app, for trees already in
+use.
 
 - Import from the browser: upload a GEDCOM file, preview what it will add, apply it as
   one logged change that can be undone as a whole.
@@ -112,9 +244,7 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 
 ### People and relationships
 
-- Add a person: a child, a parent, a partner, or someone unconnected.
-- Remove a person, and merge two records that turn out to be the same person.
-- Edit partnerships, which are separate records with no editor yet.
+- Merge two records that turn out to be the same person.
 - A page for a shared event (a wedding, a reunion) or a household, if the content model
   adopts them.
 - Places as records with coordinates and historical names.
@@ -123,7 +253,6 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 
 ### Editing
 
-- A friendlier editor for the facts at the top of a page, which are raw text today.
 - A formatted editor for the story, for relatives who will not write markdown.
 - Talk pages: a discussion thread per person.
 - Watchlist: follow a person and hear about changes.
@@ -139,32 +268,12 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 
 ### Language-model assistance
 
-Prosapia can call a language model, Claude or Gemini, to help write the record. Three
-rules shape every use:
+Uses not yet scheduled; the rules every use follows are in
+[design.md](design.md#language-models).
 
-- **Never when serving a page.** A model runs when a member asks for it, or in a batch
-  an owner starts, never as part of showing content. This keeps cost bounded and pages
-  fast.
-- **Nothing a model writes enters the record without a person choosing it.** The model
-  produces a draft; a member reads it, edits it if they wish, and saves it as an edit
-  under their own name.
-- **The record says so.** A revision that began as a model's draft is marked as such,
-  with the model's name, so anyone reading the history can tell.
-
-Possible uses, none scheduled:
-
-- Authoring: draft a biography from a person's facts, memories and photo captions.
-- Integrating: weave loose memories into the biography, as discussed in
-  [content-model.md](content-model.md).
-- Rewriting: tidy or shorten a passage, or make an imported note read as prose.
-- Structuring: suggest facts, dates and people from a story someone has typed.
-- Transcribing: read the handwriting on the back of a photo, or a scanned letter or
-  certificate.
-- Describing: suggest a caption, a rough date or a place for a photo.
-- Checking: point out conflicts, such as a child born after a parent's death.
-
-Open: which model for which job, what it costs per tree, and whether an owner must
-switch the feature on, since using it sends family data to the model's provider.
+- Transcribing a scanned letter or certificate.
+- Checking: point out conflicts, such as a child born after a parent's death, beyond the
+  simple checks in milestone 13.
 
 ### Photos and media
 

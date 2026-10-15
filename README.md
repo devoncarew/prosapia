@@ -52,6 +52,7 @@ Working today:
 | [docs/media.md](docs/media.md) | Photos: storage formats, embedded metadata, fronts and backs, rolls |
 | [docs/sharing.md](docs/sharing.md) | Privacy, sharing and trust (not yet designed in full) |
 | [docs/design.md](docs/design.md) | The main decisions and why, and the questions still open |
+| [docs/journeys.md](docs/journeys.md) | The tasks people come to Prosapia to do, and what a forgiving version looks like |
 | [docs/plan.md](docs/plan.md) | What is being built next, known future work, and a changelog |
 
 ## Contributing

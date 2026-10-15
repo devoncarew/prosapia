@@ -21,6 +21,7 @@ Work that is scheduled, and work known but not yet scheduled, is in the [plan](p
 | Who is the first user? | One family, one tree, a handful of invited relatives. The simplifications this allows are removed step by step so the tool becomes general purpose |
 | How are edits reviewed? | They are not: members with write access edit directly. Every edit is logged, attributed and reversible instead |
 | How is per-page visibility enforced? | By the server, which is the only thing that reads the database. Designing the levels themselves is deferred |
+| How are pages written? | Facts as "Name: value" lines, then markdown prose. People are `@` references to an id, shown by name; dates and places are `[date: …]` and `[place: …]`; anything unreadable is shown as unresolved. Details are in [content-model.md](content-model.md#page-syntax) |
 | How are photos stored? | JPEGs and HEICs as they are; uncompressed scans as JPEG; a front and back as two files paired by name and embedded id |
 
 ### Why not git
@@ -35,6 +36,20 @@ Alternatives considered: a git repository owned by the server, a self-hosted for
 PostgreSQL, an existing wiki engine, and Google Drive. PostgreSQL fits family
 relationships better than Firestore and remains the fallback; Firestore was chosen for
 having no running cost and nothing to operate at one family's size.
+
+## Language models
+
+Prosapia may call a language model, Claude or Gemini, to help write the record. Three
+rules shape every use:
+
+- **Never when serving a page.** A model runs when a member asks for it, or in a batch
+  an owner starts, never as part of showing content. This keeps cost bounded and pages
+  fast.
+- **Nothing a model writes enters the record without a person choosing it.** The model
+  produces a draft; a member reads it, edits it if they wish, and saves it as an edit
+  under their own name.
+- **The record says so.** A revision that began as a model's draft is marked as such,
+  with the model's name, so anyone reading the history can tell.
 
 ## Open questions
 
@@ -52,5 +67,4 @@ None of these blocks current work. Each is discussed in the document named after
   (sharing).
 - Documents, audio and the exact limit for stored video (media).
 - Which research sites permit automated capture (content model).
-- Generated text: which model for which job, its cost, and whether an owner must switch
-  it on (plan).
+- Generated text: which model for which job, and its cost (plan, milestone 16).
