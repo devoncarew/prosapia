@@ -126,7 +126,9 @@ Milestone: 13 (people completion, reused by search).
 ### 9. Undo a mistake
 
 Someone's edit removed a paragraph. Any editor opens the page's history, sees who
-changed what, and restores the earlier version. This works today.
+changed what, and restores the earlier version. A change that touched several pages,
+such as giving someone a page from a name, is undone in one step from Recent changes.
+This works today.
 
 ### 10. Join the family's tree
 

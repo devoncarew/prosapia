@@ -34,6 +34,19 @@ abstract class TreeStore {
     required int basedOn,
     required Member author,
     required String summary,
+  }) => saveChange(
+    [PageWrite(person, basedOn: basedOn)],
+    author: author,
+    summary: summary,
+  );
+
+  /// Saves several pages as one change: a new page and the reference that
+  /// names it, or a deletion and the pages that mentioned the person. All
+  /// are written, as one entry in the log, or none are.
+  Future<SaveResult> saveChange(
+    List<PageWrite> pages, {
+    required Member author,
+    required String summary,
   }) => throw UnsupportedError('This store is read-only.');
 
   /// Every saved version of a person's page, newest first.
@@ -43,6 +56,9 @@ abstract class TreeStore {
 
   /// The log of every change to the tree, newest first.
   Future<List<Change>> recentChanges({int limit = 100}) async => const [];
+
+  /// One entry in the log, by its id.
+  Future<Change?> change(String id) async => null;
 
   /// Records the name Google gives for a member, for display in histories.
   Future<void> rememberName(Member member, String name) async {}
@@ -68,14 +84,36 @@ class Member {
   final String? name;
 }
 
-/// The outcome of a save: the new revision number, or the revision that got
-/// there first.
-class SaveResult {
-  SaveResult.saved(int this.revision) : conflictWith = null;
-  SaveResult.conflict(int this.conflictWith) : revision = null;
+/// One page in a change: its new text, or its deletion.
+class PageWrite {
+  PageWrite(this.person, {required this.basedOn}) : delete = false;
 
+  /// Deletes [person]'s page. Its text stays in the history, and the last
+  /// version is kept so the page can be shown as deleted and brought back.
+  PageWrite.delete(this.person, {required this.basedOn}) : delete = true;
+
+  final Person person;
+
+  /// The revision this write was based on; zero for a new page.
+  final int basedOn;
+  final bool delete;
+}
+
+/// The outcome of a save: the new revision number, or the page and revision
+/// that got there first.
+class SaveResult {
+  SaveResult.saved(int this.revision)
+    : conflictWith = null,
+      conflictPage = null;
+  SaveResult.conflict(int this.conflictWith, {this.conflictPage})
+    : revision = null;
+
+  /// The new revision of the first page written.
   final int? revision;
   final int? conflictWith;
+
+  /// Which page had moved on, for a change of several pages.
+  final String? conflictPage;
 
   bool get saved => revision != null;
 }
@@ -89,10 +127,16 @@ class Revision {
     this.authorName,
     required this.summary,
     required this.at,
+    this.deleted = false,
   });
 
   final int number;
+
+  /// The page's text; empty for a version that deleted the page.
   final String source;
+
+  /// Whether this version deleted the page.
+  final bool deleted;
   final String author;
   final String? authorName;
   final String summary;
@@ -104,6 +148,7 @@ class Revision {
 /// An entry in the tree's change log.
 class Change {
   Change({
+    required this.id,
     required this.author,
     this.authorName,
     required this.summary,
@@ -111,6 +156,7 @@ class Change {
     required this.pages,
   });
 
+  final String id;
   final String author;
   final String? authorName;
   final String summary;

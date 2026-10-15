@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:markdown/markdown.dart' as md;
 
+import 'completion.dart';
+import 'contradictions.dart';
 import 'dates.dart';
 import 'diff.dart';
 import 'index.dart';
@@ -54,7 +56,12 @@ $body
 
   String personLink(String id, {bool years = false}) {
     final p = tree.people[id];
-    if (p == null) return '<span class="missing">unknown person ($id)</span>';
+    if (p == null) {
+      final gone = tree.deleted[id];
+      return gone == null
+          ? '<span class="missing">unknown person ($id)</span>'
+          : '<a class="deleted" href="/people/$id">${esc(gone.name)}</a> <span class="years">(page deleted)</span>';
+    }
     final suffix = years && p.years.isNotEmpty
         ? ' <span class="years">(${p.years})</span>'
         : '';
@@ -112,6 +119,7 @@ $body
       if (_canEdit) '<a href="/people/${p.id}/edit">Edit</a>',
       if (_canEdit) '<a href="/people/${p.id}/memory">Add a memory</a>',
       if (editable) '<a href="/people/${p.id}/history">History</a>',
+      if (_canEdit) '<a href="/people/${p.id}/delete">Delete</a>',
     ];
     return page(
       p.name,
@@ -120,12 +128,15 @@ $body
     );
   }
 
-  /// The body of a person's page. Also used for the editor's live preview,
-  /// where [p] is the text being typed and not yet part of the tree.
-  String personArticle(Person p, {bool withMedia = true}) {
+  /// The body of a person's page. Also used for the editor's preview, where
+  /// [p] is the text being typed and not yet part of the tree; a [preview]
+  /// leaves out photos and actions.
+  String personArticle(Person p, {bool preview = false}) {
     final sb = StringBuffer();
+    final actions = _canEdit && !preview;
     sb.write('<article class="person">');
     if (_canEdit || !requiresViewer) {
+      sb.write(_contradictions(p, actions: actions));
       for (final (items, what) in [
         (issuesOf(p), 'could not be read'),
         (checksOf(p), 'may be worth checking'),
@@ -140,7 +151,7 @@ $body
         sb.write('</ul></details>');
       }
     }
-    sb.write(_infobox(p));
+    sb.write(_infobox(p, actions: actions));
     sb.write('<h1>${esc(p.name)}</h1>');
     if (p.years.isNotEmpty) sb.write('<p class="lead">${p.years}</p>');
 
@@ -168,9 +179,9 @@ $body
       sb.write('</ul>');
     }
 
-    final media = withMedia
-        ? [for (final key in index.mediaOf(p.id)) tree.media[key]!]
-        : const <Media>[];
+    final media = preview
+        ? const <Media>[]
+        : [for (final key in index.mediaOf(p.id)) tree.media[key]!];
     if (media.isNotEmpty) {
       sb.write('<h2>Photos and documents</h2>${gallery(media)}');
     }
@@ -230,6 +241,40 @@ $body
     ];
   }
 
+  /// Contradictions between [p]'s page and others, each with a way to
+  /// resolve it by removing one side.
+  String _contradictions(Person p, {required bool actions}) {
+    final found = contradictionsOf(tree, p);
+    if (found.isEmpty) return '';
+    final sb = StringBuffer(
+      '<details class="issues contradictions" open><summary>${found.length == 1 ? 'One thing' : '${found.length} things'} on this page contradict${found.length == 1 ? 's' : ''} ${found.length == 1 ? 'another statement' : 'other statements'}</summary><ul>',
+    );
+    for (final c in found) {
+      sb.write('<li>${esc(c.message)}');
+      if (actions) {
+        sb.write('<div class="resolve">');
+        for (final s in c.statements) {
+          final page = s.page == p.id ? p : tree.people[s.page];
+          if (page == null) continue;
+          final other = tree.people[s.other]?.name ?? s.other;
+          final where = s.page == p.id ? 'this page' : '${page.name}\'s page';
+          sb.write(
+            '<form method="post" action="/people/${p.id}/resolve">'
+            '<input type="hidden" name="page" value="${s.page}">'
+            '<input type="hidden" name="kind" value="${esc(s.kind)}">'
+            '<input type="hidden" name="other" value="${s.other}">'
+            '<input type="hidden" name="based_on" value="${page.revision}">'
+            '<button>Remove ${esc(other)} from the ${esc(s.label)} line on ${esc(where)}</button></form>',
+          );
+        }
+        sb.write('</div>');
+      }
+      sb.write('</li>');
+    }
+    sb.write('</ul></details>');
+    return sb.toString();
+  }
+
   /// A date as typed, with how it was read shown on hover.
   String date(TreeDate d) => d.understood
       ? '<span class="date" title="Read as: ${esc(d.meaning)}">${esc(d.display)}</span>'
@@ -263,7 +308,16 @@ $body
     return null;
   }
 
-  String _infobox(Person p) {
+  /// A plain name, with an action to give them a page when [from] is
+  /// given: the page whose [kind] line names them.
+  String _named(PersonRef r, {String? from, String? kind, bool years = false}) {
+    final html = ref(r, years: years);
+    if (from == null || kind == null || r.name == null) return html;
+    final query = Uri(queryParameters: {'kind': kind, 'name': r.name!}).query;
+    return '$html <a class="add" href="/people/$from/add?${esc(query)}" title="Create a page for ${esc(r.name)}">+ page</a>';
+  }
+
+  String _infobox(Person p, {bool actions = false}) {
     final rows = <(String, String)>[];
     void row(String label, Iterable<String> items) {
       final html = items.where((x) => x.isNotEmpty).join('<br>');
@@ -286,10 +340,20 @@ $body
           (q == null ? '' : ' <span class="years">(${esc(q)})</span>');
     }
 
-    Iterable<String> named(List<PersonRef> refs, {bool years = false}) => [
+    Iterable<String> named(
+      List<PersonRef> refs,
+      String kind, {
+      bool years = false,
+      String? from,
+    }) => [
       for (final r in refs)
         if (r.id == null || !tree.people.containsKey(r.id))
-          ref(r, years: years),
+          _named(
+            r,
+            from: actions ? (from ?? p.id) : null,
+            kind: kind,
+            years: years,
+          ),
     ];
 
     if (p.alsoKnownAs.isNotEmpty) {
@@ -301,7 +365,7 @@ $body
     row('Buried', [event(p.buried)]);
     row('Parents', [
       for (final id in index.parentsOf(p.id)) qualified(id, p.parents),
-      ...named(p.parents),
+      ...named(p.parents, 'parents'),
     ]);
     row('Partners', [
       for (final id in index.partnersOf(p.id))
@@ -310,18 +374,32 @@ $body
               null => '',
               final year => ' <span class="years">(married $year)</span>',
             },
-      ...named(p.partners),
+      ...named(p.partners, 'partner'),
       for (final c in p.couples)
-        if (c.partner != null && c.partner!.id == null) ref(c.partner!),
+        if (c.partner != null && c.partner!.id == null)
+          _named(
+            c.partner!,
+            from: actions ? p.id : null,
+            kind: c.kind.toLowerCase().replaceAll(RegExp(r'\s+'), ' '),
+          ),
     ]);
     row('Children', [
       for (final id in index.childrenOf(p.id))
         qualified(id, const [], years: true),
-      ...named(p.children),
+      ...named(p.children, 'children'),
     ]);
+    // Children named on a parent's page without a page of their own are
+    // siblings too.
+    final siblingNames = <String>{};
     row('Siblings', [
       for (final id in index.siblingsOf(p.id)) personLink(id, years: true),
-      ...named(p.siblings),
+      ...named(p.siblings, 'siblings'),
+      for (final parent in index.parentsOf(p.id))
+        for (final r in tree.people[parent]!.children)
+          if (r.id == null &&
+              !p.siblings.any((s) => s.name == r.name) &&
+              siblingNames.add(r.name!))
+            ...named([r], 'children', from: parent),
     ]);
 
     final photo = p.photo == null ? null : tree.media[p.photo];
@@ -373,7 +451,12 @@ $body
           for (final c in other.couples)
             if (c.partner?.id == p.id) (c, PersonRef.page(other.id)),
     ];
+    // The same event stated on both pages is shown once.
+    final seen = <String>{};
     for (final (c, partner) in couples) {
+      final key =
+          '${c.kind.toLowerCase()}|${partner?.id ?? partner?.name}|${c.event.date?.sortKey}';
+      if (!seen.add(key)) continue;
       add(
         c.event.date,
         '${esc(c.kind)}${partner == null ? '' : ' ${ref(partner)}'}${at(c.event.place)}',
@@ -560,7 +643,7 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
     <textarea id="source" name="source" spellcheck="true" required aria-label="Page text">${esc(source)}</textarea>
   </div>
   <div class="tab-panel" id="panel-preview" role="tabpanel" aria-labelledby="tab-preview" hidden>
-    <div id="preview" class="preview">${personArticle(p, withMedia: false)}</div>
+    <div id="preview" class="preview">${personArticle(p, preview: true)}</div>
   </div>
   <div class="save">
     <label for="summary">What did you change?</label>
@@ -588,6 +671,109 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
 <script type="module" src="/assets/editor.js"></script>
 ''');
   }
+
+  /// Creating a page for [name], a plain name on [from]'s page in a [kind]
+  /// line. Offers the [similar] people already in the tree first. The new
+  /// page starts with [relatives], as [field] (`parents` or `partners`):
+  /// the [fixed] ones always, the others when ticked.
+  String addPerson(
+    Person from, {
+    required String kind,
+    required String name,
+    required List<Person> similar,
+    required Completion completion,
+    required String field,
+    List<Person> fixed = const [],
+    List<(Person, bool)> optional = const [],
+    String born = '',
+    String? error,
+  }) {
+    final hidden =
+        '<input type="hidden" name="kind" value="${esc(kind)}">'
+        '<input type="hidden" name="name" value="${esc(name)}">'
+        '<input type="hidden" name="based_on" value="${from.revision}">';
+    final role = switch (kind) {
+      'parents' => 'a parent',
+      'children' => 'a child',
+      'siblings' => 'a sibling',
+      'partner' => 'a partner',
+      _ => 'in a “${esc(kind)}” line',
+    };
+    final sb = StringBuffer('''
+<h1>A page for ${esc(name)}</h1>
+<p class="lead">${personLink(from.id)}'s page names ${esc(name)} as $role, without a page of their own.</p>
+${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}''');
+    if (similar.isNotEmpty) {
+      sb.write(
+        '<h2>Already in the tree?</h2><p>These people have similar names. If one of them is ${esc(name)}, link to their page instead.</p><ul class="similar">',
+      );
+      for (final p in similar) {
+        final detail = completion.detail(p);
+        sb.write(
+          '<li><form method="post" action="/people/${from.id}/link">$hidden'
+          '<input type="hidden" name="target" value="${p.id}">'
+          '${personLink(p.id)}${detail.isEmpty ? '' : ' <span class="years">${esc(detail)}</span>'} '
+          '<button>Link to this person</button></form></li>',
+        );
+      }
+      sb.write('</ul><h2>Or create a new page</h2>');
+    }
+    final relatives = [
+      for (final p in fixed)
+        '<label><input type="checkbox" checked disabled> ${esc(p.name)}</label>'
+            '<input type="hidden" name="$field" value="${p.id}">',
+      for (final (p, checked) in optional)
+        '<label><input type="checkbox" name="$field" value="${p.id}"${checked ? ' checked' : ''}> ${esc(p.name)}</label>',
+    ];
+    sb.write('''
+<form class="memory add-person" method="post" action="/people/${from.id}/add">
+  $hidden
+  <label for="new_name">Name</label>
+  <input id="new_name" name="new_name" value="${esc(name)}" required maxlength="120">
+  <label for="born">Born, if you know: a date, then a place</label>
+  <input id="born" name="born" value="${esc(born)}" maxlength="120" placeholder="about 1925, Hartford, CT">
+  ${relatives.isEmpty ? '' : '<fieldset><legend>${field == 'parents' ? 'Parents' : 'Partner'}</legend>${relatives.join()}</fieldset>'}
+  <p class="hint">The new page starts with these facts, and ${esc(from.name)}'s page links to it in place of the name. Both are saved as one change, which can be undone from Recent changes.</p>
+  <div class="save"><button class="primary">Create the page</button> <a href="/people/${from.id}">Cancel</a></div>
+</form>''');
+    return page('A page for $name', sb.toString());
+  }
+
+  /// Asks before deleting [p]'s page. [mentioning] are the pages that refer
+  /// to [p], whose references will become plain names.
+  String deletePerson(Person p, List<Person> mentioning) {
+    final sb = StringBuffer(
+      '''
+<h1>Delete ${esc(p.name)}'s page?</h1>
+<p class="lead">The page leaves the tree. Its text is kept in its history, and the deletion can be undone from Recent changes.</p>''',
+    );
+    if (mentioning.isNotEmpty) {
+      sb.write(
+        '<p>${mentioning.length == 1 ? 'One other page mentions' : '${mentioning.length} other pages mention'} ${esc(p.name)}. There, the link becomes the plain name “${esc(p.name)}”, so nothing they say is lost:</p><ul>',
+      );
+      for (final other in mentioning) {
+        sb.write('<li>${personLink(other.id, years: true)}</li>');
+      }
+      sb.write('</ul>');
+    }
+    sb.write('''
+<form class="memory" method="post" action="/people/${p.id}/delete">
+  <input type="hidden" name="based_on" value="${p.revision}">
+  <label for="summary">Why?</label>
+  <input id="summary" name="summary" value="Delete ${esc(p.name)}'s page" required maxlength="200">
+  <div class="save"><button class="danger">Delete the page</button> <a href="/people/${p.id}">Cancel</a></div>
+</form>''');
+    return page('Delete ${p.name}', sb.toString());
+  }
+
+  /// What is shown at a deleted page's address.
+  String deletedPerson(Person p) => page(
+    p.name,
+    '''
+<h1>${esc(p.name)}</h1>
+<p class="lead">This page was deleted. Its earlier versions are in its <a href="/people/${p.id}/history">history</a>.</p>
+${_canEdit && p.revision > 1 ? '<form method="post" action="/people/${p.id}/restore"><input type="hidden" name="number" value="${p.revision - 1}"><button>Bring the page back</button></form>' : ''}''',
+  );
 
   /// Explains a save that was refused because the page had moved on.
   String conflictNotice(Revision theirs, String before) =>
@@ -638,7 +824,11 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
         '<td><input type="radio" name="to" value="${r.number}" aria-label="Compare to version ${r.number}"${i == 0 ? ' checked' : ''}></td>'
         '<td><a href="/people/${p.id}/revisions/${r.number}">${time(r.at)}</a></td>'
         '<td>${esc(r.by)}</td>'
-        '<td>${esc(r.summary)}${i == 0 ? ' <span class="years">(current)</span>' : ''}</td>'
+        '<td>${esc(r.summary)}${r.deleted
+            ? ' <span class="years">(page deleted)</span>'
+            : i == 0
+            ? ' <span class="years">(current)</span>'
+            : ''}</td>'
         '</tr>',
       );
     }
@@ -655,7 +845,9 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
   }) => page('${p.name}, version ${r.number}', '''
 <h1>${personLink(p.id)}: version ${r.number}</h1>
 <p class="lead">Saved ${time(r.at)} by ${esc(r.by)}: “${esc(r.summary)}”. <a href="/people/${p.id}/history">All versions</a></p>
-${isCurrent
+${r.deleted
+      ? '<p class="lead">This version deleted the page.</p>'
+      : isCurrent
       ? '<p class="lead">This is the current version.</p>'
       : _canEdit
       ? '<form method="post" action="/people/${p.id}/restore"><input type="hidden" name="number" value="${r.number}"><button>Restore this version</button> <span class="years">The current text is kept in the history.</span></form>'
@@ -723,14 +915,27 @@ ${diff(from.source, to.source)}
                         '${personLink(e.key)} <a class="years" href="/people/${e.key}/compare?from=${e.value - 1}&amp;to=${e.value}">(what changed)</a>',
                   )
                   .join(', ');
+        final undo = _undoable(c)
+            ? '<form method="post" action="/changes/${c.id}/undo"><button>Undo</button></form>'
+            : '';
         sb.write(
-          '<tr><td>${time(c.at)}</td><td>${esc(c.by)}</td><td>${esc(c.summary)}</td><td>$pages</td></tr>',
+          '<tr><td>${time(c.at)}</td><td>${esc(c.by)}</td><td>${esc(c.summary)}</td><td>$pages</td><td>$undo</td></tr>',
         );
       }
       sb.write('</table>');
     }
     return page('Recent changes', sb.toString());
   }
+
+  /// Whether [c] can be undone in one step: every page it touched is still
+  /// as it left them. Large changes, such as loading the tree, are not
+  /// offered.
+  bool _undoable(Change c) =>
+      _canEdit &&
+      c.pages.length <= 10 &&
+      c.pages.entries.every(
+        (e) => (tree.people[e.key] ?? tree.deleted[e.key])?.revision == e.value,
+      );
 
   static const _monthNames = [
     'Jan',
@@ -782,6 +987,10 @@ ${diff(from.source, to.source)}
 </body>
 </html>
 ''';
+
+  /// A short page that explains why something could not be done.
+  String message(String title, String what) =>
+      page(title, '<h1>${esc(title)}</h1><p class="lead">${esc(what)}</p>');
 
   String notFound(String what) =>
       page('Not found', '<h1>Not found</h1><p class="lead">${esc(what)}</p>');
@@ -853,6 +1062,21 @@ mark { background: var(--mark); color: inherit; }
 .unresolved { text-decoration: underline dotted; text-underline-offset: 3px; color: var(--muted); cursor: help; }
 .named { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
 .date { cursor: help; }
+a.add { font: 12px system-ui, sans-serif; margin-left: 4px; white-space: nowrap; }
+a.deleted { color: var(--muted); text-decoration: line-through; }
+.contradictions summary { color: #b3261e; }
+@media (prefers-color-scheme: dark) { .contradictions summary { color: #f2b8b5; } }
+.resolve { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.resolve form { margin: 0; }
+.resolve button { font-size: 13px; }
+.similar { list-style: none; padding: 0; font: 15px/1.5 system-ui, sans-serif; }
+.similar li { margin-bottom: 8px; }
+.similar button { margin-left: 8px; font-size: 13px; }
+.add-person fieldset { border: none; padding: 0; margin: 14px 0 0; }
+.add-person legend { font: 13px/1.4 system-ui, sans-serif; color: var(--muted); }
+.add-person fieldset label { display: block; margin: 6px 0 0; color: var(--text); font-size: 15px; }
+.add-person fieldset input { width: auto; margin-right: 6px; }
+button.danger { background: #b3261e; border-color: #8c1d18; color: #fff; }
 .legend { margin-top: 12px; font: 13px/1.5 system-ui, sans-serif; color: var(--muted); }
 .legend summary { cursor: pointer; }
 .legend dt { margin-top: 8px; color: var(--text); }

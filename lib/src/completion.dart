@@ -32,13 +32,64 @@ class Completion {
     });
     return [
       for (final (_, p) in matches.take(limit))
-        {'id': p.id, 'ref': p.reference, 'name': p.name, 'detail': _detail(p)},
+        {'id': p.id, 'ref': p.reference, 'name': p.name, 'detail': detail(p)},
     ];
+  }
+
+  /// People whose name is close to [name], to check before creating a page
+  /// for someone who may already have one: the same surname and a given
+  /// name that matches or nearly matches, or a near spelling of the whole
+  /// name.
+  List<Person> similar(String name, {int limit = 8}) {
+    final words = _words(name);
+    if (words.isEmpty) return const [];
+    bool close(String a, String b) =>
+        a == b ||
+        (a.length >= 3 && b.startsWith(a)) ||
+        (b.length >= 3 && a.startsWith(b)) ||
+        (a.length > 3 && b.length > 3 && _distance(a, b) <= 1);
+    final found = <Person>[];
+    for (final p in tree.people.values) {
+      for (final other in [p.name, ...p.alsoKnownAs]) {
+        final theirs = _words(other);
+        if (theirs.isEmpty) continue;
+        final sameFamily =
+            words.length > 1 &&
+            theirs.length > 1 &&
+            close(words.last, theirs.last) &&
+            close(words.first, theirs.first);
+        if (sameFamily || _distance(words.join(' '), theirs.join(' ')) <= 2) {
+          found.add(p);
+          break;
+        }
+      }
+    }
+    found.sort((a, b) => a.name.compareTo(b.name));
+    return found.take(limit).toList();
+  }
+
+  /// The number of single-letter edits that turn [a] into [b].
+  static int _distance(String a, String b) {
+    var previous = List.generate(b.length + 1, (i) => i);
+    for (var i = 0; i < a.length; i++) {
+      final current = [i + 1];
+      for (var j = 0; j < b.length; j++) {
+        current.add(
+          [
+            previous[j + 1] + 1,
+            current[j] + 1,
+            previous[j] + (a[i] == b[j] ? 0 : 1),
+          ].reduce((x, y) => x < y ? x : y),
+        );
+      }
+      previous = current;
+    }
+    return previous.last;
   }
 
   /// "1911–1987, child of Joseph J. Carew and Irene Genevive Howard", to
   /// tell namesakes apart.
-  String _detail(Person p) {
+  String detail(Person p) {
     final parents = index
         .parentsOf(p.id)
         .map((id) => tree.people[id]!.name)

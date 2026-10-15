@@ -16,9 +16,9 @@ class ParsedPage {
     final facts = <FactLine>[];
     final stray = <String>[];
     if (i < lines.length &&
-        _label.firstMatch(lines[i])?[1]?.toLowerCase() == 'name') {
+        labelPattern.firstMatch(lines[i])?[1]?.toLowerCase() == 'name') {
       for (; i < lines.length && lines[i].trim().isNotEmpty; i++) {
-        final m = _label.firstMatch(lines[i]);
+        final m = labelPattern.firstMatch(lines[i]);
         if (m == null) {
           stray.add(lines[i]);
         } else {
@@ -29,7 +29,10 @@ class ParsedPage {
     return ParsedPage._(facts, lines.skip(i).join('\n').trim(), stray);
   }
 
-  static final _label = RegExp(r'^\s*([A-Za-z][A-Za-z ]{0,30}?)\s*:\s*(.*)$');
+  /// A "Label: value" line.
+  static final labelPattern = RegExp(
+    r'^\s*([A-Za-z][A-Za-z ]{0,30}?)\s*:\s*(.*)$',
+  );
 
   final List<FactLine> facts;
 

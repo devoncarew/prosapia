@@ -78,7 +78,28 @@ family in [place: Cardiff, Wales].
 
 ### People and relationships in the text
 
-Direction set, to be built in milestone 14.
+Built in milestone 14:
+
+- **A name gets a page in one action.** Beside a plain name, an editor sees "+ page". It
+  first lists people already in the tree with a similar name, any of whom can be linked
+  instead. Otherwise it creates a page that starts with what the line tells: a child's
+  page names its parents (the page's person, and their partner when ticked); a sibling's
+  names the shared parents; a parent's names the other parent as partner. The name on
+  the original page, and on a parent's page that lists the same name, becomes an `@`
+  reference. All of this is one change.
+- **Deleting a page keeps what other pages say.** Their references to the person become
+  the plain name, in the same change. The deleted page keeps its history, and its
+  address says that it was deleted and offers to bring it back.
+- **A contradiction** is two statements that cannot both hold: someone listed as both a
+  person's parent and their child, or as parent and partner; someone listed as their own
+  relative; or a marriage, or another event of two people, given different dates or
+  places on the two pages. It is shown on both pages, with a button to remove either
+  statement.
+- **Undo works on whole changes.** Recent changes offers Undo for any change whose pages
+  have not been changed since. It returns each page to its previous version, deleting a
+  page the change created or bringing back one it deleted, and is itself a change.
+
+The direction, as set before milestone 14:
 
 - **Relationships are typed in fact lines,** on either person's page: `Parents:`,
   `Children:`, `Partner:`, `Siblings:`.
