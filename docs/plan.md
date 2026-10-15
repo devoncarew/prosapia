@@ -51,30 +51,7 @@ in the text). What remains before release B is using it on the real tree.
 Goal: the most useful language-model feature, and the ability to add photos, before
 relatives arrive.
 
-#### Milestone 6: photos in the app
-
-Journey 6. A photo is not owned by a page: it names the people in it, and shows on each
-of their pages. See [media.md](media.md).
-
-- **Add photos** from a person's page, with that person already tagged, or from the
-  Photos page. Several at once: a date, place and people typed once apply to all of
-  them, and can be changed for any one.
-- **An optional back,** behind "Add the back", for the rare photo with writing on it,
-  and a transcription of it offered by Claude.
-- **Tag people by name,** with the same completion as the editor.
-- **Everything is written into the files:** caption, date, place, people, the
-  transcription of the back, the pairing of front and back, and the set.
-- **Sets replace rolls.** Photos added together are a set, recorded in each file with
-  its place in the order, so a photo's page shows the others taken with it.
-- **Change a photo's details later** from its page, rewriting the file's metadata
-  without re-encoding the image.
-- **Use a photo** as a person's main photo from the photo's page.
-- The server stores JPEGs and HEICs as they are and encodes uncompressed scans to JPEG.
-  Choose the JPEG quality using a real full-resolution scanner output.
-
-Done when: a photo added through the app shows on the right people's pages with its
-back, and both files downloaded from storage still carry their names, date,
-transcription and pairing.
+Its milestones are complete: 16 (help from a language model) and 6 (photos in the app).
 
 ### Release C: open to the family
 
@@ -175,6 +152,8 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 ### People and relationships
 
 - Merge two records that turn out to be the same person.
+- Choose the JPEG quality for scans from a real full-resolution scanner output; 92 is a
+  placeholder.
 - Upload files larger than Cloud Run's 32 MB request limit, such as large TIFF scans,
   straight to storage with a signed upload address.
 - Undo a change that later edits have built on, by working out what to take back,
@@ -262,6 +241,12 @@ Uses not yet scheduled; the rules every use follows are in
 
 Newest first.
 
+- **Milestone 6, photos in the app.** Photos are added from a person's page or from
+  Photos, several at once with a shared date, place and people, and an optional back
+  that Claude can transcribe; a photo names the people in it rather than belonging to a
+  page, and photos added together form a set. Caption, date, place, people, the writing
+  on the back, the pairing and the set are written into the files, and can be changed
+  later without re-encoding the image.
 - **Milestone 16, help from a language model.** Claude can draft or revise a page's
   story, improve a selection, and tidy a memory; its text replaces what it acted on in
   the editor, with undo, and nothing is saved until the person publishes. Claude Haiku
