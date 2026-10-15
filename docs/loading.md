@@ -13,7 +13,8 @@ a tree already in use is milestone 7 in the [plan](plan.md).
 
 - From the other software, a **GEDCOM export** of the tree. For Family Tree Maker, also
   its **backup file** (`.ftmb`), which holds the photos and documents.
-- Dart, `exiftool` and `unzip`, as in [CONTRIBUTING.md](../CONTRIBUTING.md).
+- Dart, `exiftool` and `unzip`, as in [CONTRIBUTING.md](../CONTRIBUTING.md), and
+  `poppler` (`brew install poppler`) to unwrap PDFs that only hold one scanned image.
 - Access to the Firebase project, and the Google Cloud command-line tools signed in with
   that account: run `gcloud auth application-default login` once.
 
@@ -27,8 +28,10 @@ a tree already in use is milestone 7 in the [plan](plan.md).
        ~/Downloads/export.ged data/carew ~/Downloads/backup.ftmb
    ```
 
-   It prints what it imported, which media files it could not find in the backup, dates
-   it kept as written, and anything in the export it did not understand.
+   It prints what it imported and anything worth checking: media files it could not find
+   in the backup, files it matched by a close name instead (exports carry typos, such as
+   "Oregonial" for "Oregonian"), PDFs it stored as the single JPEG they wrap, dates it
+   kept as written, and anything in the export it did not understand.
 
 2. **Look at the result locally.** No sign-in, nothing leaves your computer:
 

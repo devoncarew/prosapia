@@ -256,6 +256,8 @@ Uses not yet scheduled; the rules every use follows are in
 
 - Documents (letters, certificates, census pages): previews and metadata for PDFs.
 - Video: store short clips, link to long ones, as proposed in [media.md](media.md).
+- Multi-page scanned PDFs, such as the two baby books: keep as one document, or store as
+  a roll of page images.
 - Audio recordings.
 - Suggesting where faces are in a photo.
 - Check that embedded text survives email, photo services and messaging apps.
@@ -281,6 +283,8 @@ Uses not yet scheduled; the rules every use follows are in
 - Export on every change, not nightly.
 - Search the European and international trademark registers for "Prosapia" before any
   commercial launch. The US register showed no conflict.
+- When a tree is loaded again with `--replace`, delete stored files the new tree no
+  longer uses. They are left behind today.
 - Run the Firebase emulator checks in continuous integration, so sign-in and storage are
   tested on every change.
 - Require the continuous integration checks to pass before a pull request can merge (a

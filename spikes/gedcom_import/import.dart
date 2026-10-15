@@ -314,10 +314,19 @@ void importPhotos(
   final wanted = <Record, String>{}; // record -> path inside the backup
   for (final o in objects) {
     final match = listing.where((l) => l.split('/').last == names[o]);
-    if (match.isEmpty) {
+    if (match.isNotEmpty) {
+      wanted[o] = match.first;
+      continue;
+    }
+    // Exports carry typos ("Oregonial" for "Oregonian"). Accept one file in
+    // the backup whose name is very close, and say so.
+    final close = closestName(names[o]!, listing);
+    if (close == null) {
       report.photosMissing.add(names[o]!);
     } else {
-      wanted[o] = match.first;
+      report.matchedByCloseName.add('${names[o]} -> ${close.split('/').last}');
+      names[o] = close.split('/').last;
+      wanted[o] = close;
     }
   }
   // unzip treats [ and ] in names as patterns; escape them.
@@ -340,10 +349,20 @@ void importPhotos(
     }
     final id = ids[o.xref]!;
     // The export labels every file "jpg"; trust the file's own extension.
-    final ext = names[o]!.split('.').last.toLowerCase();
+    var ext = names[o]!.split('.').last.toLowerCase();
+    var source = src;
+    // A PDF that only wraps one scanned JPEG is stored as that JPEG.
+    if (ext == 'pdf') {
+      final jpeg = unwrapPdf(src, tmp);
+      if (jpeg != null) {
+        report.unwrapped.add(names[o]!);
+        source = jpeg;
+        ext = 'jpg';
+      }
+    }
     final dest = '$outDir/media/$id.${ext == 'jpeg' ? 'jpg' : ext}';
     report.mediaTypes[ext] = (report.mediaTypes[ext] ?? 0) + 1;
-    src.copySync(dest);
+    source.copySync(dest);
     final file = o.first('FILE')!;
     final title = file.first('TITL')?.value;
     final text = file.first('_TEXT')?.value;
@@ -382,6 +401,79 @@ void importPhotos(
     report.exifWarnings = (exif.stderr as String).trim();
   }
   tmp.deleteSync(recursive: true);
+}
+
+/// The one name in [listing] closest to [wanted], with the same extension
+/// and at most two characters different, or null if there is not exactly
+/// one.
+String? closestName(String wanted, Iterable<String> listing) {
+  final ext = wanted.split('.').last.toLowerCase();
+  final stem = wanted
+      .substring(0, wanted.length - ext.length - 1)
+      .toLowerCase();
+  final candidates = <String>[];
+  for (final path in listing) {
+    final name = path.split('/').last;
+    if (!name.toLowerCase().endsWith('.$ext')) continue;
+    final other = name.substring(0, name.length - ext.length - 1).toLowerCase();
+    if (editDistance(stem, other, limit: 2) <= 2) candidates.add(path);
+  }
+  return candidates.length == 1 ? candidates.single : null;
+}
+
+/// Levenshtein distance, giving up once it exceeds [limit].
+int editDistance(String a, String b, {required int limit}) {
+  if ((a.length - b.length).abs() > limit) return limit + 1;
+  var previous = List<int>.generate(b.length + 1, (i) => i);
+  for (var i = 1; i <= a.length; i++) {
+    final current = List<int>.filled(b.length + 1, 0)..[0] = i;
+    for (var j = 1; j <= b.length; j++) {
+      final cost = a.codeUnitAt(i - 1) == b.codeUnitAt(j - 1) ? 0 : 1;
+      current[j] = [
+        previous[j] + 1,
+        current[j - 1] + 1,
+        previous[j - 1] + cost,
+      ].reduce((x, y) => x < y ? x : y);
+    }
+    previous = current;
+  }
+  return previous.last;
+}
+
+/// If [pdf] is one page holding one JPEG image, returns that JPEG, extracted
+/// byte for byte. Otherwise, or if the PDF tools are not installed, null.
+File? unwrapPdf(File pdf, Directory scratch) {
+  try {
+    final info = Process.runSync('pdfinfo', [pdf.path]);
+    if (info.exitCode != 0 ||
+        !RegExp(
+          r'^Pages:\s+1$',
+          multiLine: true,
+        ).hasMatch(info.stdout as String)) {
+      return null;
+    }
+    final list = Process.runSync('pdfimages', ['-list', pdf.path]);
+    final rows = (list.stdout as String)
+        .split('\n')
+        .skip(2)
+        .where((l) => l.trim().isNotEmpty)
+        .toList();
+    if (rows.length != 1 || rows.single.split(RegExp(r'\s+'))[9] != 'jpeg') {
+      return null;
+    }
+    final prefix = '${scratch.path}/unwrapped_${pdf.uri.pathSegments.last}';
+    Process.runSync('pdfimages', ['-j', pdf.path, prefix]);
+    final jpeg = File('$prefix-000.jpg');
+    if (!jpeg.existsSync()) return null;
+    final head = jpeg.openSync()..setPositionSync(0);
+    final bytes = head.readSync(2);
+    head.closeSync();
+    return bytes.length == 2 && bytes[0] == 0xFF && bytes[1] == 0xD8
+        ? jpeg
+        : null;
+  } on ProcessException {
+    return null; // pdfinfo or pdfimages is not installed
+  }
 }
 
 String escapeStruct(String s) =>
@@ -498,6 +590,8 @@ class Report {
   int photos = 0, photosUntitled = 0, photosNoPeople = 0, photosSkipped = 0;
   final photosMissing = <String>[];
   final oddDates = <String>[];
+  final matchedByCloseName = <String>[];
+  final unwrapped = <String>[];
   final mediaTypes = <String, int>{};
   final _unmapped = <String, int>{};
   String? exifWarnings;
@@ -511,6 +605,9 @@ class Report {
     'photos: $photos copied, $photosUntitled untitled, $photosNoPeople attached to nobody'
         '${photosSkipped > 0 ? ', $photosSkipped skipped (no backup given)' : ''}',
     if (mediaTypes.isNotEmpty) 'media types: $mediaTypes',
+    for (final m in matchedByCloseName) 'matched by a close name: $m',
+    if (unwrapped.isNotEmpty)
+      'PDFs stored as the single JPEG they wrap: ${unwrapped.length}: ${unwrapped.join(', ')}',
     if (photosMissing.isNotEmpty)
       'photos not found in backup: ${photosMissing.length}: ${photosMissing.take(5).join(', ')}',
     if (oddDates.isNotEmpty)
