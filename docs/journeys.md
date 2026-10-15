@@ -87,13 +87,16 @@ Milestone: 13.
 _Margaret's page has dates, an occupation, two memories and five captioned photos, but
 no story._
 
-The historian chooses **Draft a biography**. A language model writes a few paragraphs
-from what the tree holds, citing nothing it was not given. The draft is shown beside the
-current page; the historian edits it and saves. The history records that the text began
-as a model's draft. The same flow tidies a passage, or weaves loose memories into an
-existing biography.
+In the editor, the historian chooses **Claude: Draft**. The model writes a few
+paragraphs from what the tree holds, adding nothing it was not given, and they appear in
+place of the empty story; undo would take them away again. The historian edits them and
+saves, and the history records that the revision had help.
 
-Milestone: 16 (drafting); 17 (weaving memories, tidying).
+Later, the historian learns about Margaret's teaching years and types the new facts as
+rough notes in the story. They select the notes and choose **Claude: Revise selection**,
+and the notes become a paragraph that fits the page around it.
+
+Milestone: 16; 17 (weaving memories into an existing biography).
 
 ### 6. Add a photo with its back
 

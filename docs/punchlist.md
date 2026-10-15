@@ -8,11 +8,5 @@
 
 ## General
 
-- support nicknames (show "Scotty" after a name in index, ...)
-- consider serving from '/people/howard-j-carew-tbczm8' instead of '/people/p-tbczm8'
-
-## History page
-
-- remove the option to compare two chosen versions
-- selecting a version shows what changed from the version before it, as a diff (git's
-  format, or something a little friendlier)
+Nicknames in the list of people and readable page addresses moved to milestone 18; the
+history page changes moved to milestone 16.
