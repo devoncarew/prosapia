@@ -21,8 +21,8 @@ Working today:
 - Person pages with an infobox of facts, a timeline, photos and full-text search.
 - Sign-in with Google, limited to a tree's invited members, with owner, editor and
   viewer roles.
-- Editing a page as text with a live preview; every save is kept, with page history,
-  comparison and restore.
+- Editing a page as lightly marked text, with a live preview, people and place
+  completion, and every save kept, with page history, comparison and restore.
 - "Add a memory": a quick way to add a dated story to someone's page.
 - Loading an existing tree exported from other genealogy software (GEDCOM), with its
   photos, using command-line tools.
