@@ -16,7 +16,8 @@ import 'tree.dart';
 /// ```
 /// trees/{tree}                 name, version
 ///   members/{email}            role, name
-///   people/{id}                source (the page as written), directory, revision
+///   people/{id}                source (the page as written), directory, revision,
+///                              deleted (when the page has been deleted)
 ///     revisions/{number}       every saved version: source, author, summary, at
 ///   media/{key}                what each file says about itself
 ///   changes/{auto}             the log: author, summary, at, pages
@@ -98,7 +99,11 @@ class FirestoreStore extends TreeStore {
         continue;
       }
       final person = _person(doc.id, data);
-      tree.people[person.id] = person;
+      if (data['deleted'] == true) {
+        tree.deleted[person.id] = person;
+      } else {
+        tree.people[person.id] = person;
+      }
     }
     each(results[1], (data) {
       final media = Media.fromMap(data);
@@ -145,38 +150,48 @@ class FirestoreStore extends TreeStore {
   bool get editable => true;
 
   @override
-  Future<SaveResult> savePerson(
-    Person person, {
-    required int basedOn,
+  Future<SaveResult> saveChange(
+    List<PageWrite> pages, {
     required Member author,
     required String summary,
   }) {
-    final ref = _tree.collection('people').doc(person.id);
-    // The page, its revision, the log entry and the tree's version change
-    // together or not at all.
+    final refs = [
+      for (final w in pages) _tree.collection('people').doc(w.person.id),
+    ];
+    // The pages, their revisions, the log entry and the tree's version
+    // change together or not at all.
     return _db.runTransaction((tx) async {
-      final current = (await tx.get(ref)).data();
-      final revision = current?['revision'] as int? ?? 0;
-      if (revision != basedOn) return SaveResult.conflict(revision);
-      final next = revision + 1;
+      final current = [for (final ref in refs) (await tx.get(ref)).data()];
+      final next = <String, int>{};
+      for (final (i, w) in pages.indexed) {
+        final revision = current[i]?['revision'] as int? ?? 0;
+        if (revision != w.basedOn) {
+          return SaveResult.conflict(revision, conflictPage: w.person.id);
+        }
+        next[w.person.id] = revision + 1;
+      }
       final stamp = {
         'author': author.email,
         'authorName': ?author.name,
         'summary': summary,
         'at': FieldValue.serverTimestamp,
       };
-      tx.set(ref, _personDoc(person, next));
-      tx.set(ref.collection('revisions').doc('$next'), {
-        'number': next,
-        'source': person.source,
-        ...stamp,
-      });
-      tx.set(_tree.collection('changes').doc(), {
-        'pages': {person.id: next},
-        ...stamp,
-      });
+      for (final (i, w) in pages.indexed) {
+        final number = next[w.person.id]!;
+        tx.set(refs[i], {
+          ..._personDoc(w.person, number),
+          if (w.delete) 'deleted': true,
+        });
+        tx.set(refs[i].collection('revisions').doc('$number'), {
+          'number': number,
+          'source': w.delete ? '' : w.person.source,
+          if (w.delete) 'deleted': true,
+          ...stamp,
+        });
+      }
+      tx.set(_tree.collection('changes').doc(), {'pages': next, ...stamp});
       tx.update(_tree, {'version': const FieldValue.increment(1)});
-      return SaveResult.saved(next);
+      return SaveResult.saved(next[pages.first.person.id]!);
     });
   }
 
@@ -211,18 +226,23 @@ class FirestoreStore extends TreeStore {
         .orderBy('at', descending: true)
         .limit(limit)
         .get();
-    return [
-      for (final doc in snapshot.docs)
-        Change(
-          author: doc.data()['author'] as String,
-          authorName: doc.data()['authorName'] as String?,
-          summary: doc.data()['summary'] as String,
-          at: _time(doc.data()['at']),
-          pages: ((doc.data()['pages'] as Map?) ?? const {})
-              .cast<String, int>(),
-        ),
-    ];
+    return [for (final doc in snapshot.docs) _change(doc.id, doc.data())];
   }
+
+  @override
+  Future<Change?> change(String id) async {
+    final data = (await _tree.collection('changes').doc(id).get()).data();
+    return data == null ? null : _change(id, data);
+  }
+
+  static Change _change(String id, Map<String, Object?> data) => Change(
+    id: id,
+    author: data['author'] as String,
+    authorName: data['authorName'] as String?,
+    summary: data['summary'] as String,
+    at: _time(data['at']),
+    pages: ((data['pages'] as Map?) ?? const {}).cast<String, int>(),
+  );
 
   @override
   Future<void> rememberName(Member member, String name) =>
@@ -235,6 +255,7 @@ class FirestoreStore extends TreeStore {
     authorName: data['authorName'] as String?,
     summary: data['summary'] as String,
     at: _time(data['at']),
+    deleted: data['deleted'] == true,
   );
 
   static DateTime _time(Object? value) => value is Timestamp

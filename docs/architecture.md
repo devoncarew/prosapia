@@ -69,9 +69,8 @@ case.
 ```
 trees/{tree}
   members/{google account}     role: owner, editor or viewer
-  people/{p-7k2m9x}            structured facts and the page's markdown
+  people/{p-7k2m9x}            the page as written; a deleted page is marked so
     revisions/{revision}       every saved version: text, author, time, summary
-  unions/{u-2b6n4c}
   sources/{s-1900-census}
   rolls/{r-8d2k5n}
   media/{m-5t1q8z}             where the file is, and what it says about itself
@@ -89,7 +88,6 @@ tree/
   people/
     hughes-margaret-ellen-7k2m9x/
       index.md     (the person's page)
-  unions/    u-2b6n4c.md
   sources/   s-1900-census.md
   media/
     m-5t1q8z.jpg        (a photo's front)

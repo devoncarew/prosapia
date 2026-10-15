@@ -5,6 +5,7 @@
 
 import 'dart:io';
 
+import 'package:prosapia/src/contradictions.dart';
 import 'package:prosapia/src/file_store.dart';
 import 'package:prosapia/src/index.dart';
 import 'package:prosapia/src/render.dart';
@@ -30,6 +31,7 @@ Future<void> main(List<String> args) async {
       ].nonNulls)
         if (!d.understood) 'Date not understood: "${d.raw}"',
       for (final check in render.checksOf(p)) 'To check: $check',
+      for (final c in contradictionsOf(tree, p)) 'Contradiction: ${c.message}',
     ];
     if (issues.isEmpty) continue;
     count++;

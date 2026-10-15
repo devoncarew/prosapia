@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:path/path.dart' as p;
 import 'package:shelf/shelf.dart';
@@ -10,6 +11,7 @@ import 'completion.dart';
 import 'firestore_store.dart' show contentTypes;
 import 'images.dart';
 import 'index.dart';
+import 'page_edits.dart';
 import 'render.dart';
 import 'store.dart';
 import 'tree.dart';
@@ -117,10 +119,14 @@ Handler siteHandler(
 
   router.get('/people/<id>', (Request r, String id) {
     final person = site.tree.people[id];
-    return person == null
-        ? missing(r, 'No person has the id $id.')
-        : html(render(r).person(person));
+    if (person != null) return html(render(r).person(person));
+    final deleted = site.tree.deleted[id];
+    if (deleted != null) return html(render(r).deletedPerson(deleted));
+    return missing(r, 'No person has the id $id.');
   });
+
+  /// A page in the tree, or one that was deleted, for its history.
+  Person? anyPerson(String id) => site.tree.people[id] ?? site.tree.deleted[id];
 
   // ---------------------------------------------------------------- editing
 
@@ -128,24 +134,51 @@ Handler siteHandler(
   Future<Map<String, String>> form(Request r) async =>
       Uri.splitQueryString(await r.readAsString());
 
+  /// A form whose fields may repeat, such as a list of checkboxes.
+  Future<Map<String, List<String>>> formAll(Request r) async =>
+      Uri(query: await r.readAsString()).queryParametersAll;
+
+  /// The member making a change, or null if they may not.
+  Member? editor(Request r) {
+    final member = Sessions.memberOf(r);
+    return site.store.editable && member != null && member.role.canEdit
+        ? member
+        : null;
+  }
+
+  Response notAllowed(Request r) => html(
+    render(r).forbidden(
+      'You can read this tree but not change it. Ask its owner if you would like to edit.',
+    ),
+    status: 403,
+  );
+
   /// Runs [action] for a member who may edit [id]; otherwise answers for it.
+  /// A deleted page can be acted on only when [deleted] is true.
   Future<Response> editing(
     Request r,
     String id,
-    Future<Response> Function(Person, Member) action,
-  ) async {
-    final person = site.tree.people[id];
+    Future<Response> Function(Person, Member) action, {
+    bool deleted = false,
+  }) async {
+    final person = deleted ? anyPerson(id) : site.tree.people[id];
     if (person == null) return missing(r, 'No person has the id $id.');
-    final member = Sessions.memberOf(r);
-    if (!site.store.editable || member == null || !member.role.canEdit) {
-      return html(
-        render(r).forbidden(
-          'You can read this tree but not change it. Ask its owner if you would like to edit.',
-        ),
-        status: 403,
-      );
-    }
+    final member = editor(r);
+    if (member == null) return notAllowed(r);
     return action(person, member);
+  }
+
+  /// Answers a change of several pages that could not be saved because one
+  /// of them had changed meanwhile.
+  Response changedMeanwhile(Request r, SaveResult result) {
+    final page = anyPerson(result.conflictPage ?? '');
+    return html(
+      render(r).message(
+        'Not saved',
+        '${page == null ? 'A page' : "${page.name}'s page"} was changed by someone else at the same time, so nothing was saved. Look at it again and retry.',
+      ),
+      status: 409,
+    );
   }
 
   router.get(
@@ -170,7 +203,7 @@ Handler siteHandler(
         person.directory,
         (await r.readAsString()).replaceAll('\r\n', '\n'),
       );
-      return html(render(r).personArticle(draft, withMedia: false));
+      return html(render(r).personArticle(draft, preview: true));
     }),
   );
 
@@ -291,7 +324,7 @@ Handler siteHandler(
   );
 
   router.get('/people/<id>/history', (Request r, String id) async {
-    final person = site.tree.people[id];
+    final person = anyPerson(id);
     if (person == null) return missing(r, 'No person has the id $id.');
     return html(render(r).history(person, await site.store.history(id)));
   });
@@ -301,7 +334,7 @@ Handler siteHandler(
     String id,
     String number,
   ) async {
-    final person = site.tree.people[id];
+    final person = anyPerson(id);
     final revision = person == null
         ? null
         : await site.store.revision(id, int.parse(number));
@@ -318,7 +351,7 @@ Handler siteHandler(
   });
 
   router.get('/people/<id>/compare', (Request r, String id) async {
-    final person = site.tree.people[id];
+    final person = anyPerson(id);
     final from = int.tryParse(r.url.queryParameters['from'] ?? '');
     final to = int.tryParse(r.url.queryParameters['to'] ?? '');
     if (person == null || from == null || to == null) {
@@ -337,7 +370,9 @@ Handler siteHandler(
     (Request r, String id) => editing(r, id, (person, member) async {
       final number = int.tryParse((await form(r))['number'] ?? '');
       final old = number == null ? null : await site.store.revision(id, number);
-      if (old == null) return missing(r, 'There is no such version.');
+      if (old == null || old.deleted) {
+        return missing(r, 'There is no such version.');
+      }
       if (old.source.startsWith('---')) {
         return html(
           render(r).forbidden(
@@ -357,8 +392,314 @@ Handler siteHandler(
       );
       await site.reload();
       return seeOther(result.saved ? '/people/$id' : '/people/$id/history');
+    }, deleted: true),
+  );
+
+  // ----------------------------------------------------------- page actions
+
+  /// Who the new page for a name in [from]'s [kind] line starts with: for
+  /// a child, its parents; for a sibling, the shared parents; for a parent,
+  /// the other parent as their partner.
+  ({String field, List<Person> fixed, List<(Person, bool)> optional})
+  startingRelatives(Person from, String kind) {
+    List<Person> people(List<String> ids) => [
+      for (final id in ids) site.tree.people[id]!,
+    ];
+    switch (kind) {
+      case 'children':
+        final partners = people(site.index.partnersOf(from.id));
+        return (
+          field: 'parents',
+          fixed: [from],
+          optional: [for (final p in partners) (p, partners.length == 1)],
+        );
+      case 'siblings':
+        return (
+          field: 'parents',
+          fixed: const [],
+          optional: [
+            for (final p in people(site.index.parentsOf(from.id))) (p, true),
+          ],
+        );
+      case 'parents':
+        final parents = people(site.index.parentsOf(from.id));
+        return (
+          field: 'partners',
+          fixed: const [],
+          optional: [for (final p in parents) (p, parents.length == 1)],
+        );
+      default:
+        return (field: 'parents', fixed: const [], optional: const []);
+    }
+  }
+
+  Response addForm(
+    Request r,
+    Person from,
+    String kind,
+    String name, {
+    String born = '',
+    String? error,
+    int status = 200,
+  }) {
+    final context = startingRelatives(from, kind);
+    return html(
+      render(r).addPerson(
+        from,
+        kind: kind,
+        name: name,
+        similar: site.completion.similar(name),
+        completion: site.completion,
+        field: context.field,
+        fixed: context.fixed,
+        optional: context.optional,
+        born: born,
+        error: error,
+      ),
+      status: status,
+    );
+  }
+
+  /// Whether [from]'s page still names [name] in a [kind] line.
+  bool stillNamed(Person from, String kind, String name) =>
+      nameToReference(from.source, kind, name, '@x') != null;
+
+  router.get(
+    '/people/<id>/add',
+    (Request r, String id) => editing(r, id, (from, member) async {
+      final kind = r.url.queryParameters['kind'] ?? '';
+      final name = r.url.queryParameters['name'] ?? '';
+      if (!stillNamed(from, kind, name)) {
+        return missing(r, "${from.name}'s page does not name $name.");
+      }
+      return addForm(r, from, kind, name);
     }),
   );
+
+  router.post(
+    '/people/<id>/add',
+    (Request r, String id) => editing(r, id, (from, member) async {
+      final fields = await formAll(r);
+      String field(String name) => (fields[name]?.firstOrNull ?? '').trim();
+      final kind = field('kind'), name = field('name');
+      final newName = field('new_name').replaceAll(RegExp(r'\s+'), ' ');
+      final born = field('born');
+      final basedOn = int.tryParse(field('based_on')) ?? from.revision;
+      if (newName.isEmpty) {
+        return addForm(
+          r,
+          from,
+          kind,
+          name,
+          born: born,
+          error: 'The new page needs a name.',
+          status: 422,
+        );
+      }
+
+      final newId = newPersonId(site.tree);
+      final directory = directoryFor(newName, newId);
+      final reference = '@$directory';
+      final origin = nameToReference(from.source, kind, name, reference);
+      if (origin == null) {
+        return missing(r, "${from.name}'s page no longer names $name.");
+      }
+      final context = startingRelatives(from, kind);
+      final chosen = [
+        for (final id in fields[context.field] ?? const <String>[])
+          ?site.tree.people[id],
+      ];
+      final source = newPage(
+        name: newName,
+        born: born,
+        parents: [
+          if (context.field == 'parents')
+            for (final p in chosen) p.reference,
+        ],
+        partners: [
+          if (context.field == 'partners')
+            for (final p in chosen) p.reference,
+        ],
+      );
+      final writes = [
+        PageWrite(Person.fromSource(newId, directory, source), basedOn: 0),
+        PageWrite(
+          Person.fromSource(from.id, from.directory, origin),
+          basedOn: basedOn,
+        ),
+      ];
+      // A relative chosen for the new page may name them by the same plain
+      // name: both parents may list the child. Link that too.
+      for (final relative in chosen) {
+        if (relative.id == from.id) continue;
+        final linked = nameToReference(
+          relative.source,
+          context.field == 'parents' ? 'children' : 'partner',
+          name,
+          reference,
+        );
+        if (linked == null) continue;
+        writes.add(
+          PageWrite(
+            Person.fromSource(relative.id, relative.directory, linked),
+            basedOn: relative.revision,
+          ),
+        );
+      }
+      final result = await site.store.saveChange(
+        writes,
+        author: member,
+        summary: 'Add a page for $newName',
+      );
+      await site.reload();
+      if (!result.saved) return changedMeanwhile(r, result);
+      return seeOther('/people/$newId');
+    }),
+  );
+
+  router.post(
+    '/people/<id>/link',
+    (Request r, String id) => editing(r, id, (from, member) async {
+      final fields = await form(r);
+      final kind = fields['kind'] ?? '', name = fields['name'] ?? '';
+      final target = site.tree.people[fields['target'] ?? ''];
+      if (target == null) return missing(r, 'There is no such person.');
+      final linked = nameToReference(from.source, kind, name, target.reference);
+      if (linked == null) {
+        return missing(r, "${from.name}'s page no longer names $name.");
+      }
+      final result = await site.store.savePerson(
+        Person.fromSource(from.id, from.directory, linked),
+        basedOn: int.tryParse(fields['based_on'] ?? '') ?? from.revision,
+        author: member,
+        summary: 'Link $name to ${target.name}\'s page',
+      );
+      await site.reload();
+      if (!result.saved) return changedMeanwhile(r, result);
+      return seeOther('/people/${from.id}');
+    }),
+  );
+
+  /// The pages, other than [p]'s, that refer to [p].
+  List<Person> mentioning(Person p) => [
+    for (final other in site.tree.people.values)
+      if (other.id != p.id && mentions(other.source, p.id)) other,
+  ]..sort((a, b) => a.name.compareTo(b.name));
+
+  router.get(
+    '/people/<id>/delete',
+    (Request r, String id) => editing(
+      r,
+      id,
+      (person, member) async =>
+          html(render(r).deletePerson(person, mentioning(person))),
+    ),
+  );
+
+  router.post(
+    '/people/<id>/delete',
+    (Request r, String id) => editing(r, id, (person, member) async {
+      final fields = await form(r);
+      final summary = (fields['summary'] ?? '').trim();
+      final result = await site.store.saveChange(
+        [
+          PageWrite.delete(
+            person,
+            basedOn: int.tryParse(fields['based_on'] ?? '') ?? person.revision,
+          ),
+          // Other pages keep what they said, with the plain name.
+          for (final other in mentioning(person))
+            PageWrite(
+              Person.fromSource(
+                other.id,
+                other.directory,
+                referencesToName(other.source, person.id, person.name),
+              ),
+              basedOn: other.revision,
+            ),
+        ],
+        author: member,
+        summary: summary.isEmpty ? "Delete ${person.name}'s page" : summary,
+      );
+      await site.reload();
+      if (!result.saved) return changedMeanwhile(r, result);
+      return seeOther('/people/$id');
+    }),
+  );
+
+  router.post(
+    '/people/<id>/resolve',
+    (Request r, String id) => editing(r, id, (person, member) async {
+      final fields = await form(r);
+      final page = site.tree.people[fields['page'] ?? ''];
+      final kind = fields['kind'] ?? '';
+      final other = fields['other'] ?? '';
+      final changed = page == null
+          ? null
+          : removeRelation(page.source, kind, other);
+      if (page == null || changed == null) return seeOther('/people/$id');
+      final otherName = site.tree.people[other]?.name ?? other;
+      final result = await site.store.savePerson(
+        Person.fromSource(page.id, page.directory, changed),
+        basedOn: int.tryParse(fields['based_on'] ?? '') ?? page.revision,
+        author: member,
+        summary:
+            'Remove $otherName from the ${kind[0].toUpperCase()}${kind.substring(1)} line',
+      );
+      await site.reload();
+      if (!result.saved) return changedMeanwhile(r, result);
+      return seeOther('/people/$id');
+    }),
+  );
+
+  router.post('/changes/<id>/undo', (Request r, String id) async {
+    final member = editor(r);
+    if (member == null) return notAllowed(r);
+    final change = await site.store.change(id);
+    if (change == null) return missing(r, 'There is no such change.');
+    Response refuse(String why) =>
+        html(render(r).message('Not undone', why), status: 409);
+
+    // Each page goes back to the version before the change, provided no
+    // one has changed it since.
+    final writes = <PageWrite>[];
+    for (final MapEntry(key: page, value: number) in change.pages.entries) {
+      final current = anyPerson(page);
+      if (current == null || current.revision != number) {
+        return refuse(
+          '${current?.name ?? 'A page'} has been changed again since, so this '
+          'change cannot be undone in one step. Edit the page by hand, or '
+          'undo the later changes first.',
+        );
+      }
+      final before = number <= 1
+          ? null
+          : await site.store.revision(page, number - 1);
+      if (before == null || before.deleted) {
+        writes.add(PageWrite.delete(current, basedOn: number));
+      } else if (before.source.startsWith('---')) {
+        return refuse(
+          "The version of ${current.name}'s page before this change is in "
+          'the page format Prosapia used before, and cannot be restored.',
+        );
+      } else {
+        writes.add(
+          PageWrite(
+            Person.fromSource(page, current.directory, before.source),
+            basedOn: number,
+          ),
+        );
+      }
+    }
+    final result = await site.store.saveChange(
+      writes,
+      author: member,
+      summary: 'Undo “${change.summary}”',
+    );
+    await site.reload();
+    if (!result.saved) return changedMeanwhile(r, result);
+    return seeOther('/changes');
+  });
 
   // Completion for the editor and the search box.
   Response json(Object value) => Response.ok(
@@ -439,4 +780,17 @@ Handler siteHandler(
   };
   if (sessions != null) handler = sessions.middleware(handler);
   return handler;
+}
+
+/// A new person id, not used by anyone in [tree] or deleted from it.
+String newPersonId(Tree tree, [Random? random]) {
+  const alphabet = '23456789abcdefghjkmnpqrstvwxyz'; // no 0/o, 1/i/l, u
+  final rng = random ?? Random.secure();
+  while (true) {
+    final id =
+        'p-${List.generate(6, (_) => alphabet[rng.nextInt(alphabet.length)]).join()}';
+    if (!tree.people.containsKey(id) && !tree.deleted.containsKey(id)) {
+      return id;
+    }
+  }
 }

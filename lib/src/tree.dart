@@ -10,6 +10,10 @@ class Tree {
   final people = <String, Person>{};
   final media = <String, Media>{};
 
+  /// Pages that were deleted, as they were last written. They are not part
+  /// of the tree, but their history is kept and they can be brought back.
+  final deleted = <String, Person>{};
+
   /// Records that could not be read, with the reason.
   final problems = <String>[];
 }
