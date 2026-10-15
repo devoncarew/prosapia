@@ -76,6 +76,26 @@ family in [place: Cardiff, Wales].
 - **Learned in context.** Syntax highlighting and completion in the editor, and a short
   legend beside it.
 
+### People and relationships in the text
+
+Direction set, to be built in milestone 14.
+
+- **Relationships are typed in fact lines,** on either person's page: `Parents:`,
+  `Children:`, `Partner:`, `Siblings:`.
+- **Either side counts.** A relationship stated on either person's page holds, and shows
+  on both pages. If the two pages contradict each other, the contradiction is flagged
+  for someone to resolve; it is never corrected automatically.
+- **A person can exist without a page.** A plain name in a relationship line, such as
+  `Children: @carew-howard-joseph-tbczm8, Mary Ducker`, is a person known only by name.
+  It shows as unresolved, with an action to create their page. Creating it fills in what
+  is known from the context and replaces the name with an `@` reference.
+- **Text first, actions where text is awkward.** Creating a page from a name, deleting a
+  person, merging two records and resolving a contradiction are page actions; adding and
+  changing relationships is typing.
+
+This replaces the earlier rule that a relationship is stored once, on the child. The
+import is unchanged: it still creates a page for everyone in the export.
+
 Settled since:
 
 - **The readable id form follows `@`:** `@hughes-thomas-3f8d1a`, the person's directory
@@ -108,9 +128,9 @@ Still to settle in milestone 13:
   tree, so they are weaker. Most people in a family tree are in none of these systems.
 - **Entries are sections** in the person's page: a heading with an optional date, then
   prose and images. The date-in-heading convention is all a timeline generator needs.
-- **Relationships are stored once.** A child lists its parents; a partnership is its own
-  small record. Siblings, children and descendants are derived. This avoids two files
-  that must be edited in step.
+- **Relationships are stored once.** This was the original rule: a child lists its
+  parents, and a partnership is its own record. Superseded by "either side counts"; see
+  People and relationships in the text above.
 - **Uncertain dates use the GEDCOM 7.0 date grammar** (`ABT 1961`, `BET 1880 AND 1885`),
   so import and export need no translation.
 - **Places are free text** in the first version, as written in the source.

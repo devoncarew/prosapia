@@ -43,26 +43,9 @@ Goal: the family historian keeps their real tree comfortably, on a desktop, with
 YAML. Nobody else is invited yet; the real tree is loaded and used privately. Editing on
 a phone is not a goal yet; viewing on one is.
 
-#### Milestone 14: adding people and relationships
-
-Journeys 2 and 3.
-
-- Add a child, parent, partner or sibling from a person's page, in a small dialog with
-  only a name required; the other parent or partnership is offered from what the tree
-  holds.
-- Before creating someone, check for an existing person with a similar name and dates,
-  and offer to link to them instead.
-- Edit partnerships: dates, places, how and when they ended, their order.
-- Remove a person, with their links, as a change that can be undone.
-- A change that touches several records (a new person plus their links) is saved and
-  undone as one.
-
-Done when: a new child can be added to an existing couple in under a minute, appears
-among both parents' children and their siblings, and can be undone in one step.
-
 #### Milestone 13: the page syntax and its editor
 
-Journeys 2, 4 and 8. The syntax is decided in
+Journeys 4 and 8. The syntax is decided in
 [content-model.md](content-model.md#page-syntax): facts as "Name: value" lines, `@`
 references to people, `[date: …]` and `[place: …]`.
 
@@ -84,6 +67,30 @@ references to people, `[date: …]` and `[place: …]`.
 
 Done when: a birth date can be corrected and an occupation added by editing fact lines,
 a person can be referenced by typing `@` and part of their name, and no page shows YAML.
+
+#### Milestone 14: relationships in the text
+
+Journeys 2 and 3. Builds on the page syntax from milestone 13; the design is in
+[content-model.md](content-model.md#people-and-relationships-in-the-text).
+
+- Relationship lines: `Parents:`, `Children:`, `Partner:` (with a marriage date and
+  place) and `Siblings:`, each taking `@` references and plain names.
+- A relationship stated on either person's page counts, and shows on both. A
+  contradiction between the two pages is flagged, never corrected automatically.
+- A plain name in a relationship line is a person without a page. It shows as
+  unresolved, with an action to create their page.
+- Creating a page from a name fills in what the context knows (made from a `Children:`
+  line, the page starts with its parents) and replaces the name with an `@` reference.
+  Before creating it, check for an existing person with a similar name and dates, and
+  offer to link to them instead.
+- Page actions for what text does badly: delete a person (the near-empty pages from the
+  import are good test cases), and resolve a flagged contradiction.
+- A change that touches several pages (a new page plus the reference that names it) is
+  saved, and undone, as one.
+
+Done when: a child can be added to an existing couple by typing a name in a `Children:`
+line, shows among both parents' children and among their siblings, can be given a page
+in one action, and every step can be undone.
 
 ### Release B: help and photos
 
