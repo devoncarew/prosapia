@@ -1116,8 +1116,11 @@ a.deleted { color: var(--muted); text-decoration: line-through; }
 .resolve button { font-size: 13px; }
 .help { margin-left: auto; display: flex; gap: 6px; align-items: center; }
 .help.off { font: 13px system-ui, sans-serif; color: var(--muted); }
-.help button { font: 13px system-ui, sans-serif; padding: 4px 10px; }
-.help button:disabled { opacity: 0.45; }
+.tabs .help button, .help button { font: 13px system-ui, sans-serif; padding: 4px 10px; margin: 0 0 4px;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text);
+  cursor: pointer; }
+.tabs .help button:hover:not(:disabled) { border-color: var(--link); color: var(--link); }
+.tabs .help button:disabled { opacity: 0.45; cursor: default; }
 .help-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 8px 12px; margin: 8px 0;
   border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font: 14px system-ui, sans-serif; }
 .help-bar[hidden] { display: none; }
