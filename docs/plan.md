@@ -40,31 +40,8 @@ Releases A to C come before relatives are invited. Release D follows.
 ### Release A: the core of editing
 
 Goal: the family historian keeps their real tree comfortably, on a desktop, without
-YAML. Nobody else is invited yet, so the real tree can be loaded early and used
-privately. Editing on a phone is not a goal yet; viewing on one is.
-
-#### Milestone 12: loading the real family tree
-
-A family arrives with a GEDCOM file and a backup holding its media; the sample backup is
-about 1 GB. Loading it now means the editing work that follows is shaped by real data,
-while only the owner can see it.
-
-- Decide the process. The simplest is that the owner runs the existing tools on their
-  own machine, pointed at the production project. Alternatives are uploading the backup
-  to a storage bucket for a one-off job to unpack, or selecting only the referenced
-  media in the browser.
-- Write the process down as steps someone else could follow, including the credentials
-  it needs.
-- Make the loader safe to rerun: skip media already uploaded, and say clearly that it
-  replaces the tree's records.
-- Apply the media rules on the way in: files over the size limit are skipped and listed,
-  and the file types the backup mislabels are handled.
-
-Done when: the real family tree, with its photos, is in the production project, visible
-only to its owner, loaded by following the written steps.
-
-This is separate from milestone 7, which imports a GEDCOM file through the browser into
-a tree already in use.
+YAML. Nobody else is invited yet; the real tree is loaded and used privately. Editing on
+a phone is not a goal yet; viewing on one is.
 
 #### Milestone 14: adding people and relationships
 
@@ -315,6 +292,10 @@ Uses not yet scheduled; the rules every use follows are in
 
 Newest first.
 
+- **Milestone 12, loading the real family tree.** The Carew family tree, 203 people and
+  135 photos and documents, is loaded into the production project as tree `carew`,
+  visible only to its owner; the loader is now safe to rerun, and
+  [loading.md](loading.md) gives the steps.
 - **Milestone 11, Firebase project.** The project `prosapia-ea818` has billing with a
   budget alert, Firestore and Cloud Storage in `us-west1`, Google sign-in, a registered
   web app, and deny-all rules; the server, run locally with a developer's own `gcloud`
