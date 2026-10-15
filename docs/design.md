@@ -57,11 +57,11 @@ shape every use:
 - **The history says so.** A revision saved with a model's help is marked "with help
   from" the model, so anyone reading the history can tell.
 
-The one-line summary of a change is the exception: a model may write it after the save,
-with no review. It describes a change rather than adding to the record. Each change
-records whether its summary was written by a model, but entries are not marked one by
-one; pages that list changes carry a single note, such as "Change summaries by Claude
-Haiku".
+The one-line summary of a change is the exception: a model may write it as the change is
+saved, with no review. It describes a change rather than adding to the record. Each
+change records whether its summary was written by a model, but entries are not marked
+one by one; pages that list changes carry a single note, such as "Change summaries by
+Claude Haiku".
 
 What may be sent to a model about living people is open; it is settled in milestone 16,
 before any of their pages are sent.

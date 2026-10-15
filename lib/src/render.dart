@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:markdown/markdown.dart' as md;
 
+import 'claude.dart';
 import 'completion.dart';
 import 'contradictions.dart';
 import 'dates.dart';
@@ -42,7 +43,7 @@ class Renderer {
 <body>
 <header>
   <a class="site" href="/">${esc(tree.name)}</a>
-  <nav><a href="/">People</a> <a href="/media">Photos</a>${editable ? ' <a href="/changes">Recent changes</a>' : ''}</nav>
+  <nav><a href="/">People</a> <a href="/media">Photos</a>${editable ? ' <a href="/changes">Recent changes</a>' : ''}${_canEdit && viewer!.role == Role.owner ? ' <a href="/settings">Settings</a>' : ''}</nav>
   <form action="/search" class="search"><input type="search" name="q" autocomplete="off" value="${esc(query)}" placeholder="Search" aria-label="Search"></form>
   ${viewer == null ? '' : '<form class="account" method="post" action="/sign-out"><span title="${esc(viewer!.email)} · ${viewer!.role.name}">${esc(viewer!.name ?? viewer!.email)}</span> <button>Sign out</button></form>'}
 </header>
@@ -628,6 +629,8 @@ $body
     String summary = '',
     String? error,
     String? conflict,
+    bool help = false,
+    String? helpedBy,
   }) {
     return page('Edit ${p.name}', '''
 <h1>Edit: ${esc(p.name)}</h1>
@@ -635,10 +638,17 @@ ${conflict ?? ''}
 ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
 <form class="editor" method="post" action="/people/${p.id}/edit" data-preview="/people/${p.id}/preview">
   <input type="hidden" name="based_on" value="$basedOn">
+  <input type="hidden" name="helped_by" value="${esc(helpedBy ?? '')}">
   <div class="tabs" role="tablist">
     <button type="button" role="tab" id="tab-write" aria-selected="true" aria-controls="panel-write">Write</button>
     <button type="button" role="tab" id="tab-preview" aria-selected="false" aria-controls="panel-preview">Preview</button>
+    ${help ? '''<span class="help" data-url="/people/${p.id}/help">
+      <button type="button" data-request="draft" title="Write the story from the facts, memories and photo captions">Claude: Draft</button>
+      <button type="button" data-request="revise" title="Rewrite the whole story">Claude: Revise…</button>
+      <button type="button" data-request="selection" title="Rewrite the selected text" disabled>Claude: Revise selection</button>
+    </span>''' : ''}
   </div>
+  <div class="help-bar" hidden role="status"></div>
   <div class="tab-panel" id="panel-write" role="tabpanel" aria-labelledby="tab-write">
     <textarea id="source" name="source" spellcheck="true" required aria-label="Page text">${esc(source)}</textarea>
   </div>
@@ -647,9 +657,9 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
   </div>
   <div class="save">
     <label for="summary">What did you change?</label>
-    <input id="summary" name="summary" value="${esc(summary)}" maxlength="200" required placeholder="Added her years in Wales">
-    <a class="button" href="/people/${p.id}">Cancel</a>
-    <button class="primary" title="Save (⌘ Enter)">Save <kbd>⌘ ⏎</kbd></button>
+    <input id="summary" name="summary" value="${esc(summary)}" maxlength="200"${help ? ' placeholder="Optional: Claude Haiku writes a summary if this is empty"' : ' required placeholder="Added her years in Wales"'}>
+    <a class="button" href="/people/${p.id}">Discard</a>
+    <button class="primary" title="Publish (⌘ Enter)">Publish <kbd>⌘ ⏎</kbd></button>
   </div>
   <p class="hint">Facts first, one per line, starting with <code>Name:</code>; then a blank line and the story.</p>
   <details class="legend" open>
@@ -790,19 +800,23 @@ ${diff(before, theirs.source)}
     String date = '',
     String text = '',
     String? error,
+    bool help = false,
   }) => page('Add a memory of ${p.name}', '''
 <h1>Add a memory of ${esc(p.name)}</h1>
 <p class="lead">A story, a trip, something you remember. It is added to the end of the page as its own section; nothing else on the page changes.</p>
 ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
 <form class="memory" method="post" action="/people/${p.id}/memory">
+  <input type="hidden" name="helped_by" value="">
   <label for="title">Title</label>
   <input id="title" name="title" value="${esc(title)}" required maxlength="120" placeholder="Trip to Wales">
   <label for="date">When, if you know. A year is enough.</label>
   <input id="date" name="date" value="${esc(date)}" maxlength="40" placeholder="1923">
   <label for="text">The memory</label>
   <textarea id="text" name="text" required spellcheck="true">${esc(text)}</textarea>
+  ${help ? '<div class="help tidy" data-url="/people/${p.id}/memory/tidy"><button type="button">Claude: Tidy up</button></div><div class="help-bar" hidden role="status"></div>' : ''}
   <div class="save"><button class="primary">Add</button> <a href="/people/${p.id}">Cancel</a></div>
 </form>
+${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
 ''');
 
   String history(Person p, List<Revision> revisions) {
@@ -814,17 +828,18 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
       return page('History of ${p.name}', sb.toString());
     }
     sb.write(
-      '<p class="lead">${revisions.length} saved ${revisions.length == 1 ? 'version' : 'versions'}, newest first. Pick two to compare.</p>',
+      '<p class="lead">${revisions.length} saved ${revisions.length == 1 ? 'version' : 'versions'}, newest first. Choose one to see what it changed.</p>',
     );
-    sb.write('<form action="/people/${p.id}/compare"><table class="history">');
+    sb.write('<table class="history">');
     for (final (i, r) in revisions.indexed) {
+      final helped = Model.byId(r.helpedBy);
       sb.write(
         '<tr>'
-        '<td><input type="radio" name="from" value="${r.number}" aria-label="Compare from version ${r.number}"${i == 1 || revisions.length == 1 ? ' checked' : ''}></td>'
-        '<td><input type="radio" name="to" value="${r.number}" aria-label="Compare to version ${r.number}"${i == 0 ? ' checked' : ''}></td>'
         '<td><a href="/people/${p.id}/revisions/${r.number}">${time(r.at)}</a></td>'
         '<td>${esc(r.by)}</td>'
-        '<td>${esc(r.summary)}${r.deleted
+        '<td>${esc(r.summary)}'
+        '${helped == null ? '' : ' <span class="years">(with help from ${esc(helped.name)})</span>'}'
+        '${r.deleted
             ? ' <span class="years">(page deleted)</span>'
             : i == 0
             ? ' <span class="years">(current)</span>'
@@ -832,35 +847,46 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
         '</tr>',
       );
     }
-    sb.write(
-      '</table>${revisions.length > 1 ? '<p><button>Compare</button></p>' : ''}</form>',
-    );
+    sb.write('</table>');
+    sb.write(_summaryNote(revisions.map((r) => r.summaryBy)));
     return page('History of ${p.name}', sb.toString());
   }
 
+  /// The single note on a page listing changes whose summaries a model
+  /// wrote. Entries are not marked one by one.
+  String _summaryNote(Iterable<String?> writers) {
+    final names = {
+      for (final id in writers.nonNulls) Model.byId(id)?.name ?? id,
+    };
+    return names.isEmpty
+        ? ''
+        : '<p class="meta">Change summaries by ${esc(names.join(' and '))}.</p>';
+  }
+
+  /// One saved version, and what it changed from the version before it.
   String revision(
     Person p,
     Revision r, {
+    Revision? previous,
     required bool isCurrent,
-  }) => page('${p.name}, version ${r.number}', '''
+  }) {
+    final helped = Model.byId(r.helpedBy);
+    return page('${p.name}, version ${r.number}', '''
 <h1>${personLink(p.id)}: version ${r.number}</h1>
-<p class="lead">Saved ${time(r.at)} by ${esc(r.by)}: “${esc(r.summary)}”. <a href="/people/${p.id}/history">All versions</a></p>
+<p class="lead">Saved ${time(r.at)} by ${esc(r.by)}${helped == null ? '' : ', with help from ${esc(helped.name)}'}: “${esc(r.summary)}”. <a href="/people/${p.id}/history">All versions</a></p>
 ${r.deleted
-      ? '<p class="lead">This version deleted the page.</p>'
-      : isCurrent
-      ? '<p class="lead">This is the current version.</p>'
-      : _canEdit
-      ? '<form method="post" action="/people/${p.id}/restore"><input type="hidden" name="number" value="${r.number}"><button>Restore this version</button> <span class="years">The current text is kept in the history.</span></form>'
-      : ''}
-<pre class="source">${esc(r.source)}</pre>
+        ? '<p class="lead">This version deleted the page.</p>'
+        : isCurrent
+        ? '<p class="lead">This is the current version.</p>'
+        : _canEdit
+        ? '<form method="post" action="/people/${p.id}/restore"><input type="hidden" name="number" value="${r.number}"><button>Restore this version</button> <span class="years">The current text is kept in the history.</span></form>'
+        : ''}
+<h2>What changed</h2>
+${r.number == 1 ? '<p class="meta">The first version of the page.</p>' : ''}
+${diff(previous?.source ?? '', r.source)}
+${r.deleted ? '' : '<details class="whole"><summary>The whole page as it was</summary><pre class="source">${esc(r.source)}</pre></details>'}
 ''');
-
-  String compare(Person p, Revision from, Revision to) =>
-      page('Compare versions of ${p.name}', '''
-<h1>${personLink(p.id)}: version ${from.number} to ${to.number}</h1>
-<p class="lead">${from.number == 0 ? 'From before the page existed' : 'From <a href="/people/${p.id}/revisions/${from.number}">${time(from.at)}</a> by ${esc(from.by)}'}, to <a href="/people/${p.id}/revisions/${to.number}">${time(to.at)}</a> by ${esc(to.by)}. <a href="/people/${p.id}/history">All versions</a></p>
-${diff(from.source, to.source)}
-''');
+  }
 
   /// A line-by-line comparison, with unchanged stretches folded away.
   String diff(String before, String after) {
@@ -912,7 +938,7 @@ ${diff(from.source, to.source)}
             : c.pages.entries
                   .map(
                     (e) =>
-                        '${personLink(e.key)} <a class="years" href="/people/${e.key}/compare?from=${e.value - 1}&amp;to=${e.value}">(what changed)</a>',
+                        '${personLink(e.key)} <a class="years" href="/people/${e.key}/revisions/${e.value}">(what changed)</a>',
                   )
                   .join(', ');
         final undo = _undoable(c)
@@ -923,6 +949,7 @@ ${diff(from.source, to.source)}
         );
       }
       sb.write('</table>');
+      sb.write(_summaryNote(changes.map((c) => c.summaryBy)));
     }
     return page('Recent changes', sb.toString());
   }
@@ -987,6 +1014,24 @@ ${diff(from.source, to.source)}
 </body>
 </html>
 ''';
+
+  /// The owner's settings for the tree: help from Claude.
+  String settings(
+    HelpSettings help, {
+    required double spent,
+    required bool available,
+  }) => page('Settings', '''
+<h1>Settings</h1>
+<h2>Help from Claude</h2>
+<p>Members who can edit may ask Claude to draft or revise a page's story, and to tidy a memory. The text replaces what Claude was asked to act on in the editor, and nothing is saved until the member publishes it. Change summaries left empty are written by Claude Haiku.</p>
+${available ? '' : '<p class="message">This server has no Anthropic API key, so help is not available whatever is set here. Set <code>ANTHROPIC_API_KEY</code> where the server runs.</p>'}
+<form class="memory" method="post" action="/settings">
+  <label class="check"><input type="checkbox" name="help"${help.enabled ? ' checked' : ''}> Members may ask Claude for help</label>
+  <label for="monthly_limit">Monthly limit, in US dollars</label>
+  <input id="monthly_limit" name="monthly_limit" type="number" min="0" step="1" value="${help.monthlyLimit.toStringAsFixed(0)}">
+  <p class="hint">Spent this month: \$${spent.toStringAsFixed(2)}. When the limit is reached, help stops until the next month.</p>
+  <div class="save"><button class="primary">Save</button></div>
+</form>''');
 
   /// A short page that explains why something could not be done.
   String message(String title, String what) =>
@@ -1069,6 +1114,21 @@ a.deleted { color: var(--muted); text-decoration: line-through; }
 .resolve { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
 .resolve form { margin: 0; }
 .resolve button { font-size: 13px; }
+.help { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.help button { font: 13px system-ui, sans-serif; padding: 4px 10px; }
+.help button:disabled { opacity: 0.45; }
+.help-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 8px 12px; margin: 8px 0;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font: 14px system-ui, sans-serif; }
+.help-bar.error { border-color: #b3261e; }
+.help-bar input { flex: 1; min-width: 200px; font: 14px system-ui, sans-serif; padding: 5px 8px;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); }
+.cm-helped { background: rgba(140, 90, 220, 0.14); }
+textarea.helped { background: rgba(140, 90, 220, 0.08); }
+.tidy { margin: 8px 0 0; }
+label.check { display: flex; gap: 8px; align-items: center; color: var(--text); font-size: 15px; }
+label.check input { width: auto; }
+.whole { margin-top: 16px; font: 14px system-ui, sans-serif; }
+.whole summary { cursor: pointer; color: var(--muted); }
 .similar { list-style: none; padding: 0; font: 15px/1.5 system-ui, sans-serif; }
 .similar li { margin-bottom: 8px; }
 .similar button { margin-left: 8px; font-size: 13px; }

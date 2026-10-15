@@ -78,9 +78,9 @@ Journeys 5 and 7. The rules every use follows are in
 - **Replace, then undo.** The model's text replaces what it acted on in the editor as
   one step, so undo restores the original exactly; the new text stays marked until it is
   kept or undone. Nothing is saved until the person saves.
-- **Automatic change summaries.** After a save, the fast model writes the one-line
-  summary, so the editor need not; one typed by the editor is kept as written. The
-  editor's actions become Publish and Discard.
+- **Automatic change summaries.** When a change is saved without a summary, the fast
+  model writes it, so the editor need not; one typed by the editor is kept as written.
+  The editor's actions become Publish and Discard.
 - **The history.** A revision saved with help from the model says so ("with help from
   Claude"). Model-written summaries are not marked one by one; Recent changes and the
   history carry one note, "Change summaries by Claude Haiku". Selecting a version shows

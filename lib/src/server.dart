@@ -6,7 +6,9 @@ import 'package:path/path.dart' as p;
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
+import 'assist.dart';
 import 'auth.dart';
+import 'claude.dart';
 import 'completion.dart';
 import 'firestore_store.dart' show contentTypes;
 import 'images.dart';
@@ -70,6 +72,7 @@ Handler siteHandler(
   Site site,
   DisplayCopies copies, {
   Sessions? sessions,
+  Assistant? assistant,
   String assets = 'web/dist',
 }) {
   final router = Router();
@@ -80,6 +83,47 @@ Handler siteHandler(
     viewer: Sessions.memberOf(r),
     editable: site.store.editable,
   );
+
+  /// Why members cannot ask the model for help now, or null if they can.
+  Future<String?> helpUnavailable() async {
+    if (assistant == null || !site.store.editable) {
+      return 'Help from Claude is not set up on this server.';
+    }
+    final settings = await site.store.helpSettings();
+    if (!settings.enabled) {
+      return 'An owner has not switched on help from Claude for this tree.';
+    }
+    if (await site.store.spentThisMonth() >= settings.monthlyLimit) {
+      return "This month's limit for help from Claude has been reached.";
+    }
+    return null;
+  }
+
+  /// Runs a call to the model, recording its cost.
+  Future<Reply> spend(Future<Reply> call) async {
+    final reply = await call;
+    await site.store.recordCost(reply.cost, model: reply.model.id);
+    return reply;
+  }
+
+  /// A one-line summary of a change, written by the fast model; null if
+  /// it could not be written.
+  Future<Reply?> summaryOf(
+    List<({String name, String before, String after})> pages,
+  ) async {
+    if (await helpUnavailable() != null) return null;
+    try {
+      final reply = await spend(
+        assistant!.summarize(pages),
+      ).timeout(const Duration(seconds: 20));
+      final line = reply.text.split('\n').first.trim();
+      if (reply.refused || line.isEmpty || line.length > 120) return null;
+      return Reply(line, reply.model, cost: reply.cost, refused: false);
+    } on Exception {
+      return null;
+    }
+  }
+
   Response html(String body, {int status = 200}) => Response(
     status,
     body: body,
@@ -187,9 +231,12 @@ Handler siteHandler(
       r,
       id,
       (person, member) async => html(
-        render(
-          r,
-        ).editPerson(person, source: person.source, basedOn: person.revision),
+        render(r).editPerson(
+          person,
+          source: person.source,
+          basedOn: person.revision,
+          help: await helpUnavailable() == null,
+        ),
       ),
     ),
   );
@@ -212,8 +259,10 @@ Handler siteHandler(
     (Request r, String id) => editing(r, id, (person, member) async {
       final fields = await form(r);
       final source = (fields['source'] ?? '').replaceAll('\r\n', '\n');
-      final summary = (fields['summary'] ?? '').trim();
+      var summary = (fields['summary'] ?? '').trim();
+      final helpedBy = Model.byId(fields['helped_by'])?.id;
       final basedOn = int.tryParse(fields['based_on'] ?? '') ?? person.revision;
+      final help = await helpUnavailable() == null;
       Response again(String error) => html(
         render(r).editPerson(
           person,
@@ -221,14 +270,26 @@ Handler siteHandler(
           basedOn: basedOn,
           summary: summary,
           error: error,
+          help: help,
+          helpedBy: helpedBy,
         ),
         status: 422,
       );
 
       final draft = Person.fromSource(id, person.directory, source);
-      if (summary.isEmpty) return again('Add a few words on what you changed.');
       if (basedOn == person.revision && source.trim() == person.source.trim()) {
         return seeOther('/people/$id'); // nothing changed
+      }
+      String? summaryBy;
+      if (summary.isEmpty) {
+        final written = await summaryOf([
+          (name: person.name, before: person.source, after: source),
+        ]);
+        if (written == null) {
+          return again('Add a few words on what you changed.');
+        }
+        summary = written.text;
+        summaryBy = written.model.id;
       }
 
       final result = await site.store.savePerson(
@@ -236,6 +297,8 @@ Handler siteHandler(
         basedOn: basedOn,
         author: member,
         summary: summary,
+        helpedBy: helpedBy,
+        summaryBy: summaryBy,
       );
       if (result.saved) {
         await site.reload();
@@ -250,6 +313,8 @@ Handler siteHandler(
           source: source,
           basedOn: result.conflictWith!,
           summary: summary,
+          help: help,
+          helpedBy: helpedBy,
           conflict: theirs == null
               ? null
               : render(r).conflictNotice(theirs, base?.source ?? ''),
@@ -264,7 +329,9 @@ Handler siteHandler(
     (Request r, String id) => editing(
       r,
       id,
-      (person, member) async => html(render(r).memoryForm(person)),
+      (person, member) async => html(
+        render(r).memoryForm(person, help: await helpUnavailable() == null),
+      ),
     ),
   );
 
@@ -278,6 +345,7 @@ Handler siteHandler(
       );
       final date = (fields['date'] ?? '').trim();
       final text = (fields['text'] ?? '').replaceAll('\r\n', '\n').trim();
+      final helpedBy = Model.byId(fields['helped_by'])?.id;
       if (title.isEmpty || text.isEmpty) {
         return html(
           render(r).memoryForm(
@@ -285,6 +353,7 @@ Handler siteHandler(
             title: title,
             date: date,
             text: text,
+            help: await helpUnavailable() == null,
             error: 'A memory needs a title and some text.',
           ),
           status: 422,
@@ -305,6 +374,7 @@ Handler siteHandler(
           basedOn: current.revision,
           author: member,
           summary: 'Add a memory: $title',
+          helpedBy: helpedBy,
         );
         await site.reload();
         if (result.saved) return seeOther('/people/$id');
@@ -315,6 +385,7 @@ Handler siteHandler(
           title: title,
           date: date,
           text: text,
+          help: await helpUnavailable() == null,
           error:
               'The page is being edited by several people at once. Please try again.',
         ),
@@ -341,28 +412,143 @@ Handler siteHandler(
     if (person == null || revision == null) {
       return missing(r, 'There is no such version.');
     }
+    final previous = revision.number > 1
+        ? await site.store.revision(id, revision.number - 1)
+        : null;
     return html(
       render(r).revision(
         person,
         revision,
+        previous: previous,
         isCurrent: revision.number == person.revision,
       ),
     );
   });
 
-  router.get('/people/<id>/compare', (Request r, String id) async {
-    final person = anyPerson(id);
-    final from = int.tryParse(r.url.queryParameters['from'] ?? '');
+  // Older links compared two versions; each version now shows its own
+  // change.
+  router.get('/people/<id>/compare', (Request r, String id) {
     final to = int.tryParse(r.url.queryParameters['to'] ?? '');
-    if (person == null || from == null || to == null) {
-      return missing(r, 'Pick two versions to compare.');
+    return seeOther(
+      to == null ? '/people/$id/history' : '/people/$id/revisions/$to',
+    );
+  });
+
+  // ------------------------------------------------------ help from Claude
+
+  Response jsonError(String message, {int status = 409}) => Response(
+    status,
+    body: jsonEncode({'error': message}),
+    headers: {'content-type': 'application/json'},
+  );
+  Response jsonReply(Reply reply) => reply.refused
+      ? jsonError('Claude declined to write this.', status: 422)
+      : Response.ok(
+          jsonEncode({
+            'text': reply.text,
+            'model': reply.model.id,
+            'modelName': reply.model.name,
+          }),
+          headers: {
+            'content-type': 'application/json',
+            'cache-control': 'no-store',
+          },
+        );
+
+  /// Runs a request for help, answering with JSON for the editor.
+  Future<Response> helping(Future<Reply> Function() call) async {
+    final unavailable = await helpUnavailable();
+    if (unavailable != null) return jsonError(unavailable);
+    try {
+      return jsonReply(await spend(call()));
+    } on ClaudeException catch (e) {
+      stderr.writeln('Claude: $e');
+      return jsonError(
+        'Claude could not be reached just now. Please try again.',
+        status: 502,
+      );
     }
-    final a = await site.store.revision(id, from < to ? from : to);
-    final b = await site.store.revision(id, from < to ? to : from);
-    if (b == null) return missing(r, 'There is no such version.');
-    // Comparing the first version with "before it" shows the whole page as new.
-    final before = a ?? Revision(0, '', author: '', summary: '', at: b.at);
-    return html(render(r).compare(person, before, b));
+  }
+
+  router.post(
+    '/people/<id>/help',
+    (Request r, String id) => editing(r, id, (person, member) async {
+      final body = (jsonDecode(await r.readAsString()) as Map)
+          .cast<String, Object?>();
+      final request = HelpRequest.byName(body['request'] as String?);
+      final source = ((body['source'] as String?) ?? '').replaceAll(
+        '\r\n',
+        '\n',
+      );
+      final from = (body['from'] as num?)?.toInt() ?? 0;
+      final to = (body['to'] as num?)?.toInt() ?? 0;
+      if (request == null ||
+          (request == HelpRequest.selection &&
+              (from < 0 || to <= from || to > source.length))) {
+        return jsonError('Nothing to help with.', status: 400);
+      }
+      return helping(
+        () => assistant!.help(
+          request,
+          person: person,
+          source: source,
+          tree: site.tree,
+          index: site.index,
+          from: from,
+          to: to,
+          guidance: (body['guidance'] as String?) ?? '',
+        ),
+      );
+    }),
+  );
+
+  router.post(
+    '/people/<id>/memory/tidy',
+    (Request r, String id) => editing(r, id, (person, member) async {
+      final body = (jsonDecode(await r.readAsString()) as Map)
+          .cast<String, Object?>();
+      final text = (body['text'] as String?) ?? '';
+      if (text.trim().isEmpty) {
+        return jsonError('There is nothing to tidy yet.', status: 400);
+      }
+      return helping(
+        () => assistant!.tidyMemory(
+          person,
+          (body['title'] as String?) ?? '',
+          text,
+        ),
+      );
+    }),
+  );
+
+  /// The member, if they own the tree.
+  Member? owner(Request r) {
+    final member = editor(r);
+    return member?.role == Role.owner ? member : null;
+  }
+
+  router.get('/settings', (Request r) async {
+    if (owner(r) == null) return notAllowed(r);
+    return html(
+      render(r).settings(
+        await site.store.helpSettings(),
+        spent: await site.store.spentThisMonth(),
+        available: assistant != null,
+      ),
+    );
+  });
+
+  router.post('/settings', (Request r) async {
+    if (owner(r) == null) return notAllowed(r);
+    final fields = await form(r);
+    final limit = double.tryParse(fields['monthly_limit'] ?? '');
+    await site.store.setHelpSettings(
+      HelpSettings(
+        enabled: fields['help'] == 'on',
+        monthlyLimit: limit == null || limit < 0 ? 10 : limit,
+      ),
+    );
+    return seeOther('/settings');
   });
 
   router.post(

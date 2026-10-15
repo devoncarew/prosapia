@@ -4,7 +4,9 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:firebase_admin_sdk/firebase_admin_sdk.dart';
 import 'package:path/path.dart' as p;
+import 'package:prosapia/src/assist.dart';
 import 'package:prosapia/src/auth.dart';
+import 'package:prosapia/src/claude.dart';
 import 'package:prosapia/src/file_store.dart';
 import 'package:prosapia/src/firestore_store.dart';
 import 'package:prosapia/src/images.dart';
@@ -121,6 +123,18 @@ Future<void> main(List<String> arguments) async {
     );
   }
 
+  // Help from Claude needs an API key; without one the editor offers none.
+  final apiKey = env['ANTHROPIC_API_KEY'];
+  final assistant = apiKey == null || apiKey.isEmpty
+      ? null
+      : Assistant(
+          Claude(
+            apiKey,
+            baseUrl: env['ANTHROPIC_BASE_URL'] ?? 'https://api.anthropic.com',
+          ),
+          WritingGuide.load(),
+        );
+
   final handler = const Pipeline()
       .addMiddleware(
         logRequests(
@@ -134,6 +148,7 @@ Future<void> main(List<String> arguments) async {
           site,
           DisplayCopies(p.join(cache, 'display')),
           sessions: sessions,
+          assistant: assistant,
         ),
       );
   // On Cloud Run the server must listen on every interface.

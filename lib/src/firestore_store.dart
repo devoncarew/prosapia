@@ -20,7 +20,8 @@ import 'tree.dart';
 ///                              deleted (when the page has been deleted)
 ///     revisions/{number}       every saved version: source, author, summary, at
 ///   media/{key}                what each file says about itself
-///   changes/{auto}             the log: author, summary, at, pages
+///   changes/{auto}             the log: author, summary, at, pages, summaryBy
+///   usage/{yyyy-mm}            what calls to a language model cost
 /// ```
 class FirestoreStore extends TreeStore {
   FirestoreStore(
@@ -154,6 +155,8 @@ class FirestoreStore extends TreeStore {
     List<PageWrite> pages, {
     required Member author,
     required String summary,
+    String? helpedBy,
+    String? summaryBy,
   }) {
     final refs = [
       for (final w in pages) _tree.collection('people').doc(w.person.id),
@@ -186,10 +189,16 @@ class FirestoreStore extends TreeStore {
           'number': number,
           'source': w.delete ? '' : w.person.source,
           if (w.delete) 'deleted': true,
+          'helpedBy': ?helpedBy,
+          'summaryBy': ?summaryBy,
           ...stamp,
         });
       }
-      tx.set(_tree.collection('changes').doc(), {'pages': next, ...stamp});
+      tx.set(_tree.collection('changes').doc(), {
+        'pages': next,
+        'summaryBy': ?summaryBy,
+        ...stamp,
+      });
       tx.update(_tree, {'version': const FieldValue.increment(1)});
       return SaveResult.saved(next[pages.first.person.id]!);
     });
@@ -242,7 +251,44 @@ class FirestoreStore extends TreeStore {
     summary: data['summary'] as String,
     at: _time(data['at']),
     pages: ((data['pages'] as Map?) ?? const {}).cast<String, int>(),
+    summaryBy: data['summaryBy'] as String?,
   );
+
+  @override
+  Future<HelpSettings> helpSettings() async {
+    final help = (await _tree.get()).data()?['help'] as Map?;
+    return HelpSettings(
+      enabled: help?['enabled'] == true,
+      monthlyLimit: (help?['monthlyLimit'] as num?)?.toDouble() ?? 10,
+    );
+  }
+
+  @override
+  Future<void> setHelpSettings(HelpSettings settings) => _tree.update({
+    'help': {
+      'enabled': settings.enabled,
+      'monthlyLimit': settings.monthlyLimit,
+    },
+  });
+
+  DocumentReference<Map<String, Object?>> get _thisMonth {
+    final now = DateTime.now().toUtc();
+    return _tree
+        .collection('usage')
+        .doc('${now.year}-${now.month.toString().padLeft(2, '0')}');
+  }
+
+  @override
+  Future<double> spentThisMonth() async =>
+      ((await _thisMonth.get()).data()?['dollars'] as num?)?.toDouble() ?? 0;
+
+  @override
+  Future<void> recordCost(double dollars, {required String model}) =>
+      _thisMonth.set({
+        'dollars': FieldValue.increment(dollars),
+        'calls': const FieldValue.increment(1),
+        'byModel': {model: FieldValue.increment(dollars)},
+      }, options: const SetOptions.merge());
 
   @override
   Future<void> rememberName(Member member, String name) =>
@@ -256,6 +302,8 @@ class FirestoreStore extends TreeStore {
     summary: data['summary'] as String,
     at: _time(data['at']),
     deleted: data['deleted'] == true,
+    helpedBy: data['helpedBy'] as String?,
+    summaryBy: data['summaryBy'] as String?,
   );
 
   static DateTime _time(Object? value) => value is Timestamp
