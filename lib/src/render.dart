@@ -838,7 +838,7 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
         '<td><a href="/people/${p.id}/revisions/${r.number}">${time(r.at)}</a></td>'
         '<td>${esc(r.by)}</td>'
         '<td>${esc(r.summary)}'
-        '${helped == null ? '' : ' <span class="years">(with help from ${esc(helped.name)})</span>'}'
+        '${helped == null ? '' : ' <span class="years">(with ${esc(helped.name)})</span>'}'
         '${r.deleted
             ? ' <span class="years">(page deleted)</span>'
             : i == 0
@@ -873,7 +873,7 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
     final helped = Model.byId(r.helpedBy);
     return page('${p.name}, version ${r.number}', '''
 <h1>${personLink(p.id)}: version ${r.number}</h1>
-<p class="lead">Saved ${time(r.at)} by ${esc(r.by)}${helped == null ? '' : ', with help from ${esc(helped.name)}'}: “${esc(r.summary)}”. <a href="/people/${p.id}/history">All versions</a></p>
+<p class="lead">Saved ${time(r.at)} by ${esc(r.by)}${helped == null ? '' : ', with ${esc(helped.name)}'}: “${esc(r.summary)}”. <a href="/people/${p.id}/history">All versions</a></p>
 ${r.deleted
         ? '<p class="lead">This version deleted the page.</p>'
         : isCurrent

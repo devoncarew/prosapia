@@ -81,8 +81,8 @@ Journeys 5 and 7. The rules every use follows are in
   model writes one as the change is saved. If it is unavailable, slow or fails, the
   summary is "Change" and a short hash, such as "Change a867eb56". The editor's actions
   become Publish and Discard.
-- **The history.** A revision saved with help from the model says so ("with help from
-  Claude"). Model-written summaries are not marked one by one; Recent changes and the
+- **The history.** A revision saved with help from the model says so ("with Claude
+  Opus"). Model-written summaries are not marked one by one; Recent changes and the
   history carry one note, "Change summaries by Claude Haiku". Selecting a version shows
   what changed from the version before it, as a diff, and the option to compare two
   chosen versions goes.
@@ -245,6 +245,11 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 Uses not yet scheduled; the rules every use follows are in
 [design.md](design.md#language-models).
 
+- Resolving names to people. A memory that mentions "Michelle", or notes being revised,
+  could have the name linked to the right person, such as `@carew-michelle-x4k2ab`. The
+  model needs to know who is meant: either give it the likely people with the request
+  (the page's relatives, people with that name nearby in the tree), or give it tools to
+  look people up in the tree as it writes.
 - Transcribing a scanned letter or certificate.
 - Checking: point out conflicts, such as a child born after a parent's death, beyond the
   simple checks in milestone 13.

@@ -45,7 +45,11 @@ class Assistant {
     String guidance = '',
   }) {
     final page = ParsedPage.parse(source);
-    final context = _context(person, source, tree, index);
+    // A selection is improved on its own terms; the relatives and photos
+    // would only invite the model to add to it.
+    final context = request == HelpRequest.selection
+        ? ''
+        : _context(person, source, tree, index);
     final task = switch (request) {
       HelpRequest.draft =>
         'The story below the facts is empty. Write it: the markdown that '
@@ -57,11 +61,14 @@ class Assistant {
             'Bring in facts from the facts block that the story leaves out, '
             'where they fit.',
       HelpRequest.selection =>
-        'Rewrite only the text between <selected> and </selected>, so that '
-            'it fits the text around it. Work out what is wanted from the '
-            'selection itself: notes or a list of facts become a clear '
-            'paragraph; rough or dictated prose is tidied; prose that already '
-            'reads well needs only light changes.',
+        'Improve only the text between <selected> and </selected>. Work out '
+            'what is wanted from the selection itself: notes or a list of '
+            'facts become a clear paragraph; rough or dictated prose is '
+            'tidied, with its grammar and voice improved; prose that already '
+            'reads well needs only light changes. Use only what the selection '
+            'says: do not bring in facts from the rest of the page, and do not '
+            'try to fill out the biography. The rest of the page is there '
+            'only so the new text fits the voice and flow around it.',
     };
     final marked = request == HelpRequest.selection
         ? '${source.substring(0, from)}<selected>${source.substring(from, to)}'

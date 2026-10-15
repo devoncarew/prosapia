@@ -8,5 +8,4 @@
 
 ## General
 
-Nicknames in the list of people and readable page addresses moved to milestone 18; the
-history page changes moved to milestone 16.
+- improve the styling of the history page

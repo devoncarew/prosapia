@@ -180,6 +180,8 @@ void main() {
         to: at + 'taught'.length,
       );
       expect(userOf(sent), contains('She <selected>taught</selected> school.'));
+      // Only the selection is improved; relatives would invite additions.
+      expect(userOf(sent), isNot(contains('<people>')));
     });
 
     test('a code fence around the reply is removed', () async {
