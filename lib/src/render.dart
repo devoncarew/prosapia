@@ -215,14 +215,16 @@ $body
         '<details class="more"><summary class="button" aria-label="More actions" title="More actions">⋯</summary><div class="menu">${more.join()}</div></details>',
     ];
     final head = StringBuffer('<div class="person-head">');
-    head.write('<div class="title"><h1>${esc(p.name)}</h1>');
+    head.write(
+      '<div class="title"><div class="name"><h1>${esc(p.name)}</h1>'
+      '${p.years.isEmpty ? '' : '<span class="lead">${p.years}</span>'}</div>',
+    );
     if (actions.isNotEmpty) {
       head.write(
         '<div class="actions"${editor == null ? '' : ' hidden'}>${actions.join()}</div>',
       );
     }
     head.write('</div>');
-    if (p.years.isNotEmpty) head.write('<p class="lead">${p.years}</p>');
     if (editable && p.editedBy != null && p.editedAt != null) {
       head.write(
         '<p class="edited">Edited by ${esc(p.editedBy)} ${ago(p.editedAt!)} · <a href="/people/${p.id}/history">history</a></p>',
@@ -1537,8 +1539,10 @@ select { font: 14px var(--ui); padding: 4px 6px; border: 1px solid var(--line); 
 .person-head { border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 24px; }
 .person-head .title { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
   gap: 8px 24px; }
-.person-head h1 { margin: 0; flex: 1 1 12em; min-width: 0; }
-.person-head .lead { margin: 6px 0 0; }
+.person-head .name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 14px;
+  flex: 1 1 12em; min-width: 0; }
+.person-head h1 { margin: 0; min-width: 0; }
+.person-head .lead { margin: 0; }
 .person-head .edited { font: 15px var(--ui); color: var(--muted); margin: 4px 0 0; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 12px; font: 15px var(--ui); }
 .person-head .actions { gap: 8px; align-items: center; margin: 6px 0 0; }
