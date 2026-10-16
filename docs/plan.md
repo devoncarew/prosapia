@@ -29,29 +29,6 @@ links to, not here.
 
 ## Milestones
 
-### Milestone 5: deploy and backup
-
-- The server in a container on Cloud Run in `us-west1`, beside the database and storage,
-  behind Firebase Hosting. On Cloud Run the server's credentials come from its service
-  account, so no key file is needed there either.
-- Attach `prosapia.app`, which is reserved. Until then the site is at
-  `prosapia-ea818.web.app`.
-- Confirm that a sign-in with a forged signature is refused. The emulators cannot test
-  this.
-- Invite members by email address, and change or remove them, from the site.
-- A nightly export of the tree, in the file layout, to a private GitHub repository: one
-  commit per logged change, with its author.
-- Firestore's scheduled backups switched on.
-- The container includes `exiftool` and `vips`, which the server needs for photos.
-- The Anthropic API key comes from Secret Manager, not a `.env` file.
-- Cloud Run's disk is temporary: display copies and staged uploads are made again after
-  a restart, which is expected.
-- A way to redeploy: a documented command, or a deploy from continuous integration when
-  `main` changes.
-
-Done when: invited relatives can sign in at `prosapia.app` and edit, and the exported
-repository, loaded by the server in file mode, renders the same site.
-
 ### Milestone 18: the first visit
 
 Journey 10.
@@ -224,6 +201,12 @@ Uses not yet scheduled; the rules every use follows are in
 
 Newest first.
 
+- **Milestone 5, deploy and backup.** The server runs on Cloud Run in `us-west1` behind
+  Firebase Hosting at `prosapia.app`, with its own service account and the Anthropic key
+  in Secret Manager; owners invite members, change their roles and remove them from
+  Settings; a forged sign-in is refused; Firestore keeps daily backups for two weeks;
+  and a nightly job exports the tree to a private GitHub repository, one commit per
+  logged change, which the server renders the same in file mode.
 - **Milestone 6, photos in the app.** Photos are added from a person's page or from
   Photos, several at once with a shared date, place and people, and an optional back
   that Claude can transcribe; a photo names the people in it rather than belonging to a
