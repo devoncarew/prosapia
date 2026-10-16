@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:markdown/markdown.dart' as md;
 
@@ -133,7 +134,7 @@ $body
     sb.write(
       '<h2>Find your way around</h2><ul class="try">'
       '<li><a href="/people">Everyone in the tree</a>, grouped by family name. Or type a name in the search box at the top of any page.</li>'
-      '<li><a href="/media">Photos and documents</a>, newest first.</li>'
+      '<li><a href="/media">Photos and documents</a>.</li>'
       '<li><a href="/research">Research</a>: where to look for more about the family.</li>'
       '${_canEdit ? '<li>Anything can be corrected: choose Edit on a page. Every change is kept, so nothing can be lost.</li>' : ''}'
       '</ul>',
@@ -353,7 +354,9 @@ $body
               if (!tree.media[key]!.isBack) tree.media[key]!,
           ];
     if (media.isNotEmpty) {
-      sb.write('<h2>Photos and documents</h2>${gallery(media)}');
+      sb.write(
+        '<h2>Photos and documents <span class="years">(${media.length})</span></h2>${strip(media)}',
+      );
     }
     sb.write('</div></article>');
     return sb.toString();
@@ -693,33 +696,76 @@ $body
 
   // ----------------------------------------------------------------- media
 
-  String gallery(Iterable<Media> items) {
-    final sb = StringBuffer('<div class="gallery">');
-    for (final m in items) {
-      final caption = esc(m.title ?? 'Untitled');
-      sb.write('<a href="/media/${m.key}">');
-      if (m.isImage) {
-        sb.write(
-          '<img loading="lazy" src="/media/${m.key}/display?w=240" alt="$caption">',
-        );
-      } else {
-        sb.write('<span class="file">${m.extension.toUpperCase()}</span>');
-      }
-      sb.write('<span>$caption</span></a>');
-    }
-    sb.write('</div>');
-    return sb.toString();
+  /// Photos and documents as a grid of thumbnails, each linking to its page.
+  String gallery(Iterable<Media> items) =>
+      '<div class="gallery">${items.map(_thumbnail).join()}</div>';
+
+  /// Photos and documents in one row that scrolls sideways, for a page that
+  /// may have many. The row keeps its place when the reader comes back.
+  String strip(Iterable<Media> items) =>
+      '<div class="strip">'
+      '<button type="button" class="prev" aria-label="Earlier" hidden>‹</button>'
+      '<div class="gallery">${items.map(_thumbnail).join()}</div>'
+      '<button type="button" class="next" aria-label="Later" hidden>›</button>'
+      '</div>'
+      '<script type="module" src="/assets/strip.js"></script>';
+
+  String _thumbnail(Media m) {
+    final caption = esc(m.title ?? 'Untitled');
+    return '<a href="/media/${m.key}" title="$caption">'
+        '${m.isImage ? '<img loading="lazy" src="/media/${m.key}/display?w=240" alt="$caption">' : '<span class="file">${m.extension.toUpperCase()}</span>'}'
+        '<span class="caption">$caption</span></a>';
   }
 
-  String mediaIndex() {
+  /// How many photos the Photos page shows at a time: three rows of five.
+  static const photosPerPage = 15;
+
+  /// One page of every photo and document.
+  String mediaIndex({int pageNumber = 1}) {
     final fronts = tree.media.values.where((m) => !m.isBack).toList();
+    final pages = max(1, (fronts.length / photosPerPage).ceil());
+    final n = pageNumber.clamp(1, pages);
+    final shown = fronts.skip((n - 1) * photosPerPage).take(photosPerPage);
     return page(
-      'Photos',
+      n == 1 ? 'Photos' : 'Photos, page $n',
       '<h1>Photos and documents</h1>'
-          '${_canEdit ? '<p class="actions"><a href="/media/add">Add photos</a></p>' : ''}'
-          '<p class="lead">${fronts.length} files. Titles and names are read from each file\'s embedded metadata.</p>'
-          '${gallery(fronts)}',
+      '${_canEdit ? '<p class="actions"><a href="/media/add">Add photos</a></p>' : ''}'
+      '<p class="lead">${fronts.length} files. Titles and names are read from each file\'s embedded metadata.</p>'
+      '${gallery(shown)}${_pager(n, pages, (i) => i == 1 ? '/media' : '/media?page=$i')}',
     );
+  }
+
+  /// Links to the other pages of a list: Previous, the page numbers
+  /// (with gaps far from [current]), and Next.
+  String _pager(int current, int pages, String Function(int) href) {
+    if (pages < 2) return '';
+    final sb = StringBuffer('<nav class="pager" aria-label="Pages">');
+    sb.write(
+      current > 1
+          ? '<a href="${href(current - 1)}" rel="prev">‹ Previous</a>'
+          : '<span class="off">‹ Previous</span>',
+    );
+    var gap = false;
+    for (var i = 1; i <= pages; i++) {
+      if (i == 1 || i == pages || (i - current).abs() <= 2) {
+        gap = false;
+        sb.write(
+          i == current
+              ? '<span aria-current="page">$i</span>'
+              : '<a href="${href(i)}">$i</a>',
+        );
+      } else if (!gap) {
+        gap = true;
+        sb.write('<span class="gap">…</span>');
+      }
+    }
+    sb.write(
+      current < pages
+          ? '<a href="${href(current + 1)}" rel="next">Next ›</a>'
+          : '<span class="off">Next ›</span>',
+    );
+    sb.write('</nav>');
+    return sb.toString();
   }
 
   /// A photo, with its back beside it when it has one, what is known about
@@ -776,7 +822,7 @@ $body
               .toList()
             ..sort((a, b) => (a.setIndex ?? 0).compareTo(b.setIndex ?? 0));
       if (set.isNotEmpty) {
-        sb.write('<h2>Added with it</h2>${gallery(set)}');
+        sb.write('<h2>Added with it</h2>${strip(set)}');
       }
     }
     sb.write(
@@ -1532,13 +1578,33 @@ h2 { font-size: 1.15em; font-weight: 600; margin: 1.8em 0 0.5em; padding-bottom:
 .surnames ul, .results { list-style: none; padding: 0; margin: 0; }
 .results li { margin-bottom: 12px; }
 mark { background: var(--mark); color: inherit; }
-.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
-.gallery a { display: block; font: 14px/1.4 var(--ui); color: var(--text);
-             overflow-wrap: anywhere; }
+.gallery { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 700px) { .gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; } }
+@media (max-width: 420px) { .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.gallery a { display: block; font: 14px/1.4 var(--ui); color: var(--text); overflow-wrap: anywhere; }
+.gallery .caption { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  line-clamp: 2; overflow: hidden; }
 .gallery img, .gallery .file { display: block; width: 100%; aspect-ratio: 1; object-fit: cover;
                                border-radius: 4px; border: 1px solid var(--line); margin-bottom: 6px; }
 .gallery .file { display: grid; place-items: center; background: var(--surface); color: var(--muted);
                  font-weight: 600; letter-spacing: 0.05em; }
+/* One row that scrolls sideways, with buttons at its ends. */
+.strip { position: relative; }
+.strip .gallery { display: flex; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: thin;
+  padding-bottom: 6px; }
+.strip .gallery a { flex: 0 0 160px; scroll-snap-align: start; }
+@media (max-width: 700px) { .strip .gallery a { flex-basis: 120px; } }
+.strip button { position: absolute; top: 60px; z-index: 1; width: 36px; height: 36px; padding: 0;
+  border-radius: 50%; font: 22px/1 var(--ui); background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.strip .prev { left: -12px; }
+.strip .next { right: -12px; }
+.pager { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center;
+  margin: 28px 0 0; font: 15px var(--ui); }
+.pager a, .pager span { padding: 4px 10px; border-radius: 6px; }
+.pager a:hover { background: var(--tint); text-decoration: none; }
+.pager [aria-current] { background: var(--accent); color: var(--on-accent); }
+.pager .off, .pager .gap { color: var(--muted); }
 .media img { max-width: 100%; max-height: 80vh; border: 1px solid var(--line); border-radius: 4px; }
 .description { white-space: pre-line; }
 .problems, .issues { font: 14px/1.4 var(--ui); margin-bottom: 16px; }

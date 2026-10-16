@@ -1258,7 +1258,14 @@ Handler siteHandler(
     return seeOther('/people/${person.id}');
   });
 
-  router.get('/media', (Request r) => html(render(r).mediaIndex()));
+  router.get(
+    '/media',
+    (Request r) => html(
+      render(r).mediaIndex(
+        pageNumber: int.tryParse(r.url.queryParameters['page'] ?? '') ?? 1,
+      ),
+    ),
+  );
   router.get('/media/<key>', (Request r, String key) {
     final media = site.tree.media[key];
     return media == null

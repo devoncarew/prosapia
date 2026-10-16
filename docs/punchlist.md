@@ -12,8 +12,3 @@
 - remove or revise "Your unsaved changes from ... have been brought back"
 - send invitations from a shared address (a Google Group or similar) rather than the
   owner's own email
-
-## Photos
-
-- page through the images in the 'Photos' page (groups of 50?)
-- put the "Photos and documents" in the biography page on a carousel?
