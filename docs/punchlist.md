@@ -18,3 +18,5 @@
 - when deleting a page ('Something Madej'), references to that page should change to the
   name (i.e. `@something-madej-1234` => `Something Madej`)
 - we should page through the images in the 'Photos' page (groups of 50?)
+- consider removing the welcome page
+- put the "Photos and documents" in the biography page on a carousel?
