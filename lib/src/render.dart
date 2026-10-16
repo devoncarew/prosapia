@@ -186,10 +186,20 @@ $body
 
   // ---------------------------------------------------------------- person
 
-  String person(Person p) {
+  /// A person's page. With an [editor], the editor takes the place of the
+  /// page's content, as when editing a comment on GitHub.
+  String person(Person p, {String? editor, bool help = false}) {
+    if (editor != null) {
+      return page(
+        'Editing ${p.name}',
+        '<div class="editing">${editingTitle(p)}$editor</div>'
+            '<script type="module" src="/assets/editor.js"></script>',
+      );
+    }
     final actions = [
-      if (_canEdit) '<a href="/people/${p.id}/edit">Edit</a>',
-      if (_canEdit) '<a href="/people/${p.id}/memory">Add a memory</a>',
+      if (_canEdit)
+        '<a class="button primary edit" href="${pathOf(p)}?edit" data-edit="/people/${p.id}/edit?fragment">Edit</a>',
+      if (_canEdit) '<a href="#add-memory">Add a memory</a>',
       if (_canEdit) '<a href="/media/add?person=${p.id}">Add photos</a>',
       if (editable) '<a href="/people/${p.id}/history">History</a>',
       if (_canEdit) '<a href="/people/${p.id}/delete">Delete</a>',
@@ -197,9 +207,32 @@ $body
     return page(
       p.name,
       '${actions.isEmpty ? '' : '<p class="actions">${actions.join(' ')}</p>'}'
-      '${personArticle(p)}',
+      '${personArticle(p)}'
+      '${_canEdit ? _memoryBox(p, help: help) : ''}'
+      '${_canEdit ? '<script type="module" src="/assets/page.js"></script>' : ''}',
     );
   }
+
+  /// The box at the end of a page for adding a memory, like the comment box
+  /// at the end of a GitHub issue.
+  String _memoryBox(Person p, {required bool help}) =>
+      '''
+<section class="add-memory" id="add-memory">
+<h2>Add a memory</h2>
+<p class="hint">A story, a trip, something you remember about ${esc(p.name)}. It is added to the end of the page as its own section.</p>
+<form class="memory" method="post" action="/people/${p.id}/memory">
+  <input type="hidden" name="helped_by" value="">
+  <div class="memory-head">
+    <div><label for="title">Title</label><input id="title" name="title" required maxlength="120" placeholder="Trip to Wales"></div>
+    <div><label for="date">When, if you know</label><input id="date" name="date" maxlength="40" placeholder="1923"></div>
+  </div>
+  <label for="text">The memory</label>
+  <textarea id="text" name="text" required spellcheck="true"></textarea>
+  ${help ? '<div class="help tidy" data-url="/people/${p.id}/memory/tidy"><button type="button">Claude: Tidy up</button></div><div class="help-bar" hidden role="status"></div>' : ''}
+  <div class="save"><button class="primary">Add the memory</button></div>
+</form>
+</section>
+${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}''';
 
   /// The body of a person's page. Also used for the editor's preview, where
   /// [p] is the text being typed and not yet part of the tree; a [preview]
@@ -227,6 +260,11 @@ $body
     sb.write(_infobox(p, actions: actions));
     sb.write('<h1>${esc(p.name)}</h1>');
     if (p.years.isNotEmpty) sb.write('<p class="lead">${p.years}</p>');
+    if (!preview && editable && p.editedBy != null && p.editedAt != null) {
+      sb.write(
+        '<p class="edited">Edited by ${esc(p.editedBy)} ${ago(p.editedAt!)} · <a href="/people/${p.id}/history">history</a></p>',
+      );
+    }
 
     if (p.body.isNotEmpty) {
       sb.write('<div class="prose">${markdown(p.body)}</div>');
@@ -782,49 +820,59 @@ $body
   ///
   /// [conflict] is shown when someone else saved first; it describes their
   /// change so this editor can reapply their own on top of it.
-  String editPerson(
+  /// The editor for [p]'s page, which takes the place of the page's content
+  /// while editing. [inPlace] marks one opened from the page itself, whose
+  /// script starts and stops it.
+  String editorForm(
     Person p, {
     required String source,
     required int basedOn,
-    String? error,
-    String? conflict,
     bool help = false,
     String? helpOff,
     String? helpedBy,
-  }) {
-    return page('Edit ${p.name}', '''
-<h1>Edit: ${esc(p.name)}</h1>
-${conflict ?? ''}
-${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
-<form class="editor" method="post" action="/people/${p.id}/edit" data-preview="/people/${p.id}/preview">
+    bool inPlace = false,
+  }) =>
+      '''
+<form class="editor" method="post" action="/people/${p.id}/edit" data-preview="/people/${p.id}/preview"${inPlace ? ' data-in-place' : ''}>
   <input type="hidden" name="based_on" value="$basedOn">
   <input type="hidden" name="helped_by" value="${esc(helpedBy ?? '')}">
   <div class="tabs" role="tablist">
     <button type="button" role="tab" id="tab-write" aria-selected="true" aria-controls="panel-write">Write</button>
     <button type="button" role="tab" id="tab-preview" aria-selected="false" aria-controls="panel-preview">Preview</button>
     ${help
-        ? '''<span class="help" data-url="/people/${p.id}/help">
+          ? '''<span class="help" data-url="/people/${p.id}/help">
       <button type="button" data-request="draft" title="Write the story from the facts, memories and photo captions">Claude: Draft</button>
       <button type="button" data-request="revise" title="Rewrite the whole story">Claude: Revise…</button>
       <button type="button" data-request="selection" title="Rewrite the selected text" disabled>Claude: Revise selection</button>
     </span>'''
-        : helpOff != null && viewer?.role == Role.owner
-        ? '<span class="help off">${esc(helpOff)} <a href="/settings">Settings</a></span>'
-        : ''}
+          : helpOff != null && viewer?.role == Role.owner
+          ? '<span class="help off">${esc(helpOff)} <a href="/settings">Settings</a></span>'
+          : ''}
   </div>
   <div class="help-bar" hidden role="status"></div>
   <div class="tab-panel" id="panel-write" role="tabpanel" aria-labelledby="tab-write">
+    <div class="format" role="toolbar" aria-label="Formatting">
+      <button type="button" data-format="heading" title="Heading">H</button>
+      <button type="button" data-format="bold" title="Bold"><b>B</b></button>
+      <button type="button" data-format="italic" title="Italic"><i>I</i></button>
+      <button type="button" data-format="list" title="List">List</button>
+      <button type="button" data-format="link" title="Link">Link</button>
+      <span class="sep"></span>
+      <button type="button" data-format="person" title="Link a person: type @ and part of a name">@ Person</button>
+      <button type="button" data-format="date" title="Mark a date">Date</button>
+      <button type="button" data-format="place" title="Mark a place">Place</button>
+    </div>
     <textarea id="source" name="source" spellcheck="true" required aria-label="Page text">${esc(source)}</textarea>
   </div>
   <div class="tab-panel" id="panel-preview" role="tabpanel" aria-labelledby="tab-preview" hidden>
     <div id="preview" class="preview">${personArticle(p, preview: true)}</div>
   </div>
   <div class="save">
-    <a class="button" href="/people/${p.id}">Discard</a>
+    <a class="button discard" href="${pathOf(p)}">Discard</a>
     <button class="primary" title="Publish (⌘ Enter)">Publish <kbd>⌘ ⏎</kbd></button>
   </div>
   <p class="hint">Facts first, one per line, starting with <code>Name:</code>; then a blank line and the story.</p>
-  <details class="legend" open>
+  <details class="legend">
     <summary>How to write a page</summary>
     <dl>
       <dt><code>Born: 6 January 1911, Brooklyn, NY</code></dt>
@@ -840,9 +888,28 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
     </dl>
   </details>
 </form>
-<script type="module" src="/assets/editor.js"></script>
-''');
-  }
+''';
+
+  String editingTitle(Person p) =>
+      '<p class="editing-title">Editing <a href="${pathOf(p)}">${esc(p.name)}</a></p>';
+
+  /// [p]'s page with the editor in place of its content: opened directly,
+  /// or shown again after a save that could not be made.
+  String editPerson(
+    Person p, {
+    required String source,
+    required int basedOn,
+    String? error,
+    String? conflict,
+    bool help = false,
+    String? helpOff,
+    String? helpedBy,
+  }) => person(
+    p,
+    editor:
+        '${conflict ?? ''}${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}'
+        '${editorForm(p, source: source, basedOn: basedOn, help: help, helpOff: helpOff, helpedBy: helpedBy)}',
+  );
 
   /// Creating a page for [name], a plain name on [from]'s page in a [kind]
   /// line. Offers the [similar] people already in the tree first. The new
@@ -1147,6 +1214,17 @@ ${r.deleted ? '' : '<details class="whole"><summary>The whole page as it was</su
     'Dec',
   ];
 
+  /// When something happened, as GitHub says it: "today", "3 days ago", or
+  /// the date for anything older than a month.
+  static String ago(DateTime at, [DateTime? now]) {
+    final days = (now ?? DateTime.now()).difference(at).inDays;
+    if (days < 1) return 'today';
+    if (days < 2) return 'yesterday';
+    if (days < 31) return '$days days ago';
+    final t = at.toLocal();
+    return 'on ${t.day} ${_monthNames[t.month - 1]} ${t.year}';
+  }
+
   /// `12 Oct 2026, 20:46`, in the server's time zone.
   static String time(DateTime at) {
     final t = at.toLocal();
@@ -1315,6 +1393,7 @@ const stylesheet = '''
           --line: #2a3240; --link: #9cc0ec; --accent: #3d6fae; --on-accent: #ffffff; --mark: #6b5a00; }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.62 var(--ui); }
 a { color: var(--link); text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -1448,6 +1527,23 @@ select { font: 14px var(--ui); padding: 4px 6px; border: 1px solid var(--line); 
 .family dt { color: var(--muted); font-size: 13px; margin-top: 6px; }
 .family dd { margin: 0; }
 .try li { margin-bottom: 8px; }
+.actions .button.edit { padding: 3px 14px; font-size: 14px; }
+.actions { align-items: center; }
+.edited { font: 13px var(--ui); color: var(--muted); margin: -0.8em 0 1.2em; }
+.editing-title { font: 600 15px var(--ui); color: var(--muted); margin: 0 0 10px; }
+.editing-title a { color: var(--text); }
+.format { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.format button { border: none; background: none; color: var(--muted); padding: 3px 8px; border-radius: 4px;
+  font: 13px var(--ui); min-width: 28px; }
+.format button:hover { background: var(--tint); color: var(--text); }
+.format .sep { width: 1px; background: var(--line); margin: 2px 6px; }
+.add-memory { margin-top: 40px; padding: 16px 20px 20px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--surface); max-width: 720px; }
+.add-memory h2 { margin-top: 0; }
+.add-memory .hint { margin-top: 0; }
+.add-memory .memory-head { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+@media (max-width: 700px) { .add-memory .memory-head { grid-template-columns: 1fr; } }
+.add-memory .memory textarea { height: 10em; }
 .similar { list-style: none; padding: 0; font: 15px/1.5 var(--ui); }
 .similar li { margin-bottom: 8px; }
 .similar button { margin-left: 8px; font-size: 13px; }
