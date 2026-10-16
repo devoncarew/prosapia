@@ -167,20 +167,15 @@ Handler siteHandler(
     router.post('/sign-out', sessions.signOut);
   }
 
-  // Members who have not seen the welcome page are shown it first.
-  final welcomed = <String>{};
-  router.get('/', (Request r) async {
-    final member = Sessions.memberOf(r);
-    if (member != null &&
-        !member.welcomed &&
-        !welcomed.contains(member.email)) {
-      welcomed.add(member.email);
-      await site.store.markWelcomed(member);
-      return html(render(r).welcome());
-    }
-    return html(render(r).home());
-  });
-  router.get('/welcome', (Request r) => html(render(r).welcome()));
+  router.get(
+    '/',
+    (Request r) async =>
+        html(render(r).home(await site.store.recentChanges(limit: 5))),
+  );
+  router.get('/people', (Request r) => html(render(r).people()));
+  router.get('/research', (Request r) => html(render(r).research()));
+  // The welcome page was folded into the first page.
+  router.get('/welcome', (Request r) => Response.seeOther(Uri.parse('/')));
   router.get(
     '/search',
     (Request r) => html(render(r).search(r.url.queryParameters['q'] ?? '')),

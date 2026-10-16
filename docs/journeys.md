@@ -137,8 +137,9 @@ to it on other pages. This works today.
 
 _An aunt receives an invitation._
 
-She follows the link, signs in with her Google account, and lands on a page that
-explains what Prosapia is, shows her own page or the nearest relative's, and suggests
-one easy thing to do, such as adding a memory.
+She follows the link, signs in with her Google account, and lands on the home page. It
+welcomes her, shows her own page and close family with a button to add a memory, and
+lists the latest changes and where to go next, including a short guide to researching
+the family.
 
 Milestones: 5 (invitations), 18 (first visit).

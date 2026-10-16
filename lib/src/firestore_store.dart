@@ -70,7 +70,6 @@ class FirestoreStore extends TreeStore {
             role,
             name: data['name'] as String?,
             person: data['person'] as String?,
-            welcomed: data['welcomed'] == true,
           );
   }
 
@@ -595,12 +594,6 @@ class FirestoreStore extends TreeStore {
         'role': role.name,
         'person': ?person,
       }, options: const SetOptions.merge());
-
-  @override
-  Future<void> markWelcomed(Member member) => _tree
-      .collection('members')
-      .doc(member.email)
-      .set({'welcomed': true}, options: const SetOptions.merge());
 
   @override
   Future<void> removeMember(String email) =>

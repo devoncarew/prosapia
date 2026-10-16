@@ -36,8 +36,8 @@ Journey 10.
 - An invitation email that says who invited them and what Prosapia is.
 - Readable addresses for people's pages, such as `/people/carew-howard-joseph-tbczm8`,
   so a link someone shares says who it is. Only the trailing id is relied on.
-- A first page after sign-in that orients a newcomer: their own page or their nearest
-  relative's, and one easy thing to do.
+- A home page that orients a newcomer: a welcome, their own page with their close family
+  and Add a memory, the latest changes, and where to go next.
 - Every page readable on a phone, since a first visit is often on one.
 
 Done when: a relative who has never seen Prosapia can accept an invitation, find their

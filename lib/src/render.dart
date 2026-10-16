@@ -44,7 +44,7 @@ class Renderer {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(title)} · ${esc(tree.name)}</title>
+<title>${title == tree.name ? esc(title) : "${esc(title)} · ${esc(tree.name)}"}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
@@ -53,7 +53,7 @@ class Renderer {
 <body>
 <header>
   <a class="site" href="/">${esc(tree.name)}</a>
-  <nav><a href="/">People</a> <a href="/media">Photos</a>${editable ? ' <a href="/changes">Recent changes</a>' : ''}${_canEdit && viewer!.role == Role.owner ? ' <a href="/settings">Settings</a>' : ''}</nav>
+  <nav><a href="/people">People</a> <a href="/media">Photos</a> <a href="/research">Research</a>${editable ? ' <a href="/changes">Recent changes</a>' : ''}${_canEdit && viewer!.role == Role.owner ? ' <a href="/settings">Settings</a>' : ''}</nav>
   <form action="/search" class="search"><input type="search" name="q" autocomplete="off" value="${esc(query)}" placeholder="Search" aria-label="Search"></form>
   ${viewer == null ? '' : '<form class="account" method="post" action="/sign-out"><span title="${esc(viewer!.email)} · ${viewer!.role.name}">${esc(viewer!.name ?? viewer!.email)}</span> <button>Sign out</button></form>'}
 </header>
@@ -86,58 +86,19 @@ $body
 
   // ------------------------------------------------------------------ home
 
-  String home() {
-    final groups = <String, List<Person>>{};
-    final people = index.peopleByName().map((id) => tree.people[id]!).toList()
-      ..sort((a, b) {
-        final c = surnameOf(a).compareTo(surnameOf(b));
-        return c != 0 ? c : a.name.compareTo(b.name);
-      });
-    for (final p in people) {
-      groups.putIfAbsent(surnameOf(p), () => []).add(p);
-    }
-    final sb = StringBuffer()
-      ..write('<h1>${esc(tree.name)}</h1>')
-      ..write(
-        '<p class="lead">${tree.people.length} people, ${tree.media.length} photos and documents.</p>',
-      );
-    if (tree.problems.isNotEmpty) {
-      sb.write(
-        '<details class="problems"><summary>${tree.problems.length} files could not be read</summary><ul>',
-      );
-      for (final problem in tree.problems) {
-        sb.write('<li>${esc(problem)}</li>');
-      }
-      sb.write('</ul></details>');
-    }
-    final mine = viewer?.person == null ? null : tree.people[viewer!.person];
-    if (mine != null) {
-      sb.write(
-        '<p class="actions">Start at ${personLink(mine.id)} · <a href="/welcome">Welcome page</a></p>',
-      );
-    }
-    sb.write('<div class="surnames">');
-    groups.forEach((surname, people) {
-      sb.write('<section><h2>${esc(surname)}</h2><ul>');
-      for (final p in people) {
-        sb.write('<li>${personLink(p.id, years: true, nickname: true)}</li>');
-      }
-      sb.write('</ul></section>');
-    });
-    sb.write('</div>');
-    return page('People', sb.toString());
-  }
-
-  /// A newcomer's first page: where they are in the tree, their close
-  /// family, and one easy thing to do.
-  String welcome() {
+  /// The first page: a welcome, the viewer's own place in the tree, the
+  /// latest changes, and where to go next.
+  String home(List<Change> recent) {
     final me = viewer;
     final first = me?.name?.split(' ').first;
     final person = me?.person == null ? null : tree.people[me!.person];
+    final photos = tree.media.values.where((m) => !m.isBack).length;
     final sb = StringBuffer(
-      '<h1>Welcome${first == null ? '' : ', ${esc(first)}'}</h1>'
-      '<p class="lead">This is ${esc(tree.name)}: the family\'s history, kept together by the family. '
-      'It holds ${tree.people.length} people and ${tree.media.values.where((m) => !m.isBack).length} photos and documents.</p>',
+      '<h1>${esc(tree.name)}</h1>'
+      '<p class="lead">${first == null ? 'Welcome' : 'Welcome, ${esc(first)}'}. '
+      'This is the family\'s history, kept together by the family: '
+      '<a href="/people">${tree.people.length} people</a> and '
+      '<a href="/media">$photos photos and documents</a>.</p>',
     );
     if (person != null) {
       final photo = person.photo == null ? null : tree.media[person.photo];
@@ -148,9 +109,10 @@ $body
         );
       }
       sb.write(
-        '<div><h2>${esc(person.name)}</h2>'
+        '<div><h2>${esc(person.displayName)}</h2>'
         '${person.years.isEmpty ? '' : '<p class="years">${person.years}</p>'}'
-        '<p><a class="button primary" href="${pathOf(person)}">Go to ${esc(person.name)}\'s page</a></p>',
+        '<p><a class="button primary" href="${pathOf(person)}">Go to your page</a>'
+        '${_canEdit ? ' <a class="button" href="/people/${person.id}/memory">Add a memory</a>' : ''}</p>',
       );
       final family = [
         for (final (label, ids) in [
@@ -167,23 +129,119 @@ $body
       }
       sb.write('</div></section>');
     }
-    sb.write('<h2>Something to try</h2><ul class="try">');
-    if (_canEdit && person != null) {
-      sb.write(
-        '<li><a href="/people/${person.id}/memory">Add a memory of ${esc(person.name)}</a>: a story, a trip, something you remember. A few sentences is plenty.</li>',
-      );
+    if (recent.isNotEmpty) {
+      sb.write('<h2>Recent changes</h2><ul class="recent">');
+      for (final c in recent) {
+        final (items, summary) = _changeParts(c);
+        sb.write(
+          '<li>$summary <span class="meta">· $items · ${esc(c.by)}, '
+          '<span class="when">${time(c.at)}</span></span></li>',
+        );
+      }
+      sb.write('</ul><p><a href="/changes">All recent changes</a></p>');
     }
     sb.write(
-      '<li>Type a name in the search box at the top of any page to find someone.</li>'
-      '<li><a href="/">See everyone in the tree</a>, grouped by family name.</li>',
+      '<h2>Find your way around</h2><ul class="try">'
+      '<li><a href="/people">Everyone in the tree</a>, grouped by family name. Or type a name in the search box at the top of any page.</li>'
+      '<li><a href="/media">Photos and documents</a>, newest first.</li>'
+      '<li><a href="/research">Research</a>: where to look for more about the family.</li>'
+      '${_canEdit ? '<li>Anything can be corrected: choose Edit on a page. Every change is kept, so nothing can be lost.</li>' : ''}'
+      '</ul>',
     );
-    if (_canEdit) {
-      sb.write(
-        '<li>Anything can be corrected: choose Edit on a page. Every change is kept, so nothing can be lost.</li>',
-      );
+    return page(tree.name, sb.toString());
+  }
+
+  /// Everyone in the tree, grouped by family name.
+  String people() {
+    final groups = <String, List<Person>>{};
+    final people = index.peopleByName().map((id) => tree.people[id]!).toList()
+      ..sort((a, b) {
+        final c = surnameOf(a).compareTo(surnameOf(b));
+        return c != 0 ? c : a.name.compareTo(b.name);
+      });
+    for (final p in people) {
+      groups.putIfAbsent(surnameOf(p), () => []).add(p);
     }
-    sb.write('</ul>');
-    return page('Welcome', sb.toString());
+    final sb = StringBuffer()
+      ..write('<h1>People</h1>')
+      ..write(
+        '<p class="lead">${tree.people.length} people, grouped by family name.</p>',
+      );
+    if (tree.problems.isNotEmpty) {
+      sb.write(
+        '<details class="problems"><summary>${tree.problems.length} files could not be read</summary><ul>',
+      );
+      for (final problem in tree.problems) {
+        sb.write('<li>${esc(problem)}</li>');
+      }
+      sb.write('</ul></details>');
+    }
+    sb.write('<div class="surnames">');
+    groups.forEach((surname, people) {
+      sb.write('<section><h2>${esc(surname)}</h2><ul>');
+      for (final p in people) {
+        sb.write('<li>${personLink(p.id, years: true, nickname: true)}</li>');
+      }
+      sb.write('</ul></section>');
+    });
+    sb.write('</div>');
+    return page('People', sb.toString());
+  }
+
+  /// Where to look for more about the family: a short guide for a member
+  /// who has not done genealogy research before.
+  String research() {
+    String link(String url, String name) =>
+        '<a href="$url" target="_blank" rel="noopener">$name</a>';
+    return page('Research', '''
+<h1>Research</h1>
+<p class="lead">Where to look for more about the family, if you would like to add to what is here and have not done genealogy research before.</p>
+<div class="research">
+<h2>How to start</h2>
+<ul>
+<li><strong>Start from someone already here.</strong> Pick a person with gaps and note what is known: dates, places, and the names of their parents, partner and children. A name alone finds thousands of people; a name with a place and a span of years finds a few.</li>
+<li><strong>Work back one generation at a time,</strong> and be sure of each link before going further.</li>
+<li><strong>Expect records to disagree.</strong> Names are spelled many ways, ages drift from one census to the next, and indexes have transcription errors. Search for variants, and look at the image of the original record, not just the index entry.</li>
+<li><strong>Other people's online family trees copy each other's mistakes.</strong> Use them to find records, not as records.</li>
+<li><strong>Write down where each fact came from,</strong> on the person's page: in a <code>Note:</code> line or in the story, such as “1920 census, Hartford, CT, on FamilySearch”.</li>
+</ul>
+
+<h2>Free</h2>
+<dl>
+<dt>${link('https://www.familysearch.org', 'FamilySearch')}</dt>
+<dd>The largest free collection: censuses, births, marriages, deaths, church and immigration records from around the world, many with images. Needs a free account. Its ${link('https://www.familysearch.org/en/wiki/', 'Research Wiki')} explains which records exist for a given place and time.</dd>
+<dt>US censuses</dt>
+<dd>Taken every ten years and opened after 72, so 1790 to 1950 can be searched, free on FamilySearch. They list everyone in a household, with ages, birthplaces and often occupations.</dd>
+<dt>${link('https://www.findagrave.com', 'Find a Grave')} and ${link('https://billiongraves.com', 'BillionGraves')}</dt>
+<dd>Cemetery records and photographs of headstones, gathered by volunteers. Often the quickest way to dates of birth and death, and to who is buried together.</dd>
+<dt>${link('https://chroniclingamerica.loc.gov', 'Chronicling America')}</dt>
+<dd>The Library of Congress's historic American newspapers, searchable by name and place.</dd>
+<dt>${link('https://www.archives.gov/research/genealogy', 'US National Archives')} and ${link('https://www.statueofliberty.org/discover/passenger-ship-search/', 'Ellis Island passenger lists')}</dt>
+<dd>Immigration, naturalization and military service records; ships' lists of arrivals in New York.</dd>
+<dt>${link('https://library-archives.canada.ca', 'Library and Archives Canada')} and ${link('https://www.freebmd.org.uk', 'FreeBMD')}</dt>
+<dd>Canadian censuses, immigration and military records; an index of births, marriages and deaths in England and Wales from 1837.</dd>
+<dt>${link('https://archive.org', 'Internet Archive')} and ${link('https://books.google.com', 'Google Books')}</dt>
+<dd>Old county histories, city directories, school yearbooks and published family histories.</dd>
+<dt>Your public library</dt>
+<dd>Many libraries offer Ancestry Library Edition free at the library, and some offer HeritageQuest or newspaper archives from home with a library card. Ask before paying for anything.</dd>
+</dl>
+
+<h2>Paid</h2>
+<p>Most offer a free trial: plan what to search for first, then subscribe for a month.</p>
+<dl>
+<dt>${link('https://www.ancestry.com', 'Ancestry')}</dt>
+<dd>The largest paid collection, strongest for the US and Britain. Its “hints” from other people's trees need checking like any other tree.</dd>
+<dt>${link('https://www.newspapers.com', 'Newspapers.com')} and ${link('https://www.genealogybank.com', 'GenealogyBank')}</dt>
+<dd>Newspaper archives. Obituaries, wedding announcements and local news are often the richest sources for the last 150 years.</dd>
+<dt>${link('https://www.fold3.com', 'Fold3')}</dt>
+<dd>US military records: service files, draft cards, pensions.</dd>
+<dt>${link('https://www.myheritage.com', 'MyHeritage')} and ${link('https://www.findmypast.com', 'Findmypast')}</dt>
+<dd>Stronger for Europe, and for Britain and Ireland.</dd>
+</dl>
+
+<h2>DNA</h2>
+<p>Tests from AncestryDNA, MyHeritage and FamilyTreeDNA match you with relatives who have also tested, which can confirm a line or get past a dead end. Results can reveal things about living relatives, so talk with the family before sharing them.</p>
+</div>''');
   }
 
   /// The last word of a person's name, for grouping the list of people.
@@ -1187,27 +1245,10 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
         '<p class="lead">Every change to the tree, newest first.</p><table class="history">',
       );
       for (final c in changes) {
-        final pages = c.pages.length > 5
-            ? '${c.pages.length} pages'
-            : c.pages.keys.map(personLink).join(', ');
-        // A front and its back are one photo.
-        final photos = c.media.where((key) => !key.endsWith('-back')).toList();
-        final media = [
-          for (final key in photos.take(5))
-            '<a href="/media/$key">${esc(tree.media[key]?.title ?? 'Untitled')}</a> '
-                '<span class="years">(${tree.media[key]?.isImage ?? true ? 'photo' : 'document'})</span>',
-          if (photos.length > 5) '${photos.length - 5} more',
-        ].join(', ');
-        // A change to one page links to that version in its history.
-        final only = c.pages.length == 1 && c.media.isEmpty
-            ? c.pages.entries.single
-            : null;
-        final summary = only == null
-            ? esc(c.summary)
-            : '<a href="/people/${only.key}/history?version=${only.value}">${esc(c.summary)}</a>';
+        final (items, summary) = _changeParts(c);
         sb.write(
           '<tr><td class="when">${time(c.at)}</td><td>${esc(c.by)}</td>'
-          '<td>$pages${pages.isNotEmpty && media.isNotEmpty ? ', ' : ''}$media</td>'
+          '<td>$items</td>'
           '<td>$summary</td></tr>',
         );
       }
@@ -1215,6 +1256,31 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
       sb.write(_summaryNote(changes.map((c) => c.summaryBy)));
     }
     return page('Recent changes', sb.toString());
+  }
+
+  /// What a change touched, linked, and its summary, linked to the version
+  /// it made when it changed one page.
+  (String, String) _changeParts(Change c) {
+    final pages = c.pages.length > 5
+        ? '${c.pages.length} pages'
+        : c.pages.keys.map(personLink).join(', ');
+    // A front and its back are one photo.
+    final photos = c.media.where((key) => !key.endsWith('-back')).toList();
+    final media = [
+      for (final key in photos.take(5))
+        '<a href="/media/$key">${esc(tree.media[key]?.title ?? 'Untitled')}</a> '
+            '<span class="years">(${tree.media[key]?.isImage ?? true ? 'photo' : 'document'})</span>',
+      if (photos.length > 5) '${photos.length - 5} more',
+    ].join(', ');
+    final only = c.pages.length == 1 && c.media.isEmpty
+        ? c.pages.entries.single
+        : null;
+    return (
+      '$pages${pages.isNotEmpty && media.isNotEmpty ? ', ' : ''}$media',
+      only == null
+          ? esc(c.summary)
+          : '<a href="/people/${only.key}/history?version=${only.value}">${esc(c.summary)}</a>',
+    );
   }
 
   /// Whether [c] can be undone in one step: every page it touched is still
@@ -1557,6 +1623,12 @@ select { font: 14px var(--ui); padding: 4px 6px; border: 1px solid var(--line); 
 .family dt { color: var(--muted); font-size: 14px; margin-top: 6px; }
 .family dd { margin: 0; }
 .try li { margin-bottom: 8px; }
+.recent { list-style: none; padding: 0; margin: 0 0 8px; }
+.recent li { margin-bottom: 8px; }
+.research { max-width: 760px; }
+.research li { margin-bottom: 8px; }
+.research dt { font-weight: 600; margin-top: 12px; }
+.research dd { margin: 2px 0 0; }
 /* A person's page: the title across the top, then the story beside the facts. */
 .person-head { border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 24px; }
 .person-head .title { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
