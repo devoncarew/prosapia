@@ -75,6 +75,10 @@ both people's timelines.
 - Weave loose memories into an existing biography, as a proposed edit.
 - Targeted requests: "add a brief mention of the trip John took with Jane and Sam in
   2011".
+- Claude: Research ideas, on a person's page: from the facts on the page, its gaps and
+  close relatives, a short list of specific records to look for and where (the 1880
+  census in Scranton on FamilySearch; an obituary in the Scranton papers). Advice only;
+  nothing is written to the page.
 
 Done when: journeys 1 and 2 can each start from one typed sentence, and nothing the
 model proposes is saved without the person confirming it.
@@ -149,6 +153,10 @@ Uses not yet scheduled; the rules every use follows are in
 - Transcribing a scanned letter or certificate.
 - Checking: point out conflicts, such as a child born after a parent's death, beyond the
   simple checks in milestone 13.
+- Research leads: Claude searches open sites (Find a Grave, Chronicling America, the
+  Internet Archive) with the API's web search tool, and returns leads with links for the
+  person to check and copy in, never facts saved directly. Watch for people with the
+  same name, and for names of living people sent to a search engine.
 
 ### Photos and media
 

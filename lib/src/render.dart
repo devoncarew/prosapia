@@ -223,6 +223,12 @@ $body
 <p><strong>${link('https://www.fold3.com', 'Fold3')}.</strong> US military records: service files, draft cards, pensions.</p>
 <p><strong>${link('https://www.myheritage.com', 'MyHeritage')} and ${link('https://www.findmypast.com', 'Findmypast')}.</strong> Stronger for Europe, and for Britain and Ireland.</p>
 
+<h2>Using an AI assistant</h2>
+<p>Claude, ChatGPT and similar assistants are useful research partners, if you check their work.</p>
+<p><strong>What works well.</strong> Asking where to look: “My great-grandfather was born about 1852 in Scranton, Pennsylvania, and died there in 1919. What records should I search, and where?” Explaining what you have found: old handwriting, abbreviations, occupations, and places that have since changed name. Reading a photo or scan of a record and transcribing it. With web search turned on, an assistant can also search open sites such as Find a Grave, Chronicling America and the Internet Archive for you.</p>
+<p><strong>What it can't reach.</strong> Anything behind a paywall (Ancestry, Newspapers.com, Fold3) or a sign-in (FamilySearch), records that exist only as unindexed images, and anything still on paper or microfilm in an archive. For these, it can tell you where to look, but you have to look.</p>
+<p><strong>What to be careful about.</strong> An assistant can state a plausible date or relationship with confidence and be wrong, and it easily mixes up two people with the same name. Ask it for a link to the record behind each fact, open it yourself, and cite the record, not the assistant. Leave out details of living relatives when you ask.</p>
+
 </div>''');
   }
 
