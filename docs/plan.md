@@ -48,8 +48,6 @@ own family, and add a memory without help.
 Using the deployed site on the real tree, and fixing what that turns up. Small items are
 kept in the [punch list](punchlist.md) and worked from there.
 
-- A normal form for a page's markdown: a light formatting pass, so equivalent pages are
-  written the same way.
 - A design pass over the person page, the editor and the photo pages.
 
 Done when: the family historian has used the deployed site for a few weeks, and what

@@ -1435,7 +1435,7 @@ h2 { font-size: 1.15em; font-weight: 600; margin: 1.8em 0 0.5em; padding-bottom:
 .prose a { font-weight: 500; }
 .timeline { border-collapse: collapse; }
 .timeline th { text-align: right; vertical-align: top; padding: 4px 16px 4px 0; font-weight: 400;
-               color: var(--muted); font-variant-numeric: tabular-nums; }
+               color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .timeline td { padding: 4px 0; }
 .surnames { columns: 3 220px; column-gap: 32px; }
 .surnames section { break-inside: avoid; margin-bottom: 16px; }
@@ -1559,11 +1559,11 @@ details.more .menu a:hover { background: var(--tint); text-decoration: none; }
   main > article.person { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 0 40px;
     align-items: start; }
   main > article.person > .infobox { grid-column: 2; grid-row: 1; float: none; width: auto; margin: 0; }
-  main > article.person > .person-body, main > article.person > .editing { grid-column: 1; grid-row: 1; }
-  main > article.person .preview .infobox { display: none; }
+  main > article.person > .person-body { grid-column: 1; grid-row: 1; }
+  main > article.person > .editing { grid-column: 1 / -1; grid-row: 1; }
 }
-/* Below that, the facts float beside the story, so they make way for the editor. */
-@media (max-width: 1099px) { main > article.editing-on > .infobox { display: none; } }
+/* The editor takes the page's full width; its preview shows the facts. */
+main > article.editing-on > .infobox { display: none; }
 .format { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
 .format button { border: none; background: none; color: var(--muted); padding: 3px 8px; border-radius: 4px;
   font: 14px var(--ui); min-width: 28px; }
