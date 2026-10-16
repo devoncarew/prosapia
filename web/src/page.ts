@@ -9,6 +9,7 @@ const edit = document.querySelector<HTMLAnchorElement>('a[data-edit]');
 const actions = document.querySelector<HTMLElement>('.person-head .actions');
 const article = document.querySelector<HTMLElement>('main > article.person');
 const body = article?.querySelector<HTMLElement>('.person-body');
+const edited = document.querySelector<HTMLElement>('main > .edited');
 let open: { box: HTMLElement; mounted: Mounted } | null = null;
 
 async function startEditing(push: boolean): Promise<void> {
@@ -24,6 +25,7 @@ async function startEditing(push: boolean): Promise<void> {
   body.replaceWith(box);
   article.classList.add('editing-on');
   if (actions) actions.hidden = true;
+  if (edited) edited.hidden = true;
   // A path in a variable is left for the browser to load, not bundled.
   const editorScript = '/assets/editor.js';
   const { mount } = (await import(editorScript)) as typeof import('./editor');
@@ -49,6 +51,7 @@ function stopEditing(push: boolean): boolean {
   open.box.replaceWith(body);
   article.classList.remove('editing-on');
   if (actions) actions.hidden = false;
+  if (edited) edited.hidden = false;
   open = null;
   if (push) history.pushState({}, '', location.pathname);
   return true;

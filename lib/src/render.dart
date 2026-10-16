@@ -225,15 +225,13 @@ $body
       );
     }
     head.write('</div>');
-    if (editable && p.editedBy != null && p.editedAt != null) {
-      head.write(
-        '<p class="edited">Edited by ${esc(p.editedBy)} ${ago(p.editedAt!)} · <a href="/people/${p.id}/history">history</a></p>',
-      );
-    }
     head.write('</div>');
+    final edited = editable && p.editedBy != null && p.editedAt != null
+        ? '<p class="edited">Edited by ${esc(p.editedBy)} ${ago(p.editedAt!)} · <a href="/people/${p.id}/history">history</a></p>'
+        : '';
     return page(
       editor == null ? p.name : 'Editing ${p.name}',
-      '$head${personArticle(p, editor: editor)}'
+      '$head${personArticle(p, editor: editor)}${editor == null ? edited : ''}'
       '${editor != null
           ? '<script type="module" src="/assets/editor.js"></script>'
           : _canEdit
@@ -1543,7 +1541,8 @@ select { font: 14px var(--ui); padding: 4px 6px; border: 1px solid var(--line); 
   flex: 1 1 12em; min-width: 0; }
 .person-head h1 { margin: 0; min-width: 0; }
 .person-head .lead { margin: 0; }
-.person-head .edited { font: 15px var(--ui); color: var(--muted); margin: 4px 0 0; }
+.edited { font: 15px var(--ui); color: var(--muted); margin: 40px 0 0; padding-top: 12px;
+  border-top: 1px solid var(--line); clear: both; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 12px; font: 15px var(--ui); }
 .person-head .actions { gap: 8px; align-items: center; margin: 6px 0 0; }
 .person-head .actions .button { padding: 5px 14px; font-size: 15px; }
