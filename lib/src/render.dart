@@ -69,7 +69,8 @@ $body
   /// Only the trailing id is relied on, so older addresses keep working.
   static String pathOf(Person p) => '/people/${p.directory}';
 
-  String personLink(String id, {bool years = false}) {
+  /// A link to [id]'s page; with [nickname], named as the family knew them.
+  String personLink(String id, {bool years = false, bool nickname = false}) {
     final p = tree.people[id];
     if (p == null) {
       final gone = tree.deleted[id];
@@ -80,7 +81,7 @@ $body
     final suffix = years && p.years.isNotEmpty
         ? ' <span class="years">(${p.years})</span>'
         : '';
-    return '<a href="${pathOf(p)}">${esc(p.name)}</a>$suffix';
+    return '<a href="${pathOf(p)}">${esc(nickname ? p.displayName : p.name)}</a>$suffix';
   }
 
   // ------------------------------------------------------------------ home
@@ -119,7 +120,7 @@ $body
     groups.forEach((surname, people) {
       sb.write('<section><h2>${esc(surname)}</h2><ul>');
       for (final p in people) {
-        sb.write('<li>${personLink(p.id, years: true)}</li>');
+        sb.write('<li>${personLink(p.id, years: true, nickname: true)}</li>');
       }
       sb.write('</ul></section>');
     });
@@ -216,7 +217,7 @@ $body
     ];
     final head = StringBuffer('<div class="person-head">');
     head.write(
-      '<div class="title"><div class="name"><h1>${esc(p.name)}</h1>'
+      '<div class="title"><div class="name"><h1>${esc(p.displayName)}</h1>'
       '${p.years.isEmpty ? '' : '<span class="lead">${p.years}</span>'}</div>',
     );
     if (actions.isNotEmpty) {
@@ -230,7 +231,7 @@ $body
         ? '<p class="edited">Edited by ${esc(p.editedBy)} ${ago(p.editedAt!)} · <a href="/people/${p.id}/history">history</a></p>'
         : '';
     return page(
-      editor == null ? p.name : 'Editing ${p.name}',
+      editor == null ? p.displayName : 'Editing ${p.name}',
       '$head${personArticle(p, editor: editor)}${editor == null ? edited : ''}'
       '${editor != null
           ? '<script type="module" src="/assets/editor.js"></script>'

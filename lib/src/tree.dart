@@ -110,6 +110,8 @@ class Person {
     switch (key) {
       case 'name':
         name = line.value;
+      case 'nickname':
+        nicknames.addAll(line.segments.map((s) => s.text));
       case 'also known as':
         alsoKnownAs.addAll(line.segments.map((s) => s.text));
       case 'sex':
@@ -270,6 +272,12 @@ class Person {
   String? sex;
   String? photo;
   Event? born, christened, died, buried;
+
+  /// What they were called in place of their given name: "Scotty".
+  final nicknames = <String>[];
+
+  /// Other full names: a maiden or married name, a changed name, another
+  /// spelling.
   final alsoKnownAs = <String>[];
   final parents = <PersonRef>[];
   final children = <PersonRef>[];
@@ -291,6 +299,14 @@ class Person {
   String get reference => '@$directory';
 
   /// `1911–1987`, `born 1950`, `died 1987`, or empty.
+  /// The name with the first nickname after the given name, as the family
+  /// would write it: Allan “Scotty” MacLean Davidson.
+  String get displayName {
+    if (nicknames.isEmpty) return name;
+    final words = name.trim().split(RegExp(r'\s+'));
+    return [words.first, '“${nicknames.first}”', ...words.skip(1)].join(' ');
+  }
+
   String get years {
     final b = born?.date?.year, d = died?.date?.year;
     if (b != null && d != null) return '$b–$d';

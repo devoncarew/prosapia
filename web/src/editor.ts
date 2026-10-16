@@ -168,6 +168,7 @@ async function places(
 
 const vocabulary = [
   'Name',
+  'Nickname',
   'Also known as',
   'Sex',
   'Born',
