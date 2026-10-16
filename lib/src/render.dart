@@ -30,7 +30,14 @@ class Renderer {
 
   static String esc(String? s) => htmlEscape.convert(s ?? '');
 
-  String page(String title, String body, {String query = ''}) =>
+  /// A page of the site. A [wide] page has room for a column beside its
+  /// text.
+  String page(
+    String title,
+    String body, {
+    String query = '',
+    bool wide = false,
+  }) =>
       '''
 <!doctype html>
 <html lang="en">
@@ -50,7 +57,7 @@ class Renderer {
   <form action="/search" class="search"><input type="search" name="q" autocomplete="off" value="${esc(query)}" placeholder="Search" aria-label="Search"></form>
   ${viewer == null ? '' : '<form class="account" method="post" action="/sign-out"><span title="${esc(viewer!.email)} · ${viewer!.role.name}">${esc(viewer!.name ?? viewer!.email)}</span> <button>Sign out</button></form>'}
 </header>
-<main>
+<main${wide ? ' class="wide"' : ''}>
 $body
 </main>
 <script type="module" src="/assets/search.js"></script>
@@ -186,61 +193,70 @@ $body
 
   // ---------------------------------------------------------------- person
 
-  /// A person's page. With an [editor], the editor takes the place of the
-  /// page's content, as when editing a comment on GitHub.
-  String person(Person p, {String? editor, bool help = false}) {
-    if (editor != null) {
-      return page(
-        'Editing ${p.name}',
-        '<div class="editing">${editingTitle(p)}$editor</div>'
-            '<script type="module" src="/assets/editor.js"></script>',
-      );
-    }
-    final actions = [
+  /// A person's page: its title, then the story beside the facts. With an
+  /// [editor], the editor takes the story's place and the title stays, as
+  /// when editing an issue on GitHub.
+  String person(Person p, {String? editor}) {
+    final buttons = [
       if (_canEdit)
         '<a class="button primary edit" href="${pathOf(p)}?edit" data-edit="/people/${p.id}/edit?fragment">Edit</a>',
-      if (_canEdit) '<a href="#add-memory">Add a memory</a>',
-      if (_canEdit) '<a href="/media/add?person=${p.id}">Add photos</a>',
-      if (editable) '<a href="/people/${p.id}/history">History</a>',
+      if (_canEdit)
+        '<a class="button" href="/people/${p.id}/memory">Add a memory</a>',
+      if (_canEdit)
+        '<a class="button" href="/media/add?person=${p.id}">Add photos</a>',
+    ];
+    final more = [
+      if (editable) '<a href="/people/${p.id}/history">Change history</a>',
       if (_canEdit) '<a href="/people/${p.id}/delete">Delete</a>',
     ];
+    final actions = [
+      ...buttons,
+      if (more.isNotEmpty)
+        '<details class="more"><summary class="button" aria-label="More actions" title="More actions">⋯</summary><div class="menu">${more.join()}</div></details>',
+    ];
+    final head = StringBuffer('<div class="person-head">');
+    head.write(
+      '<div class="title"><div class="name"><h1>${esc(p.name)}</h1>'
+      '${p.years.isEmpty ? '' : '<span class="lead">${p.years}</span>'}</div>',
+    );
+    if (actions.isNotEmpty) {
+      head.write(
+        '<div class="actions"${editor == null ? '' : ' hidden'}>${actions.join()}</div>',
+      );
+    }
+    head.write('</div>');
+    head.write('</div>');
+    final edited = editable && p.editedBy != null && p.editedAt != null
+        ? '<p class="edited">Edited by ${esc(p.editedBy)} ${ago(p.editedAt!)} · <a href="/people/${p.id}/history">history</a></p>'
+        : '';
     return page(
-      p.name,
-      '${actions.isEmpty ? '' : '<p class="actions">${actions.join(' ')}</p>'}'
-      '${personArticle(p)}'
-      '${_canEdit ? _memoryBox(p, help: help) : ''}'
-      '${_canEdit ? '<script type="module" src="/assets/page.js"></script>' : ''}',
+      editor == null ? p.name : 'Editing ${p.name}',
+      '$head${personArticle(p, editor: editor)}${editor == null ? edited : ''}'
+      '${editor != null
+          ? '<script type="module" src="/assets/editor.js"></script>'
+          : _canEdit
+          ? '<script type="module" src="/assets/page.js"></script>'
+          : ''}',
+      wide: true,
     );
   }
 
-  /// The box at the end of a page for adding a memory, like the comment box
-  /// at the end of a GitHub issue.
-  String _memoryBox(Person p, {required bool help}) =>
-      '''
-<section class="add-memory" id="add-memory">
-<h2>Add a memory</h2>
-<p class="hint">A story, a trip, something you remember about ${esc(p.name)}. It is added to the end of the page as its own section.</p>
-<form class="memory" method="post" action="/people/${p.id}/memory">
-  <input type="hidden" name="helped_by" value="">
-  <div class="memory-head">
-    <div><label for="title">Title</label><input id="title" name="title" required maxlength="120" placeholder="Trip to Wales"></div>
-    <div><label for="date">When, if you know</label><input id="date" name="date" maxlength="40" placeholder="1923"></div>
-  </div>
-  <label for="text">The memory</label>
-  <textarea id="text" name="text" required spellcheck="true"></textarea>
-  ${help ? '<div class="help tidy" data-url="/people/${p.id}/memory/tidy"><button type="button">Claude: Tidy up</button></div><div class="help-bar" hidden role="status"></div>' : ''}
-  <div class="save"><button class="primary">Add the memory</button></div>
-</form>
-</section>
-${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}''';
-
-  /// The body of a person's page. Also used for the editor's preview, where
-  /// [p] is the text being typed and not yet part of the tree; a [preview]
-  /// leaves out photos and actions.
-  String personArticle(Person p, {bool preview = false}) {
+  /// The facts and the story of a person's page, below its title. Also
+  /// used for the editor's preview, where [p] is the text being typed and
+  /// not yet part of the tree; a [preview] leaves out photos and actions.
+  /// An [editor] takes the story's place.
+  String personArticle(Person p, {bool preview = false, String? editor}) {
     final sb = StringBuffer();
     final actions = _canEdit && !preview;
-    sb.write('<article class="person">');
+    sb.write(
+      '<article class="person${editor == null ? '' : ' editing-on'}">'
+      '${_infobox(p, actions: actions)}',
+    );
+    if (editor != null) {
+      sb.write('<div class="editing">$editor</div></article>');
+      return sb.toString();
+    }
+    sb.write('<div class="person-body">');
     if (_canEdit || !requiresViewer) {
       sb.write(_contradictions(p, actions: actions));
       for (final (items, what) in [
@@ -256,14 +272,6 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}''';
         }
         sb.write('</ul></details>');
       }
-    }
-    sb.write(_infobox(p, actions: actions));
-    sb.write('<h1>${esc(p.name)}</h1>');
-    if (p.years.isNotEmpty) sb.write('<p class="lead">${p.years}</p>');
-    if (!preview && editable && p.editedBy != null && p.editedAt != null) {
-      sb.write(
-        '<p class="edited">Edited by ${esc(p.editedBy)} ${ago(p.editedAt!)} · <a href="/people/${p.id}/history">history</a></p>',
-      );
     }
 
     if (p.body.isNotEmpty) {
@@ -299,7 +307,7 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}''';
     if (media.isNotEmpty) {
       sb.write('<h2>Photos and documents</h2>${gallery(media)}');
     }
-    sb.write('</article>');
+    sb.write('</div></article>');
     return sb.toString();
   }
 
@@ -890,9 +898,6 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}''';
 </form>
 ''';
 
-  String editingTitle(Person p) =>
-      '<p class="editing-title">Editing <a href="${pathOf(p)}">${esc(p.name)}</a></p>';
-
   /// [p]'s page with the editor in place of its content: opened directly,
   /// or shown again after a save that could not be made.
   String editPerson(
@@ -1394,18 +1399,19 @@ const stylesheet = '''
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.62 var(--ui); }
+body { margin: 0; background: var(--bg); color: var(--text); font: 18px/1.6 var(--ui); }
 a { color: var(--link); text-decoration: none; }
 a:hover { text-decoration: underline; }
 header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px;
          padding: 12px 24px; border-bottom: 1px solid var(--line); background: var(--tint);
-         font-size: 15px; }
+         font-size: 16px; }
 header .site { font-weight: 600; color: var(--text); }
 header nav { display: flex; gap: 16px; flex: 1; }
 header input { font: inherit; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px;
                background: var(--bg); color: var(--text); width: 220px; max-width: 100%; }
 main { max-width: 960px; margin: 0 auto; padding: 24px 24px 64px; }
-h1 { font-size: 2em; font-weight: 600; line-height: 1.15; letter-spacing: -0.018em; margin: 0 0 4px;
+main.wide { max-width: 1100px; }
+h1 { font-size: 2em; font-weight: 600; line-height: 1.15; letter-spacing: -0.005em; margin: 0 0 4px;
      text-wrap: balance; }
 h2 { font-size: 1.15em; font-weight: 600; margin: 1.8em 0 0.5em; padding-bottom: 4px; text-wrap: balance;
      border-bottom: 1px solid var(--line); overflow: hidden; }
@@ -1416,8 +1422,8 @@ h2 { font-size: 1.15em; font-weight: 600; margin: 1.8em 0 0.5em; padding-bottom:
 .kind { font-variant: small-caps; letter-spacing: 0.03em; color: var(--muted); }
 .empty { font-style: italic; }
 .missing { color: var(--muted); font-style: italic; }
-.infobox { float: right; width: 300px; margin: 0 0 16px 24px; padding: 12px; background: var(--tint);
-           border: 1px solid var(--line); border-radius: 6px; font: 14px/1.45 var(--ui); }
+.infobox { float: right; width: 320px; margin: 0 0 16px 24px; padding: 12px; background: var(--tint);
+           border: 1px solid var(--line); border-radius: 6px; font: 15px/1.5 var(--ui); }
 .infobox img { display: block; width: 100%; border-radius: 4px; margin-bottom: 10px; }
 .infobox table { border-collapse: collapse; width: 100%; }
 .infobox th { text-align: left; vertical-align: top; padding: 4px 10px 4px 0; color: var(--muted);
@@ -1437,7 +1443,7 @@ h2 { font-size: 1.15em; font-weight: 600; margin: 1.8em 0 0.5em; padding-bottom:
 .results li { margin-bottom: 12px; }
 mark { background: var(--mark); color: inherit; }
 .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
-.gallery a { display: block; font: 13px/1.35 var(--ui); color: var(--text);
+.gallery a { display: block; font: 14px/1.4 var(--ui); color: var(--text);
              overflow-wrap: anywhere; }
 .gallery img, .gallery .file { display: block; width: 100%; aspect-ratio: 1; object-fit: cover;
                                border-radius: 4px; border: 1px solid var(--line); margin-bottom: 6px; }
@@ -1523,27 +1529,45 @@ select { font: 14px var(--ui); padding: 4px 6px; border: 1px solid var(--line); 
   background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
 .start img { width: 160px; border-radius: 4px; display: block; }
 .start h2 { margin-top: 0; border: none; }
-.family { font: 15px/1.5 var(--ui); margin: 12px 0 0; }
-.family dt { color: var(--muted); font-size: 13px; margin-top: 6px; }
+.family { font: 16px/1.5 var(--ui); margin: 12px 0 0; }
+.family dt { color: var(--muted); font-size: 14px; margin-top: 6px; }
 .family dd { margin: 0; }
 .try li { margin-bottom: 8px; }
-.actions .button.edit { padding: 3px 14px; font-size: 14px; }
-.actions { align-items: center; }
-.edited { font: 13px var(--ui); color: var(--muted); margin: -0.8em 0 1.2em; }
-.editing-title { font: 600 15px var(--ui); color: var(--muted); margin: 0 0 10px; }
-.editing-title a { color: var(--text); }
+/* A person's page: the title across the top, then the story beside the facts. */
+.person-head { border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 24px; }
+.person-head .title { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
+  gap: 8px 24px; }
+.person-head .name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 14px;
+  flex: 1 1 12em; min-width: 0; }
+.person-head h1 { margin: 0; min-width: 0; }
+.person-head .lead { margin: 0; }
+.edited { font: 15px var(--ui); color: var(--muted); margin: 40px 0 0; padding-top: 12px;
+  border-top: 1px solid var(--line); clear: both; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 12px; font: 15px var(--ui); }
+.person-head .actions { gap: 8px; align-items: center; margin: 6px 0 0; }
+.person-head .actions .button { padding: 5px 14px; font-size: 15px; }
+details.more { position: relative; }
+details.more summary { list-style: none; cursor: pointer; padding: 5px 12px; }
+details.more summary::-webkit-details-marker { display: none; }
+details.more .menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 10; min-width: 160px;
+  padding: 4px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15); font: 15px var(--ui); }
+details.more .menu a { display: block; padding: 6px 14px; color: var(--text); }
+details.more .menu a:hover { background: var(--tint); text-decoration: none; }
+@media (min-width: 1100px) {
+  main > article.person { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 0 40px;
+    align-items: start; }
+  main > article.person > .infobox { grid-column: 2; grid-row: 1; float: none; width: auto; margin: 0; }
+  main > article.person > .person-body, main > article.person > .editing { grid-column: 1; grid-row: 1; }
+  main > article.person .preview .infobox { display: none; }
+}
+/* Below that, the facts float beside the story, so they make way for the editor. */
+@media (max-width: 1099px) { main > article.editing-on > .infobox { display: none; } }
 .format { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
 .format button { border: none; background: none; color: var(--muted); padding: 3px 8px; border-radius: 4px;
-  font: 13px var(--ui); min-width: 28px; }
+  font: 14px var(--ui); min-width: 28px; }
 .format button:hover { background: var(--tint); color: var(--text); }
 .format .sep { width: 1px; background: var(--line); margin: 2px 6px; }
-.add-memory { margin-top: 40px; padding: 16px 20px 20px; border: 1px solid var(--line); border-radius: 6px;
-  background: var(--surface); max-width: 720px; }
-.add-memory h2 { margin-top: 0; }
-.add-memory .hint { margin-top: 0; }
-.add-memory .memory-head { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
-@media (max-width: 700px) { .add-memory .memory-head { grid-template-columns: 1fr; } }
-.add-memory .memory textarea { height: 10em; }
 .similar { list-style: none; padding: 0; font: 15px/1.5 var(--ui); }
 .similar li { margin-bottom: 8px; }
 .similar button { margin-left: 8px; font-size: 13px; }
@@ -1552,13 +1576,13 @@ select { font: 14px var(--ui); padding: 4px 6px; border: 1px solid var(--line); 
 .add-person fieldset label { display: block; margin: 6px 0 0; color: var(--text); font-size: 15px; }
 .add-person fieldset input { width: auto; margin-right: 6px; }
 button.danger { background: #b3261e; border-color: #8c1d18; color: #fff; }
-.legend { margin-top: 12px; font: 13px/1.5 var(--ui); color: var(--muted); }
+.legend { margin-top: 12px; font: 14px/1.5 var(--ui); color: var(--muted); }
 .legend summary { cursor: pointer; }
 .legend dt { margin-top: 8px; color: var(--text); }
 .legend dd { margin: 2px 0 0 0; }
 .legend code, label code { font-size: 12px; }
 .editor .cm-editor { min-height: 60vh; background: var(--surface); color: var(--text);
-  font: 14px/1.6 ui-monospace, Menlo, monospace; border-radius: 0 0 6px 6px; }
+  font: 15px/1.6 ui-monospace, Menlo, monospace; border-radius: 0 0 6px 6px; }
 .editor .cm-editor .cm-content { min-height: 60vh; caret-color: var(--text); padding: 12px 4px; }
 .editor .cm-editor .cm-cursor { border-left: 2px solid var(--text); }
 .editor .cm-editor.cm-focused { outline: 2px solid var(--link); outline-offset: -1px; }
@@ -1586,18 +1610,17 @@ button.danger { background: #b3261e; border-color: #8c1d18; color: #fff; }
 .search-suggestions a span { color: var(--muted); font-size: 12px; display: block; }
 .search-suggestions a.active, .search-suggestions a:hover { background: var(--bg); text-decoration: none; }
 header form { position: relative; }
-.actions { display: flex; gap: 16px; margin: 0 0 12px; font: 14px var(--ui); }
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: -1px; }
 .tabs button { border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0;
-  background: none; color: var(--muted); padding: 8px 16px; font: 14px var(--ui); }
+  background: none; color: var(--muted); padding: 8px 16px; font: 15px var(--ui); }
 .tabs button[aria-selected=true] { border-color: var(--line); background: var(--surface); color: var(--text);
   margin-bottom: -1px; }
 .tab-panel { border: 1px solid var(--line); border-top: none; border-radius: 0 0 6px 6px; background: var(--surface); }
-.editor .preview { min-height: 60vh; padding: 16px 20px; font-size: 16px; }
-.hint { font: 13px/1.5 var(--ui); color: var(--muted); margin: 20px 0 4px; }
-.memory label { display: block; font: 13px/1.4 var(--ui); color: var(--muted); margin-bottom: 6px; }
+.editor .preview { min-height: 60vh; padding: 16px 20px; }
+.hint { font: 14px/1.5 var(--ui); color: var(--muted); margin: 20px 0 4px; }
+.memory label { display: block; font: 14px/1.4 var(--ui); color: var(--muted); margin-bottom: 6px; }
 .memory label { min-height: 0; margin-top: 14px; }
-textarea, .save input, .memory input { font: 14px/1.5 ui-monospace, Menlo, monospace;
+textarea, .save input, .memory input { font: 15px/1.5 ui-monospace, Menlo, monospace;
   width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;
   background: var(--surface); color: var(--text); }
 .memory input, .memory textarea, .save input { font: 16px/1.5 var(--ui); }
@@ -1611,15 +1634,15 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 button.primary kbd { font: 12px var(--ui); background: rgba(255,255,255,0.18); border-radius: 4px;
   padding: 2px 6px; margin-left: 6px; }
 .save { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 16px;
-  font: 14px var(--ui); }
+  font: 15px var(--ui); }
 .save label { margin: 0; min-height: 0; }
 .editor .save { justify-content: flex-end; }
 .save input { flex: 1; min-width: 240px; }
 .conflict { border: 1px solid #b3261e; border-radius: 6px; padding: 4px 16px 16px; margin: 12px 0;
   font: 15px/1.5 var(--ui); }
-.history { border-collapse: collapse; font: 14px/1.5 var(--ui); width: 100%; }
+.history { border-collapse: collapse; font: 15px/1.5 var(--ui); width: 100%; }
 .history td { padding: 6px 12px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-.source, .diff { font: 13px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere;
+.source, .diff { font: 14px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere;
   background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
 .diff > div { padding: 0 6px; }
 .diff .mark { display: inline-block; width: 1.5em; color: var(--muted); user-select: none; }
@@ -1632,7 +1655,7 @@ button { font: inherit; padding: 5px 12px; border: 1px solid var(--line); border
 button.primary { font: 600 16px var(--ui); padding: 10px 20px; }
 button:disabled { opacity: 0.6; cursor: default; }
 .sign-in { max-width: 520px; padding-top: 12vh; }
-.message { font: 15px/1.5 var(--ui); color: #b3261e; min-height: 1.5em; }
+.message { font: 16px/1.5 var(--ui); color: #b3261e; min-height: 1.5em; }
 @media (max-width: 640px) {
   .infobox { float: none; width: auto; margin: 0 0 16px; }
   main { padding: 16px 16px 48px; }
@@ -1654,6 +1677,5 @@ button:disabled { opacity: 0.6; cursor: default; }
   .timeline th { padding-right: 10px; white-space: normal; }
   .save { gap: 8px; }
   .save input { min-width: 0; }
-  .actions { flex-wrap: wrap; gap: 8px 16px; }
 }
 ''';
