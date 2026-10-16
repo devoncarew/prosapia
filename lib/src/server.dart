@@ -191,9 +191,9 @@ Handler siteHandler(
       final member = Sessions.memberOf(r);
       final canEdit =
           site.store.editable && member != null && member.role.canEdit;
-      final off = canEdit ? await helpUnavailable() : 'not an editor';
-      // `?edit` opens the page with the editor in place of its content.
+      // `?edit` opens the page with the editor in place of its story.
       if (canEdit && r.url.queryParameters.containsKey('edit')) {
+        final off = await helpUnavailable();
         return html(
           render(r).editPerson(
             person,
@@ -204,7 +204,7 @@ Handler siteHandler(
           ),
         );
       }
-      return html(render(r).person(person, help: off == null));
+      return html(render(r).person(person));
     }
     final deleted = site.tree.deleted[id];
     if (deleted != null) return html(render(r).deletedPerson(deleted));
@@ -277,15 +277,14 @@ Handler siteHandler(
       }
       final off = await helpUnavailable();
       return html(
-        render(r).editingTitle(person) +
-            render(r).editorForm(
-              person,
-              source: person.source,
-              basedOn: person.revision,
-              help: off == null,
-              helpOff: off,
-              inPlace: true,
-            ),
+        render(r).editorForm(
+          person,
+          source: person.source,
+          basedOn: person.revision,
+          help: off == null,
+          helpOff: off,
+          inPlace: true,
+        ),
       );
     }),
   );

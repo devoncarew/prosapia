@@ -1,17 +1,18 @@
-// A person's page. Edit opens the editor in place of the page's content,
-// as editing a comment does on GitHub; Discard puts the page back. The
-// editor's code is loaded only when it is first needed.
+// A person's page. Edit opens the editor in place of the story, as editing
+// an issue does on GitHub: the title and the facts stay where they are, and
+// Discard puts the story back. The editor's code is loaded only when it is
+// first needed.
 
 import type { Mounted } from './editor';
 
 const edit = document.querySelector<HTMLAnchorElement>('a[data-edit]');
-const actions = document.querySelector<HTMLElement>('main > .actions');
-const article = document.querySelector<HTMLElement>('article.person');
-const memory = document.getElementById('add-memory');
+const actions = document.querySelector<HTMLElement>('.person-head .actions');
+const article = document.querySelector<HTMLElement>('main > article.person');
+const body = article?.querySelector<HTMLElement>('.person-body');
 let open: { box: HTMLElement; mounted: Mounted } | null = null;
 
 async function startEditing(push: boolean): Promise<void> {
-  if (open || !edit || !article) return;
+  if (open || !edit || !article || !body) return;
   const response = await fetch(edit.dataset.edit!);
   if (!response.ok) {
     location.href = edit.href; // the page with the editor open
@@ -20,9 +21,9 @@ async function startEditing(push: boolean): Promise<void> {
   const box = document.createElement('div');
   box.className = 'editing';
   box.innerHTML = await response.text();
-  article.replaceWith(box);
+  body.replaceWith(box);
+  article.classList.add('editing-on');
   if (actions) actions.hidden = true;
-  if (memory) memory.hidden = true;
   // A path in a variable is left for the browser to load, not bundled.
   const editorScript = '/assets/editor.js';
   const { mount } = (await import(editorScript)) as typeof import('./editor');
@@ -37,7 +38,7 @@ async function startEditing(push: boolean): Promise<void> {
 
 /** Closes the editor, after asking if it holds changes. */
 function stopEditing(push: boolean): boolean {
-  if (!open || !article) return true;
+  if (!open || !article || !body) return true;
   if (
     open.mounted.changed() &&
     !confirm('Discard your changes to this page?')
@@ -45,9 +46,9 @@ function stopEditing(push: boolean): boolean {
     return false;
   }
   open.mounted.unmount();
-  open.box.replaceWith(article);
+  open.box.replaceWith(body);
+  article.classList.remove('editing-on');
   if (actions) actions.hidden = false;
-  if (memory) memory.hidden = false;
   open = null;
   if (push) history.pushState({}, '', location.pathname);
   return true;
@@ -69,9 +70,11 @@ window.addEventListener('popstate', () => {
   }
 });
 
-// "Add a memory" goes to the box at the end of the page.
-document
-  .querySelector('a[href="#add-memory"]')
-  ?.addEventListener('click', () => {
-    setTimeout(() => document.getElementById('title')?.focus());
-  });
+// The "more actions" menu closes on a click anywhere else, or on Escape.
+const more = document.querySelector<HTMLDetailsElement>('details.more');
+document.addEventListener('click', (event) => {
+  if (more?.open && !more.contains(event.target as Node)) more.open = false;
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && more?.open) more.open = false;
+});

@@ -313,6 +313,11 @@ export function mount(form: HTMLFormElement): Mounted {
   const writePanel = document.getElementById('panel-write')!;
   const previewPanel = document.getElementById('panel-preview')!;
   let previewed = original;
+  // Beside the editor, the page's facts show what the preview shows.
+  const facts = form
+    .closest('article.person')
+    ?.querySelector<HTMLElement>(':scope > .infobox');
+  const savedFacts = facts?.innerHTML;
 
   async function showPreview(): Promise<void> {
     const text = view.state.doc.toString();
@@ -324,6 +329,8 @@ export function mount(form: HTMLFormElement): Mounted {
       body: text,
     });
     preview.innerHTML = await response.text();
+    const fresh = preview.querySelector('.infobox');
+    if (facts && fresh) facts.innerHTML = fresh.innerHTML;
     previewed = text;
     preview.classList.remove('stale');
   }
@@ -668,6 +675,7 @@ export function mount(form: HTMLFormElement): Mounted {
       window.removeEventListener('beforeunload', guard);
       clearDraft();
       view.destroy();
+      if (facts && savedFacts !== undefined) facts.innerHTML = savedFacts;
     },
   };
 }
