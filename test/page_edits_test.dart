@@ -77,6 +77,35 @@ taught school.
     expect(mentions(out, 'p-7k2m9x'), isFalse);
   });
 
+  test('a relationship stated only on a deleted page is kept as a name', () {
+    final madej = Person.fromSource(
+      'p-7nm4er',
+      'madej-something-7nm4er',
+      'Name: Something Madej\nPartner: @dwyer-lisa-fxb7e3\n'
+          'Married: @dwyer-lisa-fxb7e3, 1990, Hartford\n'
+          'Children: @madej-ann-a1b2c3 (adopted)\n',
+    );
+    expect(
+      keepRelations(
+        'Name: Lisa Dwyer\nPartner: @x-111111\n\nText.\n',
+        madej,
+        'p-fxb7e3',
+      ),
+      'Name: Lisa Dwyer\nPartner: @x-111111, Something Madej\n'
+      'Married: Something Madej, 1990, Hartford\n\nText.\n',
+    );
+    expect(
+      keepRelations('Name: Ann Madej\n', madej, 'p-a1b2c3'),
+      'Name: Ann Madej\nParents: Something Madej (adopted)\n',
+    );
+    // A page that names them itself is handled by referencesToName.
+    expect(
+      keepRelations('Name: Lisa\nPartner: @madej-7nm4er\n', madej, 'p-fxb7e3'),
+      isNull,
+    );
+    expect(keepRelations('Name: Someone else\n', madej, 'p-999999'), isNull);
+  });
+
   test('new pages and their directories', () {
     expect(
       newPage(

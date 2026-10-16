@@ -91,17 +91,61 @@ String referencesToName(String source, String personId, String name) {
   );
 }
 
-/// Sets the first `[label]:` line to [value], or adds one at the end of
-/// the facts block. Returns null if the page has no facts block.
-String? setFact(String source, String label, String value) {
-  final key = label.toLowerCase();
+/// What [deleted]'s page says about [otherId] that the other page does
+/// not, written from the other side with [deleted]'s plain name, for when
+/// [deleted]'s page goes: `Partner: @dwyer-lisa-x` on [deleted]'s page
+/// becomes `Partner: Something Madej` on Lisa's. Returns [source], the
+/// other page, with those lines added, or null if there are none.
+String? keepRelations(String source, Person deleted, String otherId) {
+  if (mentions(source, deleted.id)) return null;
+  const inverse = {
+    'parents': 'children',
+    'children': 'parents',
+    'siblings': 'siblings',
+    'partner': 'partner',
+  };
+  final name = deleted.name.replaceAll(',', '').trim();
+  var result = source;
+  var changed = false;
+  for (final line in ParsedPage.parse(deleted.source).facts) {
+    final kind = kindOf(line.key);
+    if (kind == null) continue;
+    final segments = line.segments;
+    if (inverse[kind] case final mine?) {
+      for (final s in segments) {
+        if (s is RefSegment && s.personId == otherId) {
+          final text = s.qualifier == null ? name : '$name (${s.qualifier})';
+          result = _addToRelation(result, mine, text) ?? result;
+          changed = true;
+        }
+      }
+    } else if (segments.isNotEmpty &&
+        segments.first is RefSegment &&
+        (segments.first as RefSegment).personId == otherId) {
+      // A two-person event: the same line, naming [deleted] instead.
+      final rest = [name, ...segments.skip(1).map((s) => s.text)];
+      result = _addLine(result, line.label, rest.join(', ')) ?? result;
+      changed = true;
+    }
+  }
+  return changed ? result : null;
+}
+
+/// Adds [text] to the first [kind] relationship line, or a new line.
+String? _addToRelation(String source, String kind, String text) {
   var done = false;
   final changed = _editFacts(source, (line) {
-    if (done || line.key != key) return null;
+    if (done || kindOf(line.key) != kind) return null;
     done = true;
-    return [value];
+    return [...line.segments.map((s) => s.text), text];
   });
-  if (changed != null) return changed;
+  return changed ??
+      _addLine(source, '${kind[0].toUpperCase()}${kind.substring(1)}', text);
+}
+
+/// Adds a `[label]: [value]` line at the end of the facts block. Returns
+/// null if the page has no facts block.
+String? _addLine(String source, String label, String value) {
   final lines = source.split('\n');
   var i = 0;
   while (i < lines.length && lines[i].trim().isEmpty) {
@@ -117,6 +161,19 @@ String? setFact(String source, String label, String value) {
   }
   lines.insert(i, '$label: $value');
   return lines.join('\n');
+}
+
+/// Sets the first `[label]:` line to [value], or adds one at the end of
+/// the facts block. Returns null if the page has no facts block.
+String? setFact(String source, String label, String value) {
+  final key = label.toLowerCase();
+  var done = false;
+  final changed = _editFacts(source, (line) {
+    if (done || line.key != key) return null;
+    done = true;
+    return [value];
+  });
+  return changed ?? _addLine(source, label, value);
 }
 
 /// The text of a new page: its name, and what is known from where it was

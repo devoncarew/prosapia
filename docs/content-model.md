@@ -88,8 +88,11 @@ Built in milestone 14:
   the original page, and on a parent's page that lists the same name, becomes an `@`
   reference. All of this is one change.
 - **Deleting a page keeps what other pages say.** Their references to the person become
-  the plain name, in the same change. The deleted page keeps its history, and its
-  address says that it was deleted and offers to bring it back.
+  the plain name, and a relationship stated only on the deleted page is written on the
+  other page with the plain name (`Partner: @dwyer-lisa-fxb7e3` on the deleted page
+  becomes `Partner: Something Madej` on Lisa's), all in the same change. The deleted
+  page keeps its history, and its address says that it was deleted and offers to bring
+  it back.
 - **A contradiction** is two statements that cannot both hold: someone listed as both a
   person's parent and their child, or as parent and partner; someone listed as their own
   relative; or a marriage, or another event of two people, given different dates or

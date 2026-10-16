@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild src/sign_in.ts src/editor.ts src/search.ts src/memory.ts src/photos.ts src/page.ts src/history.ts --bundle --format=esm --target=es2022 --minify --outdir=dist",
-    "watch": "esbuild src/sign_in.ts src/editor.ts src/search.ts src/memory.ts src/photos.ts src/page.ts src/history.ts --bundle --format=esm --target=es2022 --outdir=dist --watch",
+    "build": "esbuild src/sign_in.ts src/editor.ts src/search.ts src/memory.ts src/photos.ts src/page.ts src/history.ts src/times.ts --bundle --format=esm --target=es2022 --minify --outdir=dist",
+    "watch": "esbuild src/sign_in.ts src/editor.ts src/search.ts src/memory.ts src/photos.ts src/page.ts src/history.ts src/times.ts --bundle --format=esm --target=es2022 --outdir=dist --watch",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit"
   },
