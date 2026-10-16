@@ -208,7 +208,14 @@ Handler siteHandler(
       return html(render(r).person(person));
     }
     final deleted = site.tree.deleted[id];
-    if (deleted != null) return html(render(r).deletedPerson(deleted));
+    if (deleted != null) {
+      return html(
+        render(r).deletedPerson(
+          deleted,
+          undo: await site.store.changeOf(id, deleted.revision),
+        ),
+      );
+    }
     return missing(r, 'No person has the id $id.');
   });
 
@@ -426,7 +433,24 @@ Handler siteHandler(
   router.get('/people/<id>/history', (Request r, String id) async {
     final person = anyPerson(id);
     if (person == null) return missing(r, 'No person has the id $id.');
-    return html(render(r).history(person, await site.store.history(id)));
+    final revisions = await site.store.history(id);
+    final selected =
+        int.tryParse(r.url.queryParameters['version'] ?? '') ??
+        revisions.firstOrNull?.number;
+    final at = revisions.indexWhere((v) => v.number == selected);
+    return html(
+      render(r).history(
+        person,
+        revisions,
+        selected: selected,
+        panel: at < 0
+            ? ''
+            : render(r).versionPanel(
+                revisions[at],
+                previous: revisions.elementAtOrNull(at + 1),
+              ),
+      ),
+    );
   });
 
   router.get('/people/<id>/revisions/<number|[0-9]+>', (
@@ -434,6 +458,11 @@ Handler siteHandler(
     String id,
     String number,
   ) async {
+    // A version is shown in the change history; the history page asks for
+    // the part below its list.
+    if (!r.url.queryParameters.containsKey('fragment')) {
+      return seeOther('/people/$id/history?version=$number');
+    }
     final person = anyPerson(id);
     final revision = person == null
         ? null
@@ -444,14 +473,7 @@ Handler siteHandler(
     final previous = revision.number > 1
         ? await site.store.revision(id, revision.number - 1)
         : null;
-    return html(
-      render(r).revision(
-        person,
-        revision,
-        previous: previous,
-        isCurrent: revision.number == person.revision,
-      ),
-    );
+    return html(render(r).versionPanel(revision, previous: previous));
   });
 
   // Older links compared two versions; each version now shows its own
@@ -963,6 +985,10 @@ Handler siteHandler(
         );
       }
     }
+    // Undoing a deletion goes back to the page it brings back.
+    final revived = change.pages.keys
+        .where(site.tree.deleted.containsKey)
+        .firstOrNull;
     final result = await site.store.saveChange(
       writes,
       author: member,
@@ -970,7 +996,7 @@ Handler siteHandler(
     );
     await site.reload();
     if (!result.saved) return changedMeanwhile(r, result);
-    return seeOther('/changes');
+    return seeOther(revived == null ? '/changes' : '/people/$revived');
   });
 
   // Completion for the editor and the search box.

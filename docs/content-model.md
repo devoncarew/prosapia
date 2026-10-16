@@ -95,9 +95,10 @@ Built in milestone 14:
   relative; or a marriage, or another event of two people, given different dates or
   places on the two pages. It is shown on both pages, with a button to remove either
   statement.
-- **Undo works on whole changes.** Recent changes offers Undo for any change whose pages
-  have not been changed since. It returns each page to its previous version, deleting a
-  page the change created or bringing back one it deleted, and is itself a change.
+- **A deletion is undone whole.** A deleted page's address offers to bring it back,
+  provided none of the pages the deletion touched has changed since: the page returns,
+  and so do the links to it that became plain names. Other changes are taken back page
+  by page, by restoring an earlier version from the page's change history.
 
 The direction, as set before milestone 14:
 

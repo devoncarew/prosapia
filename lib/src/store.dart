@@ -91,6 +91,9 @@ abstract class TreeStore {
   /// One entry in the log, by its id.
   Future<Change?> change(String id) async => null;
 
+  /// The change that made version [number] of [page].
+  Future<Change?> changeOf(String page, int number) async => null;
+
   /// Everyone invited to the tree, by email address.
   Future<List<Member>> members() async => const [];
 
