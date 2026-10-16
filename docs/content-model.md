@@ -147,8 +147,13 @@ Settled at the start of milestone 13:
   relationship: `Parents: @behler-paul-ww9wcn (adopted)`. Any other text on the line is
   shown as written and marked as not understood, with a hint, such as suggesting a
   `Married:` line for "married 1945".
-- **The vocabulary:** `Name`, `Also known as`, `Sex`; `Born`, `Christened`, `Died`,
-  `Buried`, `Married`, `Divorced`; `Parents`, `Children`, `Partner`, `Siblings`;
+- **Other names:** `Nickname: Scotty` is what someone was called in place of their given
+  name; the first one is shown in their name wherever the family would say it, as in
+  Allan “Scotty” MacLean Davidson. `Also known as:` holds other full names: a maiden or
+  married name, a changed or anglicised name, another spelling. `Name:` is the name at
+  birth, or the one they were best known by. All of them are searched.
+- **The vocabulary:** `Name`, `Nickname`, `Also known as`, `Sex`; `Born`, `Christened`,
+  `Died`, `Buried`, `Married`, `Divorced`; `Parents`, `Children`, `Partner`, `Siblings`;
   `Occupation`, `Education`, `Residence`, `Degree`, `Graduated`, `Title`, `Note`. Any
   other label is kept as a fact of that kind and shown as written.
 - **What was typed is what is kept.** A page is stored exactly as typed. Prosapia reads

@@ -62,7 +62,7 @@ class Index {
       db.execute('insert into search values (?, ?, ?, ?)', [
         'person',
         p.id,
-        [p.name, ...p.alsoKnownAs].join(' '),
+        [p.name, ...p.nicknames, ...p.alsoKnownAs].join(' '),
         [
           p.born?.place,
           p.died?.place,

@@ -11,13 +11,13 @@ class Completion {
   final Index index;
 
   /// People whose names match [query]: each word typed must start a word of
-  /// their name, or of a name they were also known by.
+  /// their name, a nickname, or a name they were also known by.
   List<Map<String, String>> people(String query, {int limit = 10}) {
     final words = _words(query);
     if (words.isEmpty) return const [];
     final matches = <(int, Person)>[];
     for (final p in tree.people.values) {
-      for (final name in [p.name, ...p.alsoKnownAs]) {
+      for (final name in [p.name, ...p.nicknames, ...p.alsoKnownAs]) {
         final nameWords = _words(name);
         if (words.every((w) => nameWords.any((n) => n.startsWith(w)))) {
           // Names that start with what was typed come first.
@@ -50,7 +50,7 @@ class Completion {
         (a.length > 3 && b.length > 3 && _distance(a, b) <= 1);
     final found = <Person>[];
     for (final p in tree.people.values) {
-      for (final other in [p.name, ...p.alsoKnownAs]) {
+      for (final other in [p.name, ...p.nicknames, ...p.alsoKnownAs]) {
         final theirs = _words(other);
         if (theirs.isEmpty) continue;
         final sameFamily =

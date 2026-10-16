@@ -91,4 +91,16 @@ Prose.''');
     expect(prose.body, 'Note: this is prose.');
     expect(prose.issues.single, contains('Name:'));
   });
+
+  test('a nickname is shown after the given name', () {
+    final scotty = Person.fromSource(
+      'p-1',
+      'x-1',
+      'Name: Allan MacLean Davidson\nNickname: Scotty\nAlso known as: A. M. Davidson\n',
+    );
+    expect(scotty.nicknames, ['Scotty']);
+    expect(scotty.alsoKnownAs, ['A. M. Davidson']);
+    expect(scotty.displayName, 'Allan “Scotty” MacLean Davidson');
+    expect(p.displayName, 'Howard Joseph Carew');
+  });
 }
