@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:prosapia/src/assist.dart';
 import 'package:prosapia/src/auth.dart';
 import 'package:prosapia/src/claude.dart';
+import 'package:prosapia/src/export.dart';
 import 'package:prosapia/src/file_store.dart';
 import 'package:prosapia/src/firestore_store.dart';
 import 'package:prosapia/src/images.dart';
@@ -26,6 +27,9 @@ Serve a tree from Firestore (members sign in with Google):
 Future<void> main(List<String> arguments) async {
   // Settings in .env apply unless the environment sets them too.
   final env = {...readDotEnv('.env'), ...Platform.environment};
+  if (arguments.firstOrNull == 'export') {
+    return export(arguments.skip(1).toList(), env);
+  }
   final parser = ArgParser()
     ..addOption('port', abbr: 'p', defaultsTo: env['PORT'] ?? '8080')
     ..addOption(
@@ -190,4 +194,44 @@ Map<String, String> readDotEnv(String path) {
     settings[m[1]!] = value;
   }
   return settings;
+}
+
+/// `prosapia export`: copies the tree into its backup repository, one commit
+/// per logged change since the last export. Run nightly as a Cloud Run job;
+/// see docs/deploying.md.
+Future<void> export(List<String> arguments, Map<String, String> env) async {
+  final parser = ArgParser()
+    ..addOption('tree', defaultsTo: env['PROSAPIA_TREE'])
+    ..addOption('project', defaultsTo: env['GOOGLE_CLOUD_PROJECT'])
+    ..addOption('repo', defaultsTo: env['PROSAPIA_EXPORT_REPO'])
+    ..addOption(
+      'cache',
+      defaultsTo: env['PROSAPIA_CACHE'] ?? '.prosapia_cache',
+    );
+  final args = parser.parse(arguments);
+  final tree = args['tree'] as String?;
+  final project = args['project'] as String?;
+  final repo = args['repo'] as String?;
+  if (tree == null || project == null || repo == null) {
+    stderr.writeln(
+      'usage: prosapia export --project <id> --tree <id> --repo <git url>\n'
+      'The SSH key that may push to the repository is read from '
+      'GITHUB_EXPORT_KEY.',
+    );
+    exit(64);
+  }
+  final app = FirebaseApp.initializeApp(
+    options: AppOptions(projectId: project),
+  );
+  final store = FirestoreStore(
+    app,
+    tree,
+    bucketName: '$project.firebasestorage.app',
+    cacheDir: args['cache'] as String,
+  );
+  try {
+    await Exporter(store, repo: repo, sshKey: env['GITHUB_EXPORT_KEY']).run();
+  } finally {
+    await app.close();
+  }
 }

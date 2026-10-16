@@ -17,6 +17,12 @@ browser → Firebase Hosting (the site's address, HTTPS) → Cloud Run (the serv
   `__session`, which is the one the server uses.
 - **The Anthropic API key** is kept in Secret Manager as `anthropic-api-key` and given
   to the server as `ANTHROPIC_API_KEY`.
+- **A nightly export** copies the tree into the private repository
+  `devoncarew/prosapia-carew`: one commit per logged change since the last run, with the
+  change's author, time and summary, in the file layout the server can load. It runs
+  from the same image as a Cloud Run job, `prosapia-export`, started by Cloud Scheduler
+  at 3 a.m. Pacific. It pushes with a deploy key kept in Secret Manager as
+  `github-export-key`; the key can write to that one repository only.
 - **Cloud Run's disk is memory**, lost on restart. Display copies and uploads in
   progress live there and are made again when needed.
 
@@ -87,7 +93,25 @@ Done once per project, in this order. Each step changes the production project.
      --recurrence=daily --retention=14d --project prosapia-ea818
    ```
 
-7. **Attach the domain.** In the Firebase console, under Hosting, add the custom domain
+7. **Schedule the export.** The deploy key's public half is on the repository with write
+   access, and its private half is the `github-export-key` secret, readable by the
+   server's service account. `tool/deploy.sh` creates the job; this starts it nightly:
+
+   ```
+   gcloud services enable cloudscheduler.googleapis.com --project prosapia-ea818
+   gcloud run jobs add-iam-policy-binding prosapia-export --region us-west1 \
+     --member "serviceAccount:$SA" --role roles/run.invoker --project prosapia-ea818
+   gcloud scheduler jobs create http prosapia-export-nightly \
+     --location us-west1 --schedule '0 3 * * *' --time-zone America/Los_Angeles \
+     --http-method POST --oauth-service-account-email "$SA" \
+     --uri https://run.googleapis.com/v2/projects/prosapia-ea818/locations/us-west1/jobs/prosapia-export:run \
+     --project prosapia-ea818
+   ```
+
+   To export now:
+   `gcloud run jobs execute prosapia-export --region us-west1 --project prosapia-ea818`.
+
+8. **Attach the domain.** In the Firebase console, under Hosting, add the custom domain
    `prosapia.app` and put the DNS records it gives at the registrar. Then, under
    Authentication, Settings, Authorized domains, add `prosapia.app` so Google sign-in
    works there. Until then the site is at `https://prosapia-ea818.web.app`.

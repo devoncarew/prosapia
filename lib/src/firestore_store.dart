@@ -284,6 +284,23 @@ class FirestoreStore extends TreeStore {
     return [for (final doc in snapshot.docs) _change(doc.id, doc.data())];
   }
 
+  /// Every change at or after [after], oldest first; every change if
+  /// [after] is null.
+  Future<List<Change>> changesSince(DateTime? after) async {
+    Query<Map<String, Object?>> query = _tree
+        .collection('changes')
+        .orderBy('at');
+    if (after != null) {
+      query = query.where(
+        'at',
+        WhereFilter.greaterThanOrEqual,
+        Timestamp.fromDate(after),
+      );
+    }
+    final snapshot = await query.get();
+    return [for (final doc in snapshot.docs) _change(doc.id, doc.data())];
+  }
+
   @override
   Future<Change?> change(String id) async {
     final data = (await _tree.collection('changes').doc(id).get()).data();
