@@ -15,6 +15,7 @@ import 'firestore_store.dart' show contentTypes;
 import 'images.dart';
 import 'index.dart';
 import 'page_edits.dart';
+import 'page_format.dart';
 import 'photo_metadata.dart';
 import 'render.dart';
 import 'staging.dart';
@@ -306,16 +307,20 @@ Handler siteHandler(
     '/people/<id>/edit',
     (Request r, String id) => editing(r, id, (person, member) async {
       final fields = await form(r);
-      final source = (fields['source'] ?? '').replaceAll('\r\n', '\n');
+      final typed = (fields['source'] ?? '').replaceAll('\r\n', '\n');
       final helpedBy = Model.byId(fields['helped_by'])?.id;
       final basedOn = int.tryParse(fields['based_on'] ?? '') ?? person.revision;
 
+      // Saved in its normal form; a page only reformatted is not a change.
+      final source = formatPage(typed);
       final draft = Person.fromSource(id, person.directory, source);
-      if (basedOn == person.revision && source.trim() == person.source.trim()) {
+      if (basedOn == person.revision &&
+          (typed.trim() == person.source.trim() ||
+              source == formatPage(person.source))) {
         return seeOther('/people/$id'); // nothing changed
       }
       final summary = await summaryOf([
-        (name: person.name, before: person.source, after: source),
+        (name: person.name, before: formatPage(person.source), after: source),
       ]);
       final result = await site.store.savePerson(
         draft,
@@ -391,7 +396,7 @@ Handler siteHandler(
         final draft = Person.fromSource(
           id,
           current.directory,
-          '${current.source.trimRight()}\n\n$section\n',
+          formatPage('${current.source.trimRight()}\n\n$section\n'),
         );
         final result = await site.store.savePerson(
           draft,
