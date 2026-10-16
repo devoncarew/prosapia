@@ -129,6 +129,14 @@ $body
       }
       sb.write('</div></section>');
     }
+    sb.write(
+      '<h2>Find your way around</h2><ul class="try">'
+      '<li><a href="/people">Everyone in the tree</a>, grouped by family name. Or type a name in the search box at the top of any page.</li>'
+      '<li><a href="/media">Photos and documents</a>, newest first.</li>'
+      '<li><a href="/research">Research</a>: where to look for more about the family.</li>'
+      '${_canEdit ? '<li>Anything can be corrected: choose Edit on a page. Every change is kept, so nothing can be lost.</li>' : ''}'
+      '</ul>',
+    );
     if (recent.isNotEmpty) {
       sb.write('<h2>Recent changes</h2><ul class="recent">');
       for (final c in recent) {
@@ -140,14 +148,6 @@ $body
       }
       sb.write('</ul><p><a href="/changes">All recent changes</a></p>');
     }
-    sb.write(
-      '<h2>Find your way around</h2><ul class="try">'
-      '<li><a href="/people">Everyone in the tree</a>, grouped by family name. Or type a name in the search box at the top of any page.</li>'
-      '<li><a href="/media">Photos and documents</a>, newest first.</li>'
-      '<li><a href="/research">Research</a>: where to look for more about the family.</li>'
-      '${_canEdit ? '<li>Anything can be corrected: choose Edit on a page. Every change is kept, so nothing can be lost.</li>' : ''}'
-      '</ul>',
-    );
     return page(tree.name, sb.toString());
   }
 
@@ -195,7 +195,7 @@ $body
         '<a href="$url" target="_blank" rel="noopener">$name</a>';
     return page('Research', '''
 <h1>Research</h1>
-<p class="lead">Where to look for more about the family, if you would like to add to what is here and have not done genealogy research before.</p>
+<p class="lead">Genealogy techniques and research resources.</p>
 <div class="research">
 <h2>How to start</h2>
 <ul>
@@ -207,40 +207,22 @@ $body
 </ul>
 
 <h2>Free</h2>
-<dl>
-<dt>${link('https://www.familysearch.org', 'FamilySearch')}</dt>
-<dd>The largest free collection: censuses, births, marriages, deaths, church and immigration records from around the world, many with images. Needs a free account. Its ${link('https://www.familysearch.org/en/wiki/', 'Research Wiki')} explains which records exist for a given place and time.</dd>
-<dt>US censuses</dt>
-<dd>Taken every ten years and opened after 72, so 1790 to 1950 can be searched, free on FamilySearch. They list everyone in a household, with ages, birthplaces and often occupations.</dd>
-<dt>${link('https://www.findagrave.com', 'Find a Grave')} and ${link('https://billiongraves.com', 'BillionGraves')}</dt>
-<dd>Cemetery records and photographs of headstones, gathered by volunteers. Often the quickest way to dates of birth and death, and to who is buried together.</dd>
-<dt>${link('https://chroniclingamerica.loc.gov', 'Chronicling America')}</dt>
-<dd>The Library of Congress's historic American newspapers, searchable by name and place.</dd>
-<dt>${link('https://www.archives.gov/research/genealogy', 'US National Archives')} and ${link('https://www.statueofliberty.org/discover/passenger-ship-search/', 'Ellis Island passenger lists')}</dt>
-<dd>Immigration, naturalization and military service records; ships' lists of arrivals in New York.</dd>
-<dt>${link('https://library-archives.canada.ca', 'Library and Archives Canada')} and ${link('https://www.freebmd.org.uk', 'FreeBMD')}</dt>
-<dd>Canadian censuses, immigration and military records; an index of births, marriages and deaths in England and Wales from 1837.</dd>
-<dt>${link('https://archive.org', 'Internet Archive')} and ${link('https://books.google.com', 'Google Books')}</dt>
-<dd>Old county histories, city directories, school yearbooks and published family histories.</dd>
-<dt>Your public library</dt>
-<dd>Many libraries offer Ancestry Library Edition free at the library, and some offer HeritageQuest or newspaper archives from home with a library card. Ask before paying for anything.</dd>
-</dl>
+<p><strong>${link('https://www.familysearch.org', 'FamilySearch')}.</strong> The largest free collection: censuses, births, marriages, deaths, church and immigration records from around the world, many with images. Needs a free account. Its ${link('https://www.familysearch.org/en/wiki/', 'Research Wiki')} explains which records exist for a given place and time.</p>
+<p><strong>US censuses.</strong> Taken every ten years and opened after 72, so 1790 to 1950 can be searched, free on FamilySearch. They list everyone in a household, with ages, birthplaces and often occupations.</p>
+<p><strong>${link('https://www.findagrave.com', 'Find a Grave')} and ${link('https://billiongraves.com', 'BillionGraves')}.</strong> Cemetery records and photographs of headstones, gathered by volunteers. Often the quickest way to dates of birth and death, and to who is buried together.</p>
+<p><strong>${link('https://chroniclingamerica.loc.gov', 'Chronicling America')}.</strong> The Library of Congress's historic American newspapers, searchable by name and place.</p>
+<p><strong>${link('https://www.archives.gov/research/genealogy', 'US National Archives')} and ${link('https://www.statueofliberty.org/discover/passenger-ship-search/', 'Ellis Island passenger lists')}.</strong> Immigration, naturalization and military service records; ships' lists of arrivals in New York.</p>
+<p><strong>${link('https://library-archives.canada.ca', 'Library and Archives Canada')} and ${link('https://www.freebmd.org.uk', 'FreeBMD')}.</strong> Canadian censuses, immigration and military records; an index of births, marriages and deaths in England and Wales from 1837.</p>
+<p><strong>${link('https://archive.org', 'Internet Archive')} and ${link('https://books.google.com', 'Google Books')}.</strong> Old county histories, city directories, school yearbooks and published family histories.</p>
+<p><strong>Your public library.</strong> Many libraries offer Ancestry Library Edition free at the library, and some offer HeritageQuest or newspaper archives from home with a library card. Ask before paying for anything.</p>
 
 <h2>Paid</h2>
 <p>Most offer a free trial: plan what to search for first, then subscribe for a month.</p>
-<dl>
-<dt>${link('https://www.ancestry.com', 'Ancestry')}</dt>
-<dd>The largest paid collection, strongest for the US and Britain. Its “hints” from other people's trees need checking like any other tree.</dd>
-<dt>${link('https://www.newspapers.com', 'Newspapers.com')} and ${link('https://www.genealogybank.com', 'GenealogyBank')}</dt>
-<dd>Newspaper archives. Obituaries, wedding announcements and local news are often the richest sources for the last 150 years.</dd>
-<dt>${link('https://www.fold3.com', 'Fold3')}</dt>
-<dd>US military records: service files, draft cards, pensions.</dd>
-<dt>${link('https://www.myheritage.com', 'MyHeritage')} and ${link('https://www.findmypast.com', 'Findmypast')}</dt>
-<dd>Stronger for Europe, and for Britain and Ireland.</dd>
-</dl>
+<p><strong>${link('https://www.ancestry.com', 'Ancestry')}.</strong> The largest paid collection, strongest for the US and Britain. Its “hints” from other people's trees need checking like any other tree.</p>
+<p><strong>${link('https://www.newspapers.com', 'Newspapers.com')} and ${link('https://www.genealogybank.com', 'GenealogyBank')}.</strong> Newspaper archives. Obituaries, wedding announcements and local news are often the richest sources for the last 150 years.</p>
+<p><strong>${link('https://www.fold3.com', 'Fold3')}.</strong> US military records: service files, draft cards, pensions.</p>
+<p><strong>${link('https://www.myheritage.com', 'MyHeritage')} and ${link('https://www.findmypast.com', 'Findmypast')}.</strong> Stronger for Europe, and for Britain and Ireland.</p>
 
-<h2>DNA</h2>
-<p>Tests from AncestryDNA, MyHeritage and FamilyTreeDNA match you with relatives who have also tested, which can confirm a line or get past a dead end. Results can reveal things about living relatives, so talk with the family before sharing them.</p>
 </div>''');
   }
 
@@ -1623,12 +1605,10 @@ select { font: 14px var(--ui); padding: 4px 6px; border: 1px solid var(--line); 
 .family dt { color: var(--muted); font-size: 14px; margin-top: 6px; }
 .family dd { margin: 0; }
 .try li { margin-bottom: 8px; }
-.recent { list-style: none; padding: 0; margin: 0 0 8px; }
 .recent li { margin-bottom: 8px; }
 .research { max-width: 760px; }
 .research li { margin-bottom: 8px; }
-.research dt { font-weight: 600; margin-top: 12px; }
-.research dd { margin: 2px 0 0; }
+.research p { margin: 0 0 10px; }
 /* A person's page: the title across the top, then the story beside the facts. */
 .person-head { border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 24px; }
 .person-head .title { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
