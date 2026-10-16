@@ -228,7 +228,7 @@ $body
     head.write('</div>');
     head.write('</div>');
     final edited = editable && p.editedBy != null && p.editedAt != null
-        ? '<p class="edited">Edited by ${esc(p.editedBy)} ${ago(p.editedAt!)} · <a href="/people/${p.id}/history">history</a></p>'
+        ? '<p class="edited">Edited by ${esc(p.editedBy)} ${ago(p.editedAt!)} · <a href="/people/${p.id}/history">change history</a></p>'
         : '';
     return page(
       editor == null ? p.displayName : 'Editing ${p.name}',
@@ -978,7 +978,7 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}''');
   <label for="born">Born, if you know: a date, then a place</label>
   <input id="born" name="born" value="${esc(born)}" maxlength="120" placeholder="about 1925, Hartford, CT">
   ${relatives.isEmpty ? '' : '<fieldset><legend>${field == 'parents' ? 'Parents' : 'Partner'}</legend>${relatives.join()}</fieldset>'}
-  <p class="hint">The new page starts with these facts, and ${esc(from.name)}'s page links to it in place of the name. Both are saved as one change, which can be undone from Recent changes.</p>
+  <p class="hint">The new page starts with these facts, and ${esc(from.name)}'s page links to it in place of the name. Both are saved as one change.</p>
   <div class="save"><button class="primary">Create the page</button> <a href="/people/${from.id}">Cancel</a></div>
 </form>''');
     return page('A page for $name', sb.toString());
@@ -990,7 +990,7 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}''');
     final sb = StringBuffer(
       '''
 <h1>Delete ${esc(p.name)}'s page?</h1>
-<p class="lead">The page leaves the tree. Its text is kept in its history, and the deletion can be undone from Recent changes.</p>''',
+<p class="lead">The page leaves the tree. Its text is kept in its history, and the deletion can be undone from the page's address, which offers to bring it back with its links.</p>''',
     );
     if (mentioning.isNotEmpty) {
       sb.write(
@@ -1010,13 +1010,19 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}''');
   }
 
   /// What is shown at a deleted page's address.
-  String deletedPerson(Person p) => page(
-    p.name,
-    '''
+  /// What is shown at a deleted page's address. [undo] is the change that
+  /// deleted it, when it can be undone whole: the page comes back, and so
+  /// do the links to it on other pages.
+  String deletedPerson(Person p, {Change? undo}) => page(p.name, '''
 <h1>${esc(p.name)}</h1>
-<p class="lead">This page was deleted. Its earlier versions are in its <a href="/people/${p.id}/history">history</a>.</p>
-${_canEdit && p.revision > 1 ? '<form method="post" action="/people/${p.id}/restore"><input type="hidden" name="number" value="${p.revision - 1}"><button>Bring the page back</button></form>' : ''}''',
-  );
+<p class="lead">This page was deleted. Its earlier versions are in its <a href="/people/${p.id}/history">change history</a>.</p>
+${!_canEdit
+      ? ''
+      : undo != null && undoable(undo)
+      ? '<form method="post" action="/changes/${undo.id}/undo"><button>Bring the page back</button></form>'
+      : p.revision > 1
+      ? '<form method="post" action="/people/${p.id}/restore"><input type="hidden" name="number" value="${p.revision - 1}"><button>Bring the page back</button></form>'
+      : ''}''');
 
   /// Explains a save that was refused because the page had moved on.
   String conflictNotice(Revision theirs, String before) =>
@@ -1052,23 +1058,33 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
 ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
 ''');
 
-  String history(Person p, List<Revision> revisions) {
-    final sb = StringBuffer('<h1>History: ${personLink(p.id)}</h1>');
+  /// A page's change history: every saved version, newest first. Choosing
+  /// one shows what it changed below the list, from [panel], and offers to
+  /// restore it.
+  String history(
+    Person p,
+    List<Revision> revisions, {
+    int? selected,
+    String panel = '',
+  }) {
+    final sb = StringBuffer('<h1>Change history: ${personLink(p.id)}</h1>');
     if (revisions.isEmpty) {
       sb.write(
         '<p class="lead">No versions have been recorded for this page.</p>',
       );
-      return page('History of ${p.name}', sb.toString());
+      return page('Change history of ${p.name}', sb.toString());
     }
     sb.write(
       '<p class="lead">${revisions.length} saved ${revisions.length == 1 ? 'version' : 'versions'}, newest first. Choose one to see what it changed.</p>',
     );
-    sb.write('<table class="history">');
+    sb.write('<table class="history versions" data-person="${p.id}"><tbody>');
     for (final (i, r) in revisions.indexed) {
       final helped = Model.byId(r.helpedBy);
+      final restorable =
+          _canEdit && i > 0 && !r.deleted && !r.source.startsWith('---');
       sb.write(
-        '<tr>'
-        '<td><a href="/people/${p.id}/revisions/${r.number}">${time(r.at)}</a></td>'
+        '<tr data-version="${r.number}" tabindex="0"${r.number == selected ? ' aria-selected="true"' : ''}>'
+        '<td class="when">${time(r.at)}</td>'
         '<td>${esc(r.by)}</td>'
         '<td>${esc(r.summary)}'
         '${helped == null ? '' : ' <span class="years">(with ${esc(helped.name)})</span>'}'
@@ -1077,12 +1093,17 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
             : i == 0
             ? ' <span class="years">(current)</span>'
             : ''}</td>'
+        '<td class="restore">${restorable ? '<form method="post" action="/people/${p.id}/restore"><input type="hidden" name="number" value="${r.number}"><button>Restore this version</button></form>' : ''}</td>'
         '</tr>',
       );
     }
-    sb.write('</table>');
+    sb.write('</tbody></table>');
     sb.write(_summaryNote(revisions.map((r) => r.summaryBy)));
-    return page('History of ${p.name}', sb.toString());
+    sb.write(
+      '<section class="version-panel" aria-live="polite">$panel</section>'
+      '<script type="module" src="/assets/history.js"></script>',
+    );
+    return page('Change history of ${p.name}', sb.toString());
   }
 
   /// The single note on a page listing changes whose summaries a model
@@ -1096,62 +1117,62 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
         : '<p class="meta">Change summaries by ${esc(names.join(' and '))}.</p>';
   }
 
-  /// One saved version, and what it changed from the version before it.
-  String revision(
-    Person p,
-    Revision r, {
-    Revision? previous,
-    required bool isCurrent,
-  }) {
-    final helped = Model.byId(r.helpedBy);
-    return page('${p.name}, version ${r.number}', '''
-<h1>${personLink(p.id)}: version ${r.number}</h1>
-<p class="lead">Saved ${time(r.at)} by ${esc(r.by)}${helped == null ? '' : ', with ${esc(helped.name)}'}: “${esc(r.summary)}”. <a href="/people/${p.id}/history">All versions</a></p>
-${r.deleted
-        ? '<p class="lead">This version deleted the page.</p>'
-        : isCurrent
-        ? '<p class="lead">This is the current version.</p>'
-        : _canEdit
-        ? '<form method="post" action="/people/${p.id}/restore"><input type="hidden" name="number" value="${r.number}"><button>Restore this version</button> <span class="years">The current text is kept in the history.</span></form>'
-        : ''}
-<h2>What changed</h2>
-${r.number == 1 ? '<p class="meta">The first version of the page.</p>' : ''}
-${diff(previous?.source ?? '', r.source)}
-${r.deleted ? '' : '<details class="whole"><summary>The whole page as it was</summary><pre class="source">${esc(r.source)}</pre></details>'}
-''');
-  }
+  /// What one saved version changed from the version before it, shown below
+  /// the change history.
+  String versionPanel(Revision r, {Revision? previous}) =>
+      '<h2>Version ${r.number}: ${esc(r.summary)}</h2>'
+      '${r.deleted
+          ? '<p class="meta">This version deleted the page.</p>'
+          : r.number == 1
+          ? '<p class="meta">The first version of the page.</p>'
+          : ''}'
+      '<div class="changes-scroll">${diff(previous?.source ?? '', r.source)}</div>'
+      '${r.deleted ? '' : '<details class="whole"><summary>The whole page as it was</summary><pre class="source">${esc(r.source)}</pre></details>'}';
 
-  /// A line-by-line comparison, with unchanged stretches folded away.
+  /// A comparison for people to read: each fact line and paragraph that
+  /// changed, with the words taken out and put in marked, and a little of
+  /// what is around it.
   String diff(String before, String after) {
-    final lines = diffLines(before, after);
-    if (lines.every((l) => l.kind == DiffKind.same)) {
+    final blocks = diffBlocks(before, after);
+    bool changed(DiffBlock b) => b.kind != DiffKind.same || b.words != null;
+    if (!blocks.any(changed)) {
       return '<p class="lead">The two versions are identical.</p>';
     }
-    // Keep two lines of context around each change.
-    final keep = List.filled(lines.length, false);
-    for (var i = 0; i < lines.length; i++) {
-      if (lines[i].kind == DiffKind.same) continue;
-      for (var j = i - 2; j <= i + 2; j++) {
-        if (j >= 0 && j < lines.length) keep[j] = true;
+    // Keep one block of context around each change.
+    final keep = List.filled(blocks.length, false);
+    for (var i = 0; i < blocks.length; i++) {
+      if (!changed(blocks[i])) continue;
+      for (var j = i - 1; j <= i + 1; j++) {
+        if (j >= 0 && j < blocks.length) keep[j] = true;
       }
     }
     final sb = StringBuffer('<div class="diff">');
     var skipping = false;
-    for (final (i, line) in lines.indexed) {
+    for (final (i, block) in blocks.indexed) {
       if (!keep[i]) {
         if (!skipping) sb.write('<div class="skip">⋯</div>');
         skipping = true;
         continue;
       }
       skipping = false;
-      final (cls, mark) = switch (line.kind) {
-        DiffKind.same => ('same', ' '),
-        DiffKind.removed => ('removed', '−'),
-        DiffKind.added => ('added', '+'),
+      if (block.words case final words?) {
+        sb.write('<div class="changed">');
+        for (final w in words) {
+          sb.write(switch (w.kind) {
+            DiffKind.same => esc(w.text),
+            DiffKind.removed => '<del>${esc(w.text.trimRight())}</del> ',
+            DiffKind.added => '<ins>${esc(w.text)}</ins>',
+          });
+        }
+        sb.write('</div>');
+        continue;
+      }
+      final (cls, open, close) = switch (block.kind) {
+        DiffKind.same => ('same', '', ''),
+        DiffKind.removed => ('removed', '<del>', '</del>'),
+        DiffKind.added => ('added', '<ins>', '</ins>'),
       };
-      sb.write(
-        '<div class="$cls"><span class="mark">$mark</span>${esc(line.text)}</div>',
-      );
+      sb.write('<div class="$cls">$open${esc(block.text)}$close</div>');
     }
     sb.write('</div>');
     return sb.toString();
@@ -1168,24 +1189,26 @@ ${r.deleted ? '' : '<details class="whole"><summary>The whole page as it was</su
       for (final c in changes) {
         final pages = c.pages.length > 5
             ? '${c.pages.length} pages'
-            : c.pages.entries
-                  .map(
-                    (e) =>
-                        '${personLink(e.key)} <a class="years" href="/people/${e.key}/revisions/${e.value}">(what changed)</a>',
-                  )
-                  .join(', ');
+            : c.pages.keys.map(personLink).join(', ');
         // A front and its back are one photo.
         final photos = c.media.where((key) => !key.endsWith('-back')).toList();
         final media = [
           for (final key in photos.take(5))
-            '<a href="/media/$key">${esc(tree.media[key]?.title ?? 'a photo')}</a>',
+            '<a href="/media/$key">${esc(tree.media[key]?.title ?? 'Untitled')}</a> '
+                '<span class="years">(${tree.media[key]?.isImage ?? true ? 'photo' : 'document'})</span>',
           if (photos.length > 5) '${photos.length - 5} more',
         ].join(', ');
-        final undo = _undoable(c)
-            ? '<form method="post" action="/changes/${c.id}/undo"><button>Undo</button></form>'
-            : '';
+        // A change to one page links to that version in its history.
+        final only = c.pages.length == 1 && c.media.isEmpty
+            ? c.pages.entries.single
+            : null;
+        final summary = only == null
+            ? esc(c.summary)
+            : '<a href="/people/${only.key}/history?version=${only.value}">${esc(c.summary)}</a>';
         sb.write(
-          '<tr><td>${time(c.at)}</td><td>${esc(c.by)}</td><td>${esc(c.summary)}</td><td>$pages${pages.isNotEmpty && media.isNotEmpty ? ', ' : ''}$media</td><td>$undo</td></tr>',
+          '<tr><td class="when">${time(c.at)}</td><td>${esc(c.by)}</td>'
+          '<td>$pages${pages.isNotEmpty && media.isNotEmpty ? ', ' : ''}$media</td>'
+          '<td>$summary</td></tr>',
         );
       }
       sb.write('</table>');
@@ -1197,7 +1220,7 @@ ${r.deleted ? '' : '<details class="whole"><summary>The whole page as it was</su
   /// Whether [c] can be undone in one step: every page it touched is still
   /// as it left them. Large changes, such as loading the tree, are not
   /// offered.
-  bool _undoable(Change c) =>
+  bool undoable(Change c) =>
       _canEdit &&
       c.media.isEmpty &&
       c.pages.length <= 10 &&
@@ -1643,13 +1666,29 @@ button.primary kbd { font: 12px var(--ui); background: rgba(255,255,255,0.18); b
   font: 15px/1.5 var(--ui); }
 .history { border-collapse: collapse; font: 15px/1.5 var(--ui); width: 100%; }
 .history td { padding: 6px 12px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-.source, .diff { font: 14px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere;
+.source { font: 14px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere;
   background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
-.diff > div { padding: 0 6px; }
-.diff .mark { display: inline-block; width: 1.5em; color: var(--muted); user-select: none; }
-.diff .added { background: rgba(46, 160, 67, 0.2); }
-.diff .removed { background: rgba(218, 54, 51, 0.2); }
-.diff .skip { color: var(--muted); text-align: center; }
+.diff { font: 16px/1.55 var(--ui); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px 0; }
+.diff > div { padding: 6px 14px; border-left: 3px solid transparent; }
+.diff .changed { border-left-color: #b08800; }
+.diff .added { border-left-color: #2ea043; background: rgba(46, 160, 67, 0.08); }
+.diff .removed { border-left-color: #da3633; background: rgba(218, 54, 51, 0.08); }
+.diff .same { color: var(--muted); }
+.diff ins { text-decoration: none; background: rgba(46, 160, 67, 0.22); border-radius: 3px; }
+.diff del { background: rgba(218, 54, 51, 0.2); border-radius: 3px; }
+.diff .added ins, .diff .removed del { background: none; }
+.diff .skip { color: var(--muted); text-align: center; padding: 0; }
+.when { white-space: nowrap; }
+.versions tbody tr { cursor: pointer; }
+.versions tbody tr:hover { background: var(--tint); }
+.versions tbody tr[aria-selected=true] { background: var(--tint); box-shadow: inset 3px 0 0 var(--accent); }
+.versions td:first-child { padding-left: 10px; }
+.versions .restore { text-align: right; white-space: nowrap; padding-right: 8px; }
+.versions tr:not([aria-selected=true]) .restore form { display: none; }
+.versions .restore button { font-size: 14px; padding: 3px 10px; }
+.version-panel h2 { margin-top: 1.4em; }
+.changes-scroll { max-height: 60vh; overflow: auto; }
 .account { display: flex; align-items: center; gap: 10px; color: var(--muted); }
 button { font: inherit; padding: 5px 12px; border: 1px solid var(--line); border-radius: 6px;
          background: var(--surface); color: var(--text); cursor: pointer; }

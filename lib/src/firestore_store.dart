@@ -322,6 +322,17 @@ class FirestoreStore extends TreeStore {
     return data == null ? null : _change(id, data);
   }
 
+  @override
+  Future<Change?> changeOf(String page, int number) async {
+    final snapshot = await _tree
+        .collection('changes')
+        .where(FieldPath(['pages', page]), WhereFilter.equal, number)
+        .limit(1)
+        .get();
+    final doc = snapshot.docs.firstOrNull;
+    return doc == null ? null : _change(doc.id, doc.data());
+  }
+
   static Change _change(String id, Map<String, Object?> data) => Change(
     id: id,
     author: data['author'] as String,
