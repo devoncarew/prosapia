@@ -202,10 +202,11 @@ $body
         '<a class="button primary edit" href="${pathOf(p)}?edit" data-edit="/people/${p.id}/edit?fragment">Edit</a>',
       if (_canEdit)
         '<a class="button" href="/people/${p.id}/memory">Add a memory</a>',
+      if (_canEdit)
+        '<a class="button" href="/media/add?person=${p.id}">Add photos</a>',
     ];
     final more = [
-      if (_canEdit) '<a href="/media/add?person=${p.id}">Add photos</a>',
-      if (editable) '<a href="/people/${p.id}/history">History</a>',
+      if (editable) '<a href="/people/${p.id}/history">Change history</a>',
       if (_canEdit) '<a href="/people/${p.id}/delete">Delete</a>',
     ];
     final actions = [
@@ -1409,7 +1410,7 @@ header nav { display: flex; gap: 16px; flex: 1; }
 header input { font: inherit; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px;
                background: var(--bg); color: var(--text); width: 220px; max-width: 100%; }
 main { max-width: 960px; margin: 0 auto; padding: 24px 24px 64px; }
-main.wide { max-width: 1368px; }
+main.wide { max-width: 1100px; }
 h1 { font-size: 2em; font-weight: 600; line-height: 1.15; letter-spacing: -0.005em; margin: 0 0 4px;
      text-wrap: balance; }
 h2 { font-size: 1.15em; font-weight: 600; margin: 1.8em 0 0.5em; padding-bottom: 4px; text-wrap: balance;
