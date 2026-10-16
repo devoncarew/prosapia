@@ -55,6 +55,10 @@ $body
 </html>
 ''';
 
+  /// A person's page address, readable: `/people/carew-howard-joseph-tbczm8`.
+  /// Only the trailing id is relied on, so older addresses keep working.
+  static String pathOf(Person p) => '/people/${p.directory}';
+
   String personLink(String id, {bool years = false}) {
     final p = tree.people[id];
     if (p == null) {
@@ -66,7 +70,7 @@ $body
     final suffix = years && p.years.isNotEmpty
         ? ' <span class="years">(${p.years})</span>'
         : '';
-    return '<a href="/people/${p.id}">${esc(p.name)}</a>$suffix';
+    return '<a href="${pathOf(p)}">${esc(p.name)}</a>$suffix';
   }
 
   // ------------------------------------------------------------------ home
@@ -95,6 +99,12 @@ $body
       }
       sb.write('</ul></details>');
     }
+    final mine = viewer?.person == null ? null : tree.people[viewer!.person];
+    if (mine != null) {
+      sb.write(
+        '<p class="actions">Start at ${personLink(mine.id)} · <a href="/welcome">Welcome page</a></p>',
+      );
+    }
     sb.write('<div class="surnames">');
     groups.forEach((surname, people) {
       sb.write('<section><h2>${esc(surname)}</h2><ul>');
@@ -105,6 +115,64 @@ $body
     });
     sb.write('</div>');
     return page('People', sb.toString());
+  }
+
+  /// A newcomer's first page: where they are in the tree, their close
+  /// family, and one easy thing to do.
+  String welcome() {
+    final me = viewer;
+    final first = me?.name?.split(' ').first;
+    final person = me?.person == null ? null : tree.people[me!.person];
+    final sb = StringBuffer(
+      '<h1>Welcome${first == null ? '' : ', ${esc(first)}'}</h1>'
+      '<p class="lead">This is ${esc(tree.name)}: the family\'s history, kept together by the family. '
+      'It holds ${tree.people.length} people and ${tree.media.values.where((m) => !m.isBack).length} photos and documents.</p>',
+    );
+    if (person != null) {
+      final photo = person.photo == null ? null : tree.media[person.photo];
+      sb.write('<section class="start">');
+      if (photo != null && photo.isImage) {
+        sb.write(
+          '<a href="${pathOf(person)}"><img src="/media/${photo.key}/display?w=240" alt=""></a>',
+        );
+      }
+      sb.write(
+        '<div><h2>${esc(person.name)}</h2>'
+        '${person.years.isEmpty ? '' : '<p class="years">${person.years}</p>'}'
+        '<p><a class="button primary" href="${pathOf(person)}">Go to ${esc(person.name)}\'s page</a></p>',
+      );
+      final family = [
+        for (final (label, ids) in [
+          ('Parents', index.parentsOf(person.id)),
+          ('Partners', index.partnersOf(person.id)),
+          ('Brothers and sisters', index.siblingsOf(person.id)),
+          ('Children', index.childrenOf(person.id)),
+        ])
+          if (ids.isNotEmpty)
+            '<dt>$label</dt><dd>${ids.map(personLink).join(', ')}</dd>',
+      ];
+      if (family.isNotEmpty) {
+        sb.write('<dl class="family">${family.join()}</dl>');
+      }
+      sb.write('</div></section>');
+    }
+    sb.write('<h2>Something to try</h2><ul class="try">');
+    if (_canEdit && person != null) {
+      sb.write(
+        '<li><a href="/people/${person.id}/memory">Add a memory of ${esc(person.name)}</a>: a story, a trip, something you remember. A few sentences is plenty.</li>',
+      );
+    }
+    sb.write(
+      '<li>Type a name in the search box at the top of any page to find someone.</li>'
+      '<li><a href="/">See everyone in the tree</a>, grouped by family name.</li>',
+    );
+    if (_canEdit) {
+      sb.write(
+        '<li>Anything can be corrected: choose Edit on a page. Every change is kept, so nothing can be lost.</li>',
+      );
+    }
+    sb.write('</ul>');
+    return page('Welcome', sb.toString());
   }
 
   /// The last word of a person's name, for grouping the list of people.
@@ -504,7 +572,7 @@ $body
           final person = tree.people[id];
           return person == null
               ? '<span class="unresolved" title="No one in the tree matches this">@${m[1]}</span>'
-              : '<a href="/people/$id">${esc(person.name)}</a>';
+              : '<a href="${pathOf(person)}">${esc(person.name)}</a>';
         })
         .replaceAllMapped(proseMarked, (m) {
           if (m[1]!.toLowerCase() == 'date') return date(TreeDate.parse(m[2]!));
@@ -1127,12 +1195,19 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
 <table class="history members">
 ${[for (final m in members) _memberRow(m)].join('\n')}
 </table>
-<form class="add-member" method="post" action="/settings/members">
-  <input name="email" type="email" required placeholder="cousin@example.com" aria-label="Email address">
-  ${_roleSelect(Role.editor)}
-  <button>Invite</button>
+<h3>Invite someone</h3>
+<form class="memory invite" method="post" action="/settings/members">
+  <input type="hidden" name="action" value="invite">
+  <label for="invite_email">Their Google account's email address</label>
+  <input id="invite_email" name="email" type="email" required placeholder="cousin@example.com">
+  <label for="invite_role">What they may do</label>
+  ${_roleSelect(Role.editor, id: 'invite_role')}
+  <label>Who they are: their own page, or for someone without one, their nearest relative's. Their first visit starts there.</label>
+  <div class="people-picker" data-name="person" data-single="true" data-initial="[]"></div>
+  <div class="save"><button class="primary">Invite</button></div>
 </form>
-<p class="hint">Inviting adds them to this list; tell them the site's address, and they sign in with Google.</p>
+<p class="hint">Next you'll see an invitation to send them from your own email. Inviting someone already listed changes their role and who they are.</p>
+<script type="module" src="/assets/photos.js"></script>
 <h2>Help from Claude</h2>
 <p>Members who can edit may ask Claude to draft or revise a page's story, and to tidy a memory. The text replaces what Claude was asked to act on in the editor, and nothing is saved until the member publishes it. Claude Haiku writes the one-line summary of each change.</p>
 ${available ? '' : '<p class="message">This server has no Anthropic API key, so help is not available whatever is set here. Set <code>ANTHROPIC_API_KEY</code> where the server runs.</p>'}
@@ -1144,16 +1219,73 @@ ${available ? '' : '<p class="message">This server has no Anthropic API key, so 
   <div class="save"><button class="primary">Save</button></div>
 </form>''');
 
-  String _roleSelect(Role selected) =>
-      '<select name="role" aria-label="Role">${[for (final role in Role.values) '<option value="${role.name}"${role == selected ? ' selected' : ''}>${role.name}</option>'].join()}</select>';
+  String _roleSelect(Role selected, {String? id}) =>
+      '<select name="role"${id == null ? ' aria-label="Role"' : ' id="$id"'}>${[for (final role in Role.values) '<option value="${role.name}"${role == selected ? ' selected' : ''}>${role.name}</option>'].join()}</select>';
 
   String _memberRow(Member m) {
     final self = m.email == viewer?.email;
     final form =
         '<form method="post" action="/settings/members"><input type="hidden" name="email" value="${esc(m.email)}">';
-    return '<tr><td>${esc(m.name ?? '')}</td><td>${esc(m.email)}</td>'
+    final who = m.person == null ? null : tree.people[m.person];
+    return '<tr><td>${esc(m.name ?? '')}<br><span class="years">${esc(m.email)}</span></td>'
+        '<td>${who == null ? '' : personLink(who.id)}</td>'
         '<td>${self ? '${m.role.name} (you)' : '$form${_roleSelect(m.role)} <button>Change</button></form>'}</td>'
+        '<td>${self ? '' : '<a href="/settings/invitation?email=${Uri.encodeQueryComponent(m.email)}">Invitation</a>'}</td>'
         '<td>${self ? '' : '$form<input type="hidden" name="action" value="remove"><button>Remove</button></form>'}</td></tr>';
+  }
+
+  /// An invitation for [from] to send [member] from their own email, so it
+  /// comes from someone the member knows.
+  String invitation(
+    Member member, {
+    required Member from,
+    required String address,
+  }) {
+    final person = member.person == null ? null : tree.people[member.person];
+    final first = member.name?.split(' ').first;
+    final subject = 'You\'re invited to the ${tree.name} history';
+    final body = [
+      'Hi${first == null ? '' : ' $first'},',
+      '',
+      'I\'ve added you to "${tree.name}", our family\'s history on Prosapia: a '
+          'private website where the family keeps its stories, dates and '
+          'photos together${member.role.canEdit ? ', and where anyone invited can add what they know and remember' : ''}.',
+      '',
+      'To visit, go to $address and sign in with your Google account, '
+          '${member.email}.${person == null ? '' : ' You\'ll start at ${person.name}\'s page.'}',
+      if (member.role.canEdit) ...[
+        '',
+        'Every change is kept, so nothing you do can be lost or break anything.',
+      ],
+      '',
+      from.name ?? from.email,
+    ].join('\n');
+    final mailto = Uri(
+      scheme: 'mailto',
+      path: member.email,
+      query:
+          'subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}',
+    );
+    return page('Invitation', '''
+<h1>Invite ${esc(member.name ?? member.email)}</h1>
+<p class="lead">${esc(member.email)} can now sign in. Send them this from your own email, so it comes from someone they know; change it as you like.</p>
+<form class="memory invitation">
+  <label for="subject">Subject</label>
+  <input id="subject" value="${esc(subject)}" readonly>
+  <label for="body">Message</label>
+  <textarea id="body" readonly>${esc(body)}</textarea>
+  <div class="save">
+    <a class="button primary" href="${esc(mailto.toString())}">Open in your email</a>
+    <button type="button" class="copy" data-copy="body">Copy the message</button>
+    <a href="/settings#members">Back to Settings</a>
+  </div>
+</form>
+<script>
+document.querySelector('.copy').addEventListener('click', async (e) => {
+  await navigator.clipboard.writeText(document.getElementById('body').value);
+  e.target.textContent = 'Copied';
+});
+</script>''');
   }
 
   /// A short page that explains why something could not be done.
@@ -1292,10 +1424,21 @@ img.thumb { display: block; max-width: 240px; max-height: 240px; border-radius: 
 .photo-card .add-back { font: 13px system-ui, sans-serif; margin-top: 10px; display: inline-block; }
 .members form, .add-member { display: flex; gap: 8px; align-items: center; margin: 0; }
 .add-member { margin-top: 12px; max-width: 640px; }
+a.button.primary { background: #2f7d32; border-color: #2a6f2d; color: #fff; }
+.invitation textarea { height: 16em; font: 15px/1.5 system-ui, sans-serif; }
+.invite select { display: block; }
 .add-member input { flex: 1; font: 15px system-ui, sans-serif; padding: 6px 10px; border: 1px solid var(--line);
   border-radius: 6px; background: var(--surface); color: var(--text); }
 select { font: 14px system-ui, sans-serif; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px;
   background: var(--surface); color: var(--text); }
+.start { display: flex; gap: 20px; align-items: flex-start; padding: 16px; margin: 8px 0 24px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.start img { width: 160px; border-radius: 4px; display: block; }
+.start h2 { margin-top: 0; border: none; }
+.family { font: 15px/1.5 system-ui, sans-serif; margin: 12px 0 0; }
+.family dt { color: var(--muted); font-size: 13px; margin-top: 6px; }
+.family dd { margin: 0; }
+.try li { margin-bottom: 8px; }
 .similar { list-style: none; padding: 0; font: 15px/1.5 system-ui, sans-serif; }
 .similar li { margin-bottom: 8px; }
 .similar button { margin-left: 8px; font-size: 13px; }
@@ -1388,5 +1531,24 @@ button:disabled { opacity: 0.6; cursor: default; }
 @media (max-width: 640px) {
   .infobox { float: none; width: auto; margin: 0 0 16px; }
   main { padding: 16px 16px 48px; }
+}
+/* Phones: one column, and nothing wider than the screen. */
+@media (max-width: 700px) {
+  header { padding: 10px 16px; gap: 8px 16px; }
+  header nav { order: 3; flex-basis: 100%; gap: 14px; }
+  header form.search { flex: 1; }
+  header input { width: 100%; }
+  main { padding: 16px 16px 48px; }
+  h1 { font-size: 1.6em; }
+  .infobox { float: none; width: auto; margin: 0 0 16px; }
+  .history { display: block; overflow-x: auto; }
+  .tabs { flex-wrap: wrap; }
+  .tabs .help { margin-left: 0; flex-wrap: wrap; }
+  .start { flex-direction: column; }
+  .start img { width: 100%; max-width: 320px; }
+  .timeline th { padding-right: 10px; white-space: normal; }
+  .save { gap: 8px; }
+  .save input { min-width: 0; }
+  .actions { flex-wrap: wrap; gap: 8px 16px; }
 }
 ''';

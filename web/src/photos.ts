@@ -17,6 +17,7 @@ class PeoplePicker {
   private active = 0;
 
   constructor(private readonly el: HTMLElement) {
+    el.classList.add('ready');
     this.input.placeholder = 'Type a name';
     this.input.setAttribute('aria-label', 'Add a person');
     this.list.className = 'suggestions';
@@ -37,6 +38,11 @@ class PeoplePicker {
 
   add(person: Person): void {
     if (this.people.some((p) => p.id === person.id)) return;
+    // A picker for one person replaces whoever was chosen before.
+    if (this.el.dataset.single === 'true') {
+      this.people.length = 0;
+      this.el.querySelectorAll('.chip').forEach((c) => c.remove());
+    }
     this.people.push(person);
     const chip = document.createElement('span');
     chip.className = 'chip';
@@ -413,3 +419,13 @@ const addForm = document.querySelector<HTMLFormElement>('form.add-photos');
 if (addForm) new AddPhotos(addForm);
 const editForm = document.querySelector<HTMLFormElement>('form.edit-photo');
 if (editForm) editPhoto(editForm);
+// Any other picker on the page, such as choosing who a new member is.
+for (const el of document.querySelectorAll<HTMLElement>(
+  '.people-picker:not(.ready)',
+)) {
+  new PeoplePicker(el);
+  // Enter picks a person rather than sending the form.
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') e.preventDefault();
+  });
+}

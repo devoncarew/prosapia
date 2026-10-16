@@ -58,11 +58,20 @@ class FirestoreStore extends TreeStore {
         .get();
     final data = snapshot.data();
     if (data == null) return null;
-    return Member(
-      email.toLowerCase(),
-      Role.values.byName(data['role'] as String),
-      name: data['name'] as String?,
-    );
+    return _member(email.toLowerCase(), data);
+  }
+
+  static Member? _member(String email, Map<String, Object?> data) {
+    final role = Role.values.where((r) => r.name == data['role']).firstOrNull;
+    return role == null
+        ? null
+        : Member(
+            email,
+            role,
+            name: data['name'] as String?,
+            person: data['person'] as String?,
+            welcomed: data['welcomed'] == true,
+          );
   }
 
   @override
@@ -559,19 +568,22 @@ class FirestoreStore extends TreeStore {
   @override
   Future<List<Member>> members() async {
     final snapshot = await _tree.collection('members').get();
-    return [
-      for (final doc in snapshot.docs)
-        if (Role.values.where((r) => r.name == doc.data()['role']).firstOrNull
-            case final role?)
-          Member(doc.id, role, name: doc.data()['name'] as String?),
-    ]..sort((a, b) => a.email.compareTo(b.email));
+    return [for (final doc in snapshot.docs) ?_member(doc.id, doc.data())]
+      ..sort((a, b) => a.email.compareTo(b.email));
   }
 
   @override
-  Future<void> setMember(String email, Role role) => _tree
+  Future<void> setMember(String email, Role role, {String? person}) =>
+      _tree.collection('members').doc(email.toLowerCase()).set({
+        'role': role.name,
+        'person': ?person,
+      }, options: const SetOptions.merge());
+
+  @override
+  Future<void> markWelcomed(Member member) => _tree
       .collection('members')
-      .doc(email.toLowerCase())
-      .set({'role': role.name}, options: const SetOptions.merge());
+      .doc(member.email)
+      .set({'welcomed': true}, options: const SetOptions.merge());
 
   @override
   Future<void> removeMember(String email) =>

@@ -94,10 +94,13 @@ abstract class TreeStore {
   /// Everyone invited to the tree, by email address.
   Future<List<Member>> members() async => const [];
 
-  /// Invites [email] with [role], or changes their role. A name already
-  /// recorded for them is kept.
-  Future<void> setMember(String email, Role role) =>
+  /// Invites [email] with [role], or changes their role, and the [person]
+  /// they are when given. A name already recorded for them is kept.
+  Future<void> setMember(String email, Role role, {String? person}) =>
       throw UnsupportedError('This store is read-only.');
+
+  /// Records that [member] has seen the welcome page.
+  Future<void> markWelcomed(Member member) async {}
 
   /// Removes [email] from the tree. Their past edits keep their name.
   Future<void> removeMember(String email) =>
@@ -129,11 +132,24 @@ enum Role {
 /// Someone invited to a tree. Google confirms who they are; Prosapia decides
 /// what they may do.
 class Member {
-  Member(this.email, this.role, {this.name});
+  Member(
+    this.email,
+    this.role, {
+    this.name,
+    this.person,
+    this.welcomed = false,
+  });
 
   final String email;
   final Role role;
   final String? name;
+
+  /// The id of the member's own page, or of their nearest relative's for
+  /// someone without one. Chosen by the owner who invites them.
+  final String? person;
+
+  /// Whether they have seen the welcome page.
+  final bool welcomed;
 }
 
 /// One page in a change: its new text, or its deletion.
