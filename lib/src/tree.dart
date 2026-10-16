@@ -280,6 +280,10 @@ class Person {
   final notes = <String>[];
   String body = '';
 
+  /// Who last saved the page, and when, if the store records it.
+  String? editedBy;
+  DateTime? editedAt;
+
   /// What could not be read from the page, in words for its editors.
   final issues = <String>[];
 

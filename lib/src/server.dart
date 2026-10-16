@@ -185,9 +185,27 @@ Handler siteHandler(
     (Request r) => html(render(r).search(r.url.queryParameters['q'] ?? '')),
   );
 
-  router.get('/people/<id>', (Request r, String id) {
+  router.get('/people/<id>', (Request r, String id) async {
     final person = site.tree.people[id];
-    if (person != null) return html(render(r).person(person));
+    if (person != null) {
+      final member = Sessions.memberOf(r);
+      final canEdit =
+          site.store.editable && member != null && member.role.canEdit;
+      final off = canEdit ? await helpUnavailable() : 'not an editor';
+      // `?edit` opens the page with the editor in place of its content.
+      if (canEdit && r.url.queryParameters.containsKey('edit')) {
+        return html(
+          render(r).editPerson(
+            person,
+            source: person.source,
+            basedOn: person.revision,
+            help: off == null,
+            helpOff: off,
+          ),
+        );
+      }
+      return html(render(r).person(person, help: off == null));
+    }
     final deleted = site.tree.deleted[id];
     if (deleted != null) return html(render(r).deletedPerson(deleted));
     return missing(r, 'No person has the id $id.');
@@ -249,18 +267,25 @@ Handler siteHandler(
     );
   }
 
+  // The editor alone, for the person's page to open in place; otherwise,
+  // the person's page with the editor open.
   router.get(
     '/people/<id>/edit',
     (Request r, String id) => editing(r, id, (person, member) async {
+      if (!r.url.queryParameters.containsKey('fragment')) {
+        return seeOther('/people/${person.directory}?edit');
+      }
       final off = await helpUnavailable();
       return html(
-        render(r).editPerson(
-          person,
-          source: person.source,
-          basedOn: person.revision,
-          help: off == null,
-          helpOff: off,
-        ),
+        render(r).editingTitle(person) +
+            render(r).editorForm(
+              person,
+              source: person.source,
+              basedOn: person.revision,
+              help: off == null,
+              helpOff: off,
+              inPlace: true,
+            ),
       );
     }),
   );

@@ -142,11 +142,15 @@ class FirestoreStore extends TreeStore {
 
   static Person _person(String id, Map<String, Object?> data) =>
       Person.fromSource(
-        id,
-        data['directory'] as String? ?? id,
-        data['source'] as String,
-        revision: data['revision'] as int? ?? 0,
-      );
+          id,
+          data['directory'] as String? ?? id,
+          data['source'] as String,
+          revision: data['revision'] as int? ?? 0,
+        )
+        ..editedBy = data['editedBy'] as String?
+        ..editedAt = data['editedAt'] is Timestamp
+            ? (data['editedAt'] as Timestamp).toDate()
+            : null;
 
   static Map<String, Object?> _personDoc(Person person, int revision) => {
     'source': person.source,
@@ -193,6 +197,8 @@ class FirestoreStore extends TreeStore {
         tx.set(refs[i], {
           ..._personDoc(w.person, number),
           if (w.delete) 'deleted': true,
+          'editedBy': author.name ?? author.email,
+          'editedAt': FieldValue.serverTimestamp,
         });
         tx.set(refs[i].collection('revisions').doc('$number'), {
           'number': number,
