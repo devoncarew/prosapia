@@ -870,11 +870,20 @@ Handler siteHandler(
     }),
   );
 
-  /// The pages, other than [p]'s, that refer to [p].
-  List<Person> mentioning(Person p) => [
-    for (final other in site.tree.people.values)
-      if (other.id != p.id && mentions(other.source, p.id)) other,
-  ]..sort((a, b) => a.name.compareTo(b.name));
+  /// What deleting [p]'s page changes on other pages, by name, so that
+  /// nothing they say is lost: links to [p] become the plain name, and a
+  /// relationship stated only on [p]'s page is written on the other page.
+  Map<Person, String> keptOnDelete(Person p) => Map.fromEntries(
+    [
+      for (final other in site.tree.people.values)
+        if (other.id == p.id)
+          null
+        else if (mentions(other.source, p.id))
+          MapEntry(other, referencesToName(other.source, p.id, p.name))
+        else if (keepRelations(other.source, p, other.id) case final kept?)
+          MapEntry(other, kept),
+    ].nonNulls.toList()..sort((a, b) => a.key.name.compareTo(b.key.name)),
+  );
 
   router.get(
     '/people/<id>/delete',
@@ -882,7 +891,7 @@ Handler siteHandler(
       r,
       id,
       (person, member) async =>
-          html(render(r).deletePerson(person, mentioning(person))),
+          html(render(r).deletePerson(person, keptOnDelete(person).keys)),
     ),
   );
 
@@ -897,13 +906,11 @@ Handler siteHandler(
             basedOn: int.tryParse(fields['based_on'] ?? '') ?? person.revision,
           ),
           // Other pages keep what they said, with the plain name.
-          for (final other in mentioning(person))
+          for (final MapEntry(key: other, value: source) in keptOnDelete(
+            person,
+          ).entries)
             PageWrite(
-              Person.fromSource(
-                other.id,
-                other.directory,
-                referencesToName(other.source, person.id, person.name),
-              ),
+              Person.fromSource(other.id, other.directory, source),
               basedOn: other.revision,
             ),
         ],

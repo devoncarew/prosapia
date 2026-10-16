@@ -61,6 +61,7 @@ class Renderer {
 $body
 </main>
 <script type="module" src="/assets/search.js"></script>
+<script type="module" src="/assets/times.js"></script>
 </body>
 </html>
 ''';
@@ -1030,9 +1031,10 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}''');
     return page('A page for $name', sb.toString());
   }
 
-  /// Asks before deleting [p]'s page. [mentioning] are the pages that refer
-  /// to [p], whose references will become plain names.
-  String deletePerson(Person p, List<Person> mentioning) {
+  /// Asks before deleting [p]'s page. [changed] are the other pages that
+  /// keep what they say about [p] with the plain name.
+  String deletePerson(Person p, Iterable<Person> changed) {
+    final mentioning = changed.toList();
     final sb = StringBuffer(
       '''
 <h1>Delete ${esc(p.name)}'s page?</h1>
@@ -1040,7 +1042,7 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}''');
     );
     if (mentioning.isNotEmpty) {
       sb.write(
-        '<p>${mentioning.length == 1 ? 'One other page mentions' : '${mentioning.length} other pages mention'} ${esc(p.name)}. There, the link becomes the plain name “${esc(p.name)}”, so nothing they say is lost:</p><ul>',
+        '<p>${mentioning.length == 1 ? 'One other page names' : '${mentioning.length} other pages name'} ${esc(p.name)}. There, ${esc(p.name)} stays as the plain name “${esc(p.name)}”, so nothing is lost:</p><ul>',
       );
       for (final other in mentioning) {
         sb.write('<li>${personLink(other.id, years: true)}</li>');
@@ -1299,20 +1301,30 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
 
   /// When something happened, as GitHub says it: "today", "3 days ago", or
   /// the date for anything older than a month.
+  /// How long ago [at] was: `today`, `3 days ago`, `on 12 Oct 2026`. The
+  /// browser recounts the days in the viewer's own time zone.
   static String ago(DateTime at, [DateTime? now]) {
     final days = (now ?? DateTime.now()).difference(at).inDays;
-    if (days < 1) return 'today';
-    if (days < 2) return 'yesterday';
-    if (days < 31) return '$days days ago';
-    final t = at.toLocal();
-    return 'on ${t.day} ${_monthNames[t.month - 1]} ${t.year}';
+    final text = days < 1
+        ? 'today'
+        : days < 2
+        ? 'yesterday'
+        : days < 31
+        ? '$days days ago'
+        : 'on ${_day(at.toUtc())}';
+    return '<time datetime="${at.toUtc().toIso8601String()}" data-ago>$text</time>';
   }
 
-  /// `12 Oct 2026, 20:46`, in the server's time zone.
+  /// `12 Oct 2026, 20:46`: written in UTC, and shown by the browser in the
+  /// viewer's own time zone.
   static String time(DateTime at) {
-    final t = at.toLocal();
-    return '${t.day} ${_monthNames[t.month - 1]} ${t.year}, ${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+    final t = at.toUtc();
+    return '<time datetime="${t.toIso8601String()}" data-time>${_day(t)}, '
+        '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')} UTC</time>';
   }
+
+  static String _day(DateTime t) =>
+      '${t.day} ${_monthNames[t.month - 1]} ${t.year}';
 
   String forbidden(String what) => page(
     'Not allowed',
@@ -1551,6 +1563,17 @@ a.deleted { color: var(--muted); text-decoration: line-through; }
 .help-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 8px 12px; margin: 8px 0;
   border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font: 14px var(--ui); }
 .help-bar[hidden] { display: none; }
+.spinner { display: inline-block; width: 14px; height: 14px; margin-right: 8px; vertical-align: -2px;
+  border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+/* A bar moving along the top of the text Claude is working on. */
+.busy, .editor .cm-editor.busy { background: linear-gradient(90deg, transparent, var(--accent), transparent) no-repeat,
+  var(--surface); background-size: 30% 3px, auto; animation: busy 1.2s linear infinite; }
+.cm-editor.busy .cm-scroller { opacity: 0.6; }
+textarea.busy { opacity: 0.75; }
+@keyframes busy { from { background-position: -40% 0, 0 0; } to { background-position: 140% 0, 0 0; } }
+@media (prefers-reduced-motion: reduce) { .spinner, .busy { animation-duration: 3s; } }
 .help-bar.error { border-color: #b3261e; }
 .help-bar input { flex: 1; min-width: 200px; font: 14px var(--ui); padding: 5px 8px;
   border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); }

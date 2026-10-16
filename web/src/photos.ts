@@ -2,6 +2,8 @@
 // soon as it is chosen, so it can be previewed and its back read by Claude
 // before anything is added to the tree.
 
+import { busy, spinner } from './busy';
+
 interface Person {
   id: string;
   name: string;
@@ -178,8 +180,10 @@ function transcribeButton(
     void (async () => {
       const before = text.value;
       button.disabled = true;
-      status.textContent = ' Reading the back…';
+      status.replaceChildren(' ', spinner(), 'Claude is reading the back…');
+      busy(text, true);
       const reply = await post('/media/transcribe', JSON.stringify(request()));
+      busy(text, false);
       button.disabled = false;
       if (reply.error || reply.text === undefined) {
         status.textContent = ` ${reply.error ?? 'Something went wrong.'}`;

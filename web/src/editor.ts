@@ -36,6 +36,8 @@ import {
   type ViewUpdate,
 } from '@codemirror/view';
 
+import { busy, spinner } from './busy';
+
 // ------------------------------------------------------------- highlighting
 
 /** The line numbers of the facts block: from a first "Name:" line to the first blank line. */
@@ -384,9 +386,10 @@ export function mount(form: HTMLFormElement): Mounted {
     message: string,
     actions: [string, () => void][] = [],
     error = false,
+    working = false,
   ): void {
     if (!helpBar) return;
-    helpBar.replaceChildren(message);
+    helpBar.replaceChildren(...(working ? [spinner()] : []), message);
     helpBar.classList.toggle('error', error);
     for (const [label, run] of actions) {
       const button = document.createElement('button');
@@ -430,7 +433,8 @@ export function mount(form: HTMLFormElement): Mounted {
         ? [from, to]
         : [storyStart(state), state.doc.length];
     const before = helpedBy.value;
-    bar('Claude is writing…');
+    bar('Claude is writing…', [], false, true);
+    busy(view.dom, true);
     view.dispatch({
       effects: editable.reconfigure(EditorView.editable.of(false)),
     });
@@ -454,6 +458,7 @@ export function mount(form: HTMLFormElement): Mounted {
         error: 'Claude could not be reached just now. Please try again.',
       };
     } finally {
+      busy(view.dom, false);
       view.dispatch({
         effects: editable.reconfigure(EditorView.editable.of(true)),
       });

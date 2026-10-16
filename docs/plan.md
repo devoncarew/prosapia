@@ -31,7 +31,8 @@ links to, not here.
 
 ### Milestone 18: the first visit
 
-Journey 10.
+Journey 10. Everything below is built; what is left is the Done when, which needs
+relatives who have not seen the site before.
 
 - An invitation email that says who invited them and what Prosapia is.
 - Readable addresses for people's pages, such as `/people/carew-howard-joseph-tbczm8`,
@@ -48,7 +49,8 @@ own family, and add a memory without help.
 Using the deployed site on the real tree, and fixing what that turns up. Small items are
 kept in the [punch list](punchlist.md) and worked from there.
 
-- A design pass over the person page, the editor and the photo pages.
+- A design pass over the photo pages. The person page, the editor, the change history
+  and Recent changes have had theirs.
 
 Done when: the family historian has used the deployed site for a few weeks, and what
 they found is fixed or moved to Known future work.
@@ -114,8 +116,8 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 ### People and relationships
 
 - Merge two records that turn out to be the same person.
-- Undo a change that later edits have built on, by working out what to take back,
-  instead of refusing as now.
+- Bring back a deleted page when the pages around it have changed since, by working out
+  what to take back, instead of restoring only the page as now.
 - Give a page to a plain name written elsewhere than a relationship line, such as a
   fact's people or the story.
 - A page for a shared event (a wedding, a reunion) or a household, if the content model

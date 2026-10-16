@@ -1,6 +1,8 @@
 // "Claude: Tidy up" on the Add a memory form. The tidied text replaces what
 // was typed; Undo puts it back. Nothing is saved until the memory is added.
 
+import { busy, spinner } from './busy';
+
 const form = document.querySelector<HTMLFormElement>('form.memory')!;
 const tidy = form.querySelector<HTMLElement>('.tidy[data-url]')!;
 const button = tidy.querySelector('button')!;
@@ -9,8 +11,12 @@ const text = form.querySelector<HTMLTextAreaElement>('#text')!;
 const title = form.querySelector<HTMLInputElement>('#title')!;
 const helpedBy = form.querySelector<HTMLInputElement>('input[name=helped_by]')!;
 
-function show(message: string, actions: [string, () => void][] = []): void {
-  bar.replaceChildren(message);
+function show(
+  message: string,
+  actions: [string, () => void][] = [],
+  working = false,
+): void {
+  bar.replaceChildren(...(working ? [spinner()] : []), message);
   for (const [label, run] of actions) {
     const b = document.createElement('button');
     b.type = 'button';
@@ -32,7 +38,8 @@ async function tidyUp(): Promise<void> {
   const original = text.value;
   button.disabled = true;
   text.readOnly = true;
-  show('Claude is tidying…');
+  show('Claude is tidying…', [], true);
+  busy(text, true);
   let reply: HelpReply;
   try {
     const response = await fetch(tidy.dataset.url!, {
@@ -48,6 +55,7 @@ async function tidyUp(): Promise<void> {
   } finally {
     button.disabled = false;
     text.readOnly = false;
+    busy(text, false);
   }
   if (reply.error || reply.text === undefined) {
     show(reply.error ?? 'Something went wrong.', [
