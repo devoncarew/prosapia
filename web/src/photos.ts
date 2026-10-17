@@ -151,6 +151,34 @@ async function post(url: string, body: BodyInit, json = true): Promise<Reply> {
   }
 }
 
+/**
+ * Sends [file] to be staged, reporting how much of it has gone, from 0 to
+ * 1; fetch cannot report an upload's progress.
+ */
+function sendFile(
+  file: File,
+  progress: (sent: number) => void,
+): Promise<Reply> {
+  return new Promise((resolve) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', '/media/staging');
+    request.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable) progress(event.loaded / event.total);
+    });
+    request.addEventListener('load', () => {
+      try {
+        resolve(JSON.parse(request.responseText) as Reply);
+      } catch {
+        resolve({ error: 'The upload failed.' });
+      }
+    });
+    request.addEventListener('error', () =>
+      resolve({ error: 'The server could not be reached. Please try again.' }),
+    );
+    request.send(file);
+  });
+}
+
 function element<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   props: Partial<HTMLElementTagNameMap[K]> = {},
@@ -315,8 +343,15 @@ class PhotoCard {
   ): Promise<Reply | undefined> {
     this.uploading++;
     this.page.update();
-    status.textContent = `Uploading ${file.name}…`;
-    const reply = await post('/media/staging', file, false);
+    const bar = element('progress', { max: 1, value: 0 });
+    status.replaceChildren(`Uploading ${file.name}… `, bar);
+    const reply = await sendFile(file, (sent) => {
+      bar.value = sent;
+      if (sent >= 1) {
+        // Sent; the server is storing it and making its preview.
+        status.replaceChildren(spinner(), `Preparing ${file.name}…`);
+      }
+    });
     this.uploading--;
     if (reply.error || !reply.token) {
       status.textContent = reply.error ?? 'The upload failed.';
