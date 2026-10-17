@@ -130,6 +130,9 @@ class PeoplePicker {
 
 interface Reply {
   token?: string;
+  kind?: string;
+  title?: string;
+  date?: string;
   text?: string;
   location?: string;
   error?: string;
@@ -237,6 +240,7 @@ class PhotoCard {
     });
     remove.addEventListener('click', () => page.remove(this));
     const pickerEl = element('div', { className: 'people-picker' });
+    const peopleLabel = element('label', {}, 'Also in this photo');
     this.people = new PeoplePicker(pickerEl);
 
     const backArea = element('div', { hidden: true });
@@ -260,8 +264,8 @@ class PhotoCard {
       if (!chosen) return;
       addBack.hidden = true;
       backArea.hidden = false;
-      void this.upload(chosen, backPreview, backStatus).then((token) => {
-        this.back = token;
+      void this.upload(chosen, backPreview, backStatus).then((reply) => {
+        this.back = reply?.token;
       });
     });
     const backStatus = element('p', { className: 'status' });
@@ -283,7 +287,7 @@ class PhotoCard {
         ...field('Caption', this.title),
         ...field('When', this.date),
         ...field('Where', this.place),
-        element('label', {}, 'Also in this photo'),
+        peopleLabel,
         pickerEl,
         addBack,
         backInput,
@@ -291,8 +295,16 @@ class PhotoCard {
         element('p', {}, remove),
       ),
     );
-    void this.upload(file, preview, status).then((token) => {
-      this.front = token;
+    void this.upload(file, preview, status).then((reply) => {
+      this.front = reply?.token;
+      // A document has no back, and names people rather than showing them.
+      if (reply?.kind === 'pdf') {
+        addBack.hidden = true;
+        peopleLabel.textContent = 'People it names';
+        preview.classList.add('document');
+        if (reply.title && !this.title.value) this.title.value = reply.title;
+        if (reply.date && !this.date.value) this.date.value = reply.date;
+      }
     });
   }
 
@@ -300,7 +312,7 @@ class PhotoCard {
     file: File,
     preview: HTMLImageElement,
     status: HTMLElement,
-  ): Promise<string | undefined> {
+  ): Promise<Reply | undefined> {
     this.uploading++;
     this.page.update();
     status.textContent = `Uploading ${file.name}…`;
@@ -315,7 +327,7 @@ class PhotoCard {
     status.textContent = file.name;
     // The token is recorded by the caller before the page checks again.
     setTimeout(() => this.page.update());
-    return reply.token;
+    return reply;
   }
 }
 

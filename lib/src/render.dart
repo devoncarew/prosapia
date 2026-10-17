@@ -713,9 +713,18 @@ $body
   String _thumbnail(Media m) {
     final caption = esc(m.title ?? 'Untitled');
     return '<a href="/media/${m.key}" title="$caption">'
-        '${m.isImage ? '<img loading="lazy" src="/media/${m.key}/display?w=240" alt="$caption">' : '<span class="file">${m.extension.toUpperCase()}</span>'}'
+        '${m.isImage
+            ? '<img loading="lazy" src="/media/${m.key}/display?w=240" alt="$caption">'
+            : m.isDocument
+            ? '<span class="doc"><img loading="lazy" src="/media/${m.key}/display?w=240" alt="$caption"><span class="badge">${m.extension.toUpperCase()}</span></span>'
+            : '<span class="file">${m.extension.toUpperCase()}</span>'}'
         '<span class="caption">$caption</span></a>';
   }
+
+  /// A file size for people: `26.7 MB`.
+  static String _megabytes(int bytes) => bytes >= 1000 * 1000
+      ? '${(bytes / 1000 / 1000).toStringAsFixed(1)} MB'
+      : '${(bytes / 1000).ceil()} kB';
 
   /// How many photos the Photos page shows at a time: three rows of five.
   static const photosPerPage = 15;
@@ -788,6 +797,9 @@ $body
     if (facts.isNotEmpty) sb.write('<p class="lead">${facts.join(' · ')}</p>');
     String image(Media x, String label) => x.isImage
         ? '<figure><a href="/media/${x.key}/file"><img src="/media/${x.key}/display?w=1920" alt="${esc(front.title ?? '')}, $label"></a>${back == null ? '' : '<figcaption>$label</figcaption>'}</figure>'
+        : x.isDocument
+        ? '<figure class="document"><a href="/media/${x.key}/file"><img src="/media/${x.key}/display?w=960" alt="${esc(front.title ?? '')}, first page"></a>'
+              '<figcaption><a class="button primary" href="/media/${x.key}/file">Open the ${x.extension.toUpperCase()}</a>${x.size == null ? '' : ' <span class="years">${_megabytes(x.size!)}</span>'}</figcaption></figure>'
         : '<p><a class="file" href="/media/${x.key}/file">Open the ${x.extension.toUpperCase()} file</a></p>';
     sb.write(
       '<div class="sides${back == null ? '' : ' two'}">${image(front, 'Front')}${back == null ? '' : image(back, 'Back')}</div>',
@@ -799,7 +811,9 @@ $body
       );
     }
     if (front.people.isNotEmpty) {
-      sb.write('<h2>People shown</h2><ul class="shown">');
+      sb.write(
+        '<h2>${front.isDocument ? 'People named' : 'People shown'}</h2><ul class="shown">',
+      );
       for (final id in front.people) {
         final person = tree.people[id];
         final main =
@@ -837,7 +851,7 @@ $body
   String addPhotos(Person? person, {required bool help}) =>
       page(person == null ? 'Add photos' : 'Add photos of ${person.name}', '''
 <h1>Add photos${person == null ? '' : ' of ${esc(person.name)}'}</h1>
-<p class="lead">Choose one photo or several. What you type here applies to all of them; you can change it for any one below.</p>
+<p class="lead">Choose one photo or several, or documents as PDFs. What you type here applies to all of them; you can change it for any one below.</p>
 <form class="memory add-photos" data-person="${person?.id ?? ''}" data-help="$help">
   <label for="shared_date">When, if you know</label>
   <input id="shared_date" name="date" maxlength="80" placeholder="about 1949">
@@ -847,8 +861,8 @@ $body
   <div class="people-picker" data-name="people" data-initial="${esc(jsonEncode([
         if (person != null) {'id': person.id, 'name': person.name},
       ]))}"></div>
-  <label for="files">Photos</label>
-  <input id="files" type="file" multiple accept="image/jpeg,image/heic,image/png,image/tiff,.heic,.tif,.tiff">
+  <label for="files">Photos and documents</label>
+  <input id="files" type="file" multiple accept="image/jpeg,image/heic,image/png,image/tiff,application/pdf,.heic,.tif,.tiff,.pdf">
   <div class="photo-list"></div>
   <p class="message" role="alert" hidden></p>
   <div class="save"><button class="primary" disabled>Add the photos</button> <a href="${person == null ? '/media' : '/people/${person.id}'}">Cancel</a></div>
@@ -1586,6 +1600,19 @@ mark { background: var(--mark); color: inherit; }
   line-clamp: 2; overflow: hidden; }
 .gallery img, .gallery .file { display: block; width: 100%; aspect-ratio: 1; object-fit: cover;
                                border-radius: 4px; border: 1px solid var(--line); margin-bottom: 6px; }
+/* A document: its first page, on a small stack of paper, with its kind. */
+.gallery .doc { position: relative; display: block; margin-bottom: 6px; }
+.gallery .doc img { object-position: top; margin-bottom: 0; background: #fff;
+  box-shadow: 3px 3px 0 -1px var(--surface), 3px 3px 0 0 var(--line), 6px 6px 0 -1px var(--surface),
+    6px 6px 0 0 var(--line); }
+.gallery .doc .badge { position: absolute; left: 6px; bottom: 6px; padding: 1px 6px; border-radius: 3px;
+  background: #b3261e; color: #fff; font: 600 11px/1.5 var(--ui); letter-spacing: 0.04em; }
+.media figure.document img { max-height: 60vh; background: #fff;
+  box-shadow: 4px 4px 0 -1px var(--surface), 4px 4px 0 0 var(--line), 8px 8px 0 -1px var(--surface),
+    8px 8px 0 0 var(--line); }
+.media figure.document figcaption { margin-top: 14px; }
+.media figure.document figcaption .years { margin-left: 8px; }
+.photo-card img.document { background: #fff; box-shadow: 3px 3px 0 0 var(--line), 6px 6px 0 0 var(--line); }
 .gallery .file { display: grid; place-items: center; background: var(--surface); color: var(--muted);
                  font-weight: 600; letter-spacing: 0.05em; }
 /* One row that scrolls sideways, with buttons at its ends. */

@@ -166,7 +166,8 @@ Uses not yet scheduled; the rules every use follows are in
   placeholder.
 - Upload files larger than Cloud Run's 32 MB request limit, such as large TIFF scans,
   straight to storage with a signed upload address.
-- Documents (letters, certificates, census pages): previews and metadata for PDFs.
+- Documents: read a PDF's pages in the site, and add a text layer (OCR) to typed ones so
+  they can be searched.
 - Video: store short clips, link to long ones, as proposed in [media.md](media.md).
 - Multi-page scanned PDFs, such as the two baby books: keep as one document, or store as
   a set of page images.

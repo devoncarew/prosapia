@@ -19,12 +19,13 @@ COPY web ./
 RUN npm run build
 
 # The image that runs: the server, its pages' scripts, the tools it calls
-# for photos (exiftool for metadata, vips for display copies), and git and
-# ssh for the nightly export, which runs from the same image.
+# for photos and documents (exiftool for metadata, vips for display copies,
+# poppler for a PDF's first page), and git and ssh for the nightly export,
+# which runs from the same image.
 FROM debian:bookworm-slim
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
-    ca-certificates libimage-exiftool-perl libvips-tools libheif1 \
+    ca-certificates libimage-exiftool-perl libvips-tools libheif1 libpoppler-glib8 \
     git openssh-client \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /app

@@ -1040,13 +1040,22 @@ Handler siteHandler(
     final saved = await uploads.save(r.read());
     if (saved == null) {
       return jsonError(
-        'That is not a photo Prosapia can store (JPEG, HEIC, PNG or TIFF, '
-        'up to 32 MB).',
+        'That is not a file Prosapia can store: a photo (JPEG, HEIC, PNG or '
+        'TIFF) or a PDF, up to 32 MB.',
         status: 400,
       );
     }
+    // A document usually has its own title and date, to start with.
+    final embedded = saved.kind == 'pdf'
+        ? await embeddedDetails(uploads.file(saved.token)!)
+        : (title: null, date: null);
     return Response.ok(
-      jsonEncode({'token': saved.token, 'kind': saved.kind}),
+      jsonEncode({
+        'token': saved.token,
+        'kind': saved.kind,
+        'title': ?embedded.title,
+        'date': ?embedded.date,
+      }),
       headers: {'content-type': 'application/json'},
     );
   });
@@ -1155,9 +1164,11 @@ Handler siteHandler(
             Media(
               id,
               isBack: isBack,
-              extension: p.extension(archival.path).substring(1) == 'heic'
-                  ? 'heic'
-                  : 'jpg',
+              extension: switch (p.extension(archival.path).substring(1)) {
+                'heic' => 'heic',
+                'pdf' => 'pdf',
+                _ => 'jpg',
+              },
               location: '',
             ),
             details,
@@ -1170,8 +1181,9 @@ Handler siteHandler(
       writes,
       author: member,
       summary: photos.length == 1
-          ? 'Add a photo${first.title == null ? '' : ': ${first.title}'}'
-          : 'Add ${photos.length} photos',
+          ? 'Add a ${first.isDocument ? 'document' : 'photo'}'
+                '${first.title == null ? '' : ': ${first.title}'}'
+          : 'Add ${photos.length} ${writes.every((w) => w.media.isDocument) ? 'documents' : 'photos'}',
     );
     await site.reload();
     final person = site.tree.people['${body['person']}'];
@@ -1274,7 +1286,7 @@ Handler siteHandler(
   });
   router.get('/media/<key>/display', (Request r, String key) async {
     final media = site.tree.media[key];
-    if (media == null || !media.isImage) {
+    if (media == null || !(media.isImage || media.isDocument)) {
       return Response.notFound('not an image');
     }
     final width = int.tryParse(r.url.queryParameters['w'] ?? '') ?? 960;

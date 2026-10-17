@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -118,3 +119,28 @@ String _escapeEntities(String arg) => arg
     .replaceAll('&', '&amp;')
     .replaceAll('\r\n', '\n')
     .replaceAll('\n', '&#10;');
+
+/// The title and date embedded in [file], where it has them: its XMP
+/// title, or a PDF's own; the date as typed, or the date created.
+Future<({String? title, String? date})> embeddedDetails(File file) async {
+  final result = await Process.run('exiftool', [
+    '-j',
+    '-XMP-dc:Title',
+    '-PDF:Title',
+    '-XMP-dc:Coverage',
+    '-XMP-photoshop:DateCreated',
+    file.path,
+  ]);
+  if (result.exitCode != 0) return (title: null, date: null);
+  final tags = ((jsonDecode('${result.stdout}') as List).first as Map)
+      .cast<String, Object?>();
+  String? first(List<String> names) => [
+    for (final n in names)
+      if (tags[n] case final Object v when '$v'.trim().isNotEmpty) '$v'.trim(),
+  ].firstOrNull;
+  final created = first(['DateCreated']);
+  return (
+    title: first(['Title']),
+    date: first(['Coverage']) ?? created?.split(' ').first.replaceAll(':', '-'),
+  );
+}
