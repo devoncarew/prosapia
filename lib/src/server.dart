@@ -11,6 +11,7 @@ import 'auth.dart';
 import 'claude.dart';
 import 'completion.dart';
 import 'diff.dart';
+import 'family.dart';
 import 'file_store.dart' show idFromDirectory;
 import 'firestore_store.dart' show contentTypes;
 import 'images.dart';
@@ -293,6 +294,28 @@ Handler siteHandler(
       );
     }),
   );
+
+  // The family tree, centred on the viewer when they have a page, or else on
+  // whoever has the most family around them.
+  router.get('/family', (Request r) {
+    final mine = Sessions.memberOf(r)?.person;
+    final center =
+        site.tree.people[mine] ?? Hourglass.busiest(site.tree, site.index);
+    return center == null
+        ? missing(r, 'The tree has no people yet.')
+        : seeOther('${Renderer.pathOf(center)}/family');
+  });
+  router.get('/people/<id>/family', (Request r, String id) {
+    final person = site.tree.people[id];
+    return person == null
+        ? missing(r, 'No person has the id $id.')
+        : html(
+            render(r).family(
+              person,
+              fragment: r.url.queryParameters.containsKey('fragment'),
+            ),
+          );
+  });
 
   router.get('/people/<id>/text', (Request r, String id) {
     final person = site.tree.people[id];

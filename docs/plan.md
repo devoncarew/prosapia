@@ -66,15 +66,20 @@ transcription that search finds and a first draft can draw on.
 
 ### Milestone 23: a family tree view
 
-People need to see where someone sits in the family to find their way around. Not every
-chart is needed; one useful view is.
+People need to see where someone sits in the family to find their way around. The view
+is an hourglass, two generations each way, and anyone in it can be chosen to centre it
+on them; going further is moving, not zooming out.
 
-- A small tree on a person's page or its own page: parents and grandparents above,
-  partners and children below, each a link, so a newcomer can move up and down the
-  family.
-- Choose between an ancestor chart, a descendant chart or an hourglass of both, and how
-  far it goes, by trying them on the real tree.
-- Readable on a phone, by scrolling or by fewer generations.
+- Try it with relatives on the real tree, and on a phone, and adjust what it shows.
+
+Built so far: **Family tree** in the header and on each person's page opens the chart:
+grandparents and parents above, older and younger brothers and sisters either side,
+partners beside, and children (grouped by their other parent) and grandchildren below.
+Cards give a name, years, a photo and a hint of more family beyond the chart; large
+families are counted rather than shown in full. Choosing someone recentres it in place,
+with the cards moving to their new places, and the address changes so Back works. It
+starts on the viewer's own page, or on the person with the most family around them. The
+home page shows the viewer's own chart.
 
 Done when: from any person's page a relative can see their parents, grandparents,
 partners and children at a glance, and move to any of them in one click.
@@ -180,6 +185,14 @@ GEDCOM import in the app (was milestone 7). The spike in
 ### Views
 
 - Fuller family tree and descendant charts, beyond milestone 23's view.
+- A 3D view of the whole tree, as a spike with three.js (or `3d-force-graph` on it):
+  people as points, parent and partner links as lines, and height set by birth year. It
+  might show the shape of the family at a glance (its branches, where research is thin,
+  who was alive at the same time) and untangle remarriages and cousin marriages that
+  cross in 2D. Against it: names are hard to read in 3D, orbiting and zooming are hard
+  for less technical relatives and on phones, and it gives nothing to screen readers or
+  print. Worth a day to find out; a 2D chart that tilts into depth may keep the best of
+  it.
 - Every page readable on a phone (left open from milestone 18). Viewing works; check
   each page on a real phone and fix what does not.
 - A "needs source" report.

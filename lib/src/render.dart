@@ -9,6 +9,7 @@ import 'completion.dart';
 import 'contradictions.dart';
 import 'dates.dart';
 import 'diff.dart';
+import 'family.dart';
 import 'index.dart';
 import 'page_syntax.dart';
 import 'store.dart';
@@ -55,7 +56,7 @@ class Renderer {
 <body>
 <header>
   <a class="site" href="/">${esc(tree.name)}</a>
-  <nav><a href="/people">People</a> <a href="/media">Photos</a> <a href="/research">Research</a>${editable ? ' <a href="/changes">Recent changes</a>' : ''}${_canEdit && viewer!.role == Role.owner ? ' <a href="/settings">Settings</a>' : ''}</nav>
+  <nav><a href="/people">People</a> <a href="/family">Family tree</a> <a href="/media">Photos</a> <a href="/research">Research</a>${editable ? ' <a href="/changes">Recent changes</a>' : ''}${_canEdit && viewer!.role == Role.owner ? ' <a href="/settings">Settings</a>' : ''}</nav>
   <form action="/search" class="search"><input type="search" name="q" autocomplete="off" value="${esc(query)}" placeholder="Search" aria-label="Search"></form>
   ${viewer == null ? '' : '<form class="account" method="post" action="/sign-out"><span title="${esc(viewer!.email)} · ${viewer!.role.name}">${esc(viewer!.name ?? viewer!.email)}</span> <button>Sign out</button></form>'}
 </header>
@@ -117,24 +118,21 @@ $body
         '<p><a class="button primary" href="${pathOf(person)}">Go to your page</a>'
         '${_canEdit ? ' <a class="button" href="/people/${person.id}/memory">Add a memory</a>' : ''}</p>',
       );
-      final family = [
-        for (final (label, ids) in [
-          ('Parents', index.parentsOf(person.id)),
-          ('Partners', index.partnersOf(person.id)),
-          ('Brothers and sisters', index.siblingsOf(person.id)),
-          ('Children', index.childrenOf(person.id)),
-        ])
-          if (ids.isNotEmpty)
-            '<dt>$label</dt><dd>${ids.map(personLink).join(', ')}</dd>',
-      ];
-      if (family.isNotEmpty) {
-        sb.write('<dl class="family">${family.join()}</dl>');
-      }
       sb.write('</div></section>');
+      final chart = family(person, embedded: true);
+      if (chart.isNotEmpty) {
+        sb.write(
+          '<h2>Your family</h2>$chart'
+          '<p class="meta">Choose anyone to see their family, or '
+          '<a href="${pathOf(person)}/family">open your family tree</a>.</p>'
+          '<script type="module" src="/assets/family.js"></script>',
+        );
+      }
     }
     sb.write(
       '<h2>Find your way around</h2><ul class="try">'
       '<li><a href="/people">Everyone in the tree</a>, grouped by family name. Or type a name in the search box at the top of any page.</li>'
+      '<li><a href="/family">The family tree</a>: anyone with their parents, grandparents, children and grandchildren.</li>'
       '<li><a href="/media">Photos and documents</a>.</li>'
       '<li><a href="/research">Research</a>: where to look for more about the family.</li>'
       '${_canEdit ? '<li>Anything can be corrected: choose Edit on a page. Every change is kept, so nothing can be lost.</li>' : ''}'
@@ -236,6 +234,218 @@ $body
   }
 
   /// The last word of a person's name, for grouping the list of people.
+  // ---------------------------------------------------------------- family
+
+  /// How many brothers and sisters show on each side of the person; more
+  /// are counted, and reached through a parent.
+  static const _siblingsShown = 4;
+
+  /// How many of a child's children show under them.
+  static const _grandchildrenShown = 6;
+
+  /// [p]'s family tree, two generations each way. Choosing anyone in it
+  /// centres it on them. A [fragment] is the chart alone, for the page's
+  /// script to put in place of the one shown; an [embedded] one is the
+  /// chart without its title, for another page to show.
+  String family(Person p, {bool fragment = false, bool embedded = false}) {
+    final h = Hourglass.of(p, tree, index);
+    var count = 0;
+    final named = <String>{};
+    final unions = <Map<String, Object>>[];
+    final couples = <List<String>>[];
+
+    String plural(int n, String one, String many) =>
+        '$n ${n == 1 ? one : many}';
+
+    ({String key, String html}) card(
+      String id, {
+      String? hint,
+      String? partner,
+      bool center = false,
+    }) {
+      final person = tree.people[id]!;
+      final key = 'k${count++}';
+      // The same person shown twice moves as one only from the first.
+      final moves = named.add(id)
+          ? ' style="view-transition-name: f-${person.id}"'
+          : '';
+      final photo = person.photo == null ? null : tree.media[person.photo];
+      final image = photo != null && photo.isImage
+          ? '<img src="/media/${photo.key}/display?w=96" alt="" loading="lazy">'
+          : '<span class="no-photo" aria-hidden="true"></span>';
+      final href = center ? pathOf(person) : '${pathOf(person)}/family';
+      final title = center
+          ? 'Go to ${person.name}\'s page'
+          : 'Centre the tree on ${person.name}';
+      return (
+        key: key,
+        html:
+            '<a class="card${center ? ' center' : ''}" href="$href" data-key="$key" title="${esc(title)}"$moves>'
+            '$image<span class="who"><span class="name">${esc(person.displayName)}</span>'
+            '${person.years.isEmpty ? '' : '<span class="years">${person.years}</span>'}'
+            '${partner == null ? '' : '<span class="partner">&amp; ${esc(tree.people[partner]?.name)}</span>'}'
+            '${hint == null ? '' : '<span class="hint">${esc(hint)}</span>'}'
+            '</span></a>',
+      );
+    }
+
+    String more(int n, String what, String? id) {
+      final label = '+$n $what';
+      final person = id == null ? null : tree.people[id];
+      return person == null
+          ? '<span class="more">$label</span>'
+          : '<a class="more" href="${pathOf(person)}/family" title="Centre the tree on ${esc(person.name)}">$label</a>';
+    }
+
+    String? childrenHint(String id) {
+      final n = index.childrenOf(id).length;
+      return n == 0 ? null : plural(n, 'child', 'children');
+    }
+
+    // Grandparents and parents.
+    final up = StringBuffer();
+    final parentKeys = <String>[];
+    for (final parent in h.parents) {
+      final grand = [
+        for (final g in parent.parents)
+          card(g, hint: index.parentsOf(g).isEmpty ? null : 'parents ↑'),
+      ];
+      final aunts = index.siblingsOf(parent.id).length;
+      final c = card(
+        parent.id,
+        hint: aunts == 0
+            ? null
+            : plural(aunts, 'brother or sister', 'brothers and sisters'),
+      );
+      parentKeys.add(c.key);
+      if (grand.isNotEmpty) {
+        unions.add({
+          'p': [for (final g in grand) g.key],
+          'c': [c.key],
+        });
+        if (grand.length == 2) couples.add([grand[0].key, grand[1].key]);
+      }
+      up.write(
+        '<div class="anc">'
+        '<div class="row">${grand.map((g) => g.html).join()}</div>'
+        '${c.html}</div>',
+      );
+    }
+    if (parentKeys.length == 2) couples.add(parentKeys);
+
+    // The person, their partners, and their brothers and sisters.
+    final me = card(p.id, center: true);
+    final partnerCards = <String, ({String key, String html})>{};
+    for (final id in h.partners) {
+      partnerCards[id] = card(id);
+      couples.add([me.key, partnerCards[id]!.key]);
+    }
+    final ordered = partnerCards.values.toList();
+    // A second partner sits on the other side, so neither line crosses.
+    final left = [if (ordered.length > 1) ordered[1]];
+    final right = [if (ordered.isNotEmpty) ordered[0], ...ordered.skip(2)];
+    final mother = h.parents.isEmpty ? null : h.parents.last.id;
+    final siblingKeys = <String>[];
+    String sibling(String id) {
+      final partners = index.partnersOf(id);
+      final c = card(id, partner: partners.firstOrNull, hint: childrenHint(id));
+      siblingKeys.add(c.key);
+      return c.html;
+    }
+
+    final olderShown = h.older.length > _siblingsShown
+        ? h.older.sublist(h.older.length - _siblingsShown)
+        : h.older;
+    final youngerShown = h.younger.take(_siblingsShown).toList();
+    final before = [
+      if (olderShown.length < h.older.length)
+        more(h.older.length - olderShown.length, 'older', mother),
+      ...olderShown.map(sibling),
+    ];
+    final after = [
+      ...youngerShown.map(sibling),
+      if (youngerShown.length < h.younger.length)
+        more(h.younger.length - youngerShown.length, 'younger', mother),
+    ];
+    if (parentKeys.isNotEmpty) {
+      unions.add({
+        'p': parentKeys,
+        'c': [me.key, ...siblingKeys],
+      });
+    }
+
+    // Children and grandchildren.
+    final down = StringBuffer();
+    for (final group in h.children) {
+      final childKeys = <String>[];
+      down.write('<div class="group">');
+      for (final child in group.children) {
+        final c = card(child.id, partner: child.partners.firstOrNull);
+        childKeys.add(c.key);
+        final shown = child.children.take(_grandchildrenShown);
+        final grand = [for (final g in shown) card(g, hint: childrenHint(g))];
+        if (grand.isNotEmpty) {
+          unions.add({
+            'p': [c.key],
+            'c': [for (final g in grand) g.key],
+          });
+        }
+        final hidden = child.children.length - grand.length;
+        down.write(
+          '<div class="desc">${c.html}'
+          '${grand.isEmpty ? '' : '<div class="row">${grand.map((g) => g.html).join()}'
+                    '${hidden > 0 ? more(hidden, 'more', child.id) : ''}</div>'}'
+          '</div>',
+        );
+      }
+      down.write('</div>');
+      final other = partnerCards[group.other]?.key;
+      unions.add({
+        'p': [me.key, ?other],
+        'c': childKeys,
+      });
+    }
+
+    final alone = h.size == 0;
+    if (embedded && alone) return '';
+    final chart = StringBuffer(
+      '<section class="family-view${embedded ? ' embedded' : ''}" data-title="${esc('${p.name}\'s family')}">',
+    );
+    if (!embedded) {
+      chart.write(
+        '<div class="person-head"><div class="title"><div class="name">'
+        '<h1>${esc(p.displayName)}\'s family</h1>'
+        '${p.years.isEmpty ? '' : '<span class="lead">${p.years}</span>'}</div>'
+        '<div class="actions"><a class="button" href="${pathOf(p)}">Go to ${esc(p.name)}\'s page</a></div>'
+        '</div></div>',
+      );
+    }
+    if (alone) {
+      chart.write(
+        '<p class="empty">No family is recorded for ${esc(p.name)} yet. '
+        'Parents, partners, brothers and sisters, and children written on their page show here.</p>',
+      );
+    }
+    chart.write(
+      '<div class="family-scroll"><div class="family" '
+      'data-unions="${esc(jsonEncode(unions))}" data-couples="${esc(jsonEncode(couples))}">'
+      '${up.isEmpty ? '' : '<div class="gen up">$up</div>'}'
+      '<div class="gen self"><div class="side before">${before.join()}</div>'
+      '<div class="row couple">${left.map((c) => c.html).join()}${me.html}${right.map((c) => c.html).join()}</div>'
+      '<div class="side after">${after.join()}</div></div>'
+      '${down.isEmpty ? '' : '<div class="gen down">$down</div>'}'
+      '</div></div>'
+      '${alone || embedded ? '' : '<p class="meta">Choose anyone to centre the tree on them.</p>'}'
+      '</section>',
+    );
+    if (fragment || embedded) return chart.toString();
+    return page(
+      '${p.name}\'s family',
+      '$chart<script type="module" src="/assets/family.js"></script>',
+      wide: true,
+    );
+  }
+
   static String surnameOf(Person p) {
     final words = p.name.trim().split(RegExp(r'\s+'));
     return words.length > 1 ? words.last : 'Other';
@@ -254,6 +464,7 @@ $body
         '<a class="button" href="/people/${p.id}/memory" title="A story, a trip, something you remember about ${esc(p.name)}, added as its own section at the end of the page">Add a memory</a>',
       if (_canEdit)
         '<button type="button" class="button" data-research="/people/${p.id}/research" title="Claude suggests records to look for about ${esc(p.name)}, and where to find them. Nothing is saved.">Claude: Research</button>',
+      '<a class="button" href="${pathOf(p)}/family" title="${esc(p.name)}\'s parents, grandparents, brothers and sisters, children and grandchildren">Family tree</a>',
     ];
     final more = [
       if (editable) '<a href="/people/${p.id}/history">View changes</a>',
@@ -1773,9 +1984,6 @@ select { font: 14px var(--ui); padding: 4px 6px; border: 1px solid var(--line); 
   background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
 .start img { width: 160px; border-radius: 4px; display: block; }
 .start h2 { margin-top: 0; border: none; }
-.family { font: 16px/1.5 var(--ui); margin: 12px 0 0; }
-.family dt { color: var(--muted); font-size: 14px; margin-top: 6px; }
-.family dd { margin: 0; }
 .try li { margin-bottom: 8px; }
 .recent li { margin-bottom: 8px; }
 .research { max-width: 760px; }
@@ -1943,6 +2151,58 @@ button:disabled { opacity: 0.6; cursor: default; }
   .infobox { float: none; width: auto; margin: 0 0 16px; }
   main { padding: 16px 16px 48px; }
 }
+/* The family tree: rows of small cards, with lines drawn by family.js. It
+   takes the whole width of the window, since a large family is wide. */
+main:has(> .family-view:not(.embedded)) { max-width: none; }
+.family-scroll { overflow-x: auto; margin: 8px -24px 0; padding: 8px 24px 16px; scrollbar-width: thin; }
+.family { position: relative; width: max-content; min-width: 100%; display: flex; flex-direction: column;
+  align-items: center; gap: 36px; font: 14px/1.3 var(--ui); }
+.family > svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+  overflow: visible; }
+.family .gen { display: flex; justify-content: center; align-items: flex-start; gap: 24px; }
+/* Grandparents in one row and parents in the next, so parents line up
+   whether or not their own parents are shown. */
+.family .gen.up { display: grid; grid-auto-flow: column; grid-template-rows: auto auto;
+  gap: 36px 24px; justify-content: center; justify-items: center; }
+.family .gen.up .anc { display: contents; }
+.family .gen.up .anc > .row { align-self: end; }
+.family .gen.up .anc > .card { align-self: start; }
+.family .gen.self { display: grid; grid-template-columns: 1fr auto 1fr; gap: 24px; align-items: start;
+  width: 100%; }
+.family .side { display: flex; gap: 12px; align-items: flex-start; }
+.family .side.before { justify-content: flex-end; }
+.family .row { display: flex; gap: 12px; justify-content: center; align-items: flex-start; }
+.family .row.couple { gap: 20px; }
+.family .anc, .family .desc { display: flex; flex-direction: column; align-items: center; gap: 36px; }
+.family .gen.down { gap: 40px; }
+.family .group { display: flex; gap: 16px; align-items: flex-start; }
+.family .card { position: relative; z-index: 1; display: flex; gap: 8px; align-items: center; width: 210px;
+  padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
+  color: var(--text); }
+.family .card:hover { text-decoration: none; border-color: var(--link); }
+.family .card.center { border: 2px solid var(--accent); padding: 5px 7px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.12); }
+.family .card img, .family .card .no-photo { flex: none; width: 36px; height: 36px; border-radius: 50%;
+  object-fit: cover; background: var(--tint); border: 1px solid var(--line); }
+.family .who { display: flex; flex-direction: column; min-width: 0; }
+.family .name { font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; }
+.family .years, .family .partner, .family .hint { font-size: 12px; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.family .hint { color: var(--link); margin: 0; }
+.family .more { align-self: center; position: relative; z-index: 1; font-size: 13px; padding: 4px 10px;
+  border: 1px dashed var(--line); border-radius: 12px; background: var(--bg); color: var(--muted);
+  white-space: nowrap; }
+.family svg path { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.family svg path.couple { stroke-width: 1.5; }
+.family-view > .meta { margin-top: 4px; }
+@media (max-width: 700px) {
+  .family-scroll { margin: 8px -16px 0; padding: 8px 16px 16px; }
+  .family .card { width: 128px; }
+  .family .card img, .family .card .no-photo { width: 28px; height: 28px; }
+}
+::view-transition-group(*) { animation-duration: 0.35s; }
+@media (prefers-reduced-motion: reduce) { ::view-transition-group(*) { animation-duration: 0s; } }
 /* Phones: one column, and nothing wider than the screen. */
 @media (max-width: 700px) {
   header { padding: 10px 16px; gap: 8px 16px; }
