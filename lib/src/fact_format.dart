@@ -58,8 +58,11 @@ List<String> _parts(FactLine line) {
     if (s is PlaceSegment) placed = true;
     if (s is! TextSegment || identical(s, partner)) continue;
     final asDate = TreeDate.parse(s.value);
+    // As in reading: after the place, a date needs a year.
     final isDate = (life || couple)
-        ? date == null && !placed && joined.isEmpty && asDate.understood
+        ? date == null &&
+              asDate.understood &&
+              ((!placed && joined.isEmpty) || asDate.year != null)
         : date == null && asDate.understood;
     if (isDate) {
       date = asDate;

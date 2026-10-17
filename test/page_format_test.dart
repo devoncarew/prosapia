@@ -96,6 +96,17 @@ void main() {
       );
     });
 
+    test('a date after the place stays the date', () {
+      expect(
+        facts('Born: "Portland, Oregon", "18 March 1914"'),
+        'Name: A\nBorn: "Portland, Oregon", 18 March 1914\n',
+      );
+      expect(
+        facts('Died: Portland, Oregon, 1987'),
+        'Name: A\nDied: "Portland, Oregon", 1987\n',
+      );
+    });
+
     test('a place beside a named partner is labelled', () {
       expect(
         facts('Married: Ann Price, 1884, Hartford, CT'),
