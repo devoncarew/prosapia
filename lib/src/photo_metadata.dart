@@ -13,7 +13,8 @@ class PhotoDetails {
     this.title,
     this.date,
     this.place,
-    this.back,
+    this.transcription,
+    this.notes,
     this.people = const [],
     this.set,
     this.setIndex,
@@ -25,8 +26,12 @@ class PhotoDetails {
   final String? date;
   final String? place;
 
-  /// The transcription of writing on the back.
-  final String? back;
+  /// The words written or printed on it; for a photo with a back, the
+  /// writing on the back.
+  final String? transcription;
+
+  /// What is known about it rather than written on it.
+  final String? notes;
 
   /// Each person shown, by id and name.
   final List<({String id, String name})> people;
@@ -42,7 +47,8 @@ List<String> metadataArgs(String key, PhotoDetails details) {
   String? value(String? s) => s == null || s.trim().isEmpty ? null : s.trim();
   final isBack = key.endsWith('-back');
   final title = value(details.title);
-  final back = value(details.back);
+  final transcription = value(details.transcription);
+  final notes = value(details.notes);
   final place = value(details.place);
   final date = value(details.date) == null
       ? null
@@ -51,7 +57,8 @@ List<String> metadataArgs(String key, PhotoDetails details) {
     '-overwrite_original',
     '-XMP-dc:Identifier=${Media.idScheme}$key',
     '-XMP-dc:Title=${title ?? ''}',
-    '-XMP-dc:Description=${back ?? ''}',
+    '-XMP-dc:Description=${transcription ?? ''}',
+    '-XMP-exif:UserComment=${notes ?? ''}',
     '-XMP-photoshop:DateCreated=${date ?? ''}',
     // DateCreated takes no words, so the date as typed is kept too.
     '-XMP-dc:Coverage=${value(details.date) ?? ''}',

@@ -48,42 +48,6 @@ today.
 Done when: a short phone clip and a linked long video each appear on the right people's
 pages, and the 50 MB limit is confirmed or changed.
 
-### Milestone 22: notes and transcriptions on photos and documents
-
-A birth certificate, a letter or the back of a photo says things worth keeping as text.
-Today only the writing on a photo's back is kept, as its description.
-
-- Notes on any photo or document: a transcription of what is written on it, and notes
-  about it (where it came from, what it shows), edited from the photo's page.
-- **Claude: Transcribe** when adding a photo or document and when viewing one, proposing
-  a transcription for the person to check before saving. Handwriting is read by the
-  model; typed pages may use OCR. Multi-page PDFs are read page by page.
-- The transcription is written into the file where the format allows, as the writing on
-  a back is now, searchable, and given to a first draft as what the document says.
-
-Done when: a scanned certificate and a handwritten letter each have a checked
-transcription that search finds and a first draft can draw on.
-
-### Milestone 23: a family tree view
-
-People need to see where someone sits in the family to find their way around. The view
-is an hourglass, two generations each way, and anyone in it can be chosen to centre it
-on them; going further is moving, not zooming out.
-
-- Try it with relatives on the real tree, and on a phone, and adjust what it shows.
-
-Built so far: **Family tree** in the header and on each person's page opens the chart:
-grandparents and parents above, older and younger brothers and sisters either side,
-partners beside, and children (grouped by their other parent) and grandchildren below.
-Cards give a name, years, a photo and a hint of more family beyond the chart; large
-families are counted rather than shown in full. Choosing someone recentres it in place,
-with the cards moving to their new places, and the address changes so Back works. It
-starts on the viewer's own page, or on the person with the most family around them. The
-home page shows the viewer's own chart.
-
-Done when: from any person's page a relative can see their parents, grandparents,
-partners and children at a glance, and move to any of them in one click.
-
 ### Milestone 15: events and memories
 
 Journeys 1 and 7.
@@ -159,6 +123,8 @@ Uses not yet scheduled; the rules every use follows are in
 - Choose the JPEG quality for scans from a real full-resolution scanner output; 92 is a
   placeholder.
 - Documents: read a PDF's pages in the site, rather than only its first page's preview.
+- A text layer (OCR) in typed PDFs, so a downloaded copy can be searched in a PDF
+  viewer. The transcription is in the file's metadata and searched in Prosapia already.
 - A design pass over the photo pages.
 - Multi-page scanned PDFs, such as the two baby books: keep as one document, or store as
   a set of page images.
@@ -229,6 +195,17 @@ this is needed until a wider preview is chosen. It should be done before then.
 
 Newest first.
 
+- **Milestone 23, a family tree view.** **Family tree** in the header, on each person's
+  page and on the home page shows an hourglass chart: grandparents and parents above,
+  brothers and sisters either side, partners beside, and children and grandchildren
+  below, with hints of more family beyond. Choosing anyone recentres it in place, with
+  the cards moving to their new places; the home page shows the viewer's own.
+- **Milestone 22, notes and transcriptions.** Every photo and document has a
+  transcription of what is written on it (for a photo with a back, the back) and notes
+  about it, written into the file (`dc:description` and EXIF `UserComment`), shown on
+  its page, searched, and given to first drafts. **Claude: Transcribe** works on any
+  photo, back or document, when adding or editing, and reads a document a page at a
+  time.
 - **Milestone 20, dogfooding and polish.** Using the deployed site on the real tree
   brought a new fact syntax with quoted and labelled parts, a Format button and normal
   form, change history with a friendly diff, viewer-local times, paged photos and a

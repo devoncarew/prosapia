@@ -1035,10 +1035,16 @@ $body
     sb.write(
       '<div class="sides${back == null ? '' : ' two'}">${image(front, 'Front')}${back == null ? '' : image(back, 'Back')}</div>',
     );
-    final writing = front.description ?? back?.description;
+    final writing = front.transcription ?? back?.transcription;
     if (writing != null) {
+      sb.write('<h2>${_writtenOn(front, back)}</h2>${_longText(writing)}');
+    }
+    if (front.notes != null) {
+      sb.write('<h2>Notes</h2>${_longText(front.notes!)}');
+    }
+    if (_canEdit && writing == null && front.notes == null) {
       sb.write(
-        '${back == null ? '' : '<h2>Written on the back</h2>'}<p class="description">${esc(writing)}</p>',
+        '<p><a href="/media/${front.key}/edit#transcription">Add a transcription or notes</a></p>',
       );
     }
     if (front.people.isNotEmpty) {
@@ -1075,6 +1081,30 @@ $body
     );
     sb.write('</article>');
     return page(front.title ?? 'Untitled', sb.toString());
+  }
+
+  /// What a transcription is called for [m]: the writing on the back of a
+  /// photo that has one, or on the photo or document itself.
+  static String _writtenOn(Media m, Media? back) => back != null
+      ? 'Written on the back'
+      : m.isDocument
+      ? 'Transcription'
+      : 'Written on it';
+
+  /// Text as written, with its line breaks. A long text shows its start,
+  /// with the rest a click away.
+  static String _longText(String text) {
+    final lines = text.split('\n');
+    var cut = 0, length = 0;
+    while (cut < lines.length && cut < 15 && length < 1200) {
+      length += lines[cut++].length;
+    }
+    if (lines.length - cut < 3) {
+      return '<p class="description">${esc(text)}</p>';
+    }
+    return '<p class="description">${esc(lines.take(cut).join('\n'))}</p>'
+        '<details class="rest"><summary>Show the rest</summary>'
+        '<p class="description">${esc(lines.skip(cut).join('\n'))}</p></details>';
   }
 
   /// The form for adding photos, from [person]'s page when given. The
@@ -1118,12 +1148,15 @@ $body
   <input id="date" name="date" value="${esc(m.date ?? '')}" maxlength="80" placeholder="about 1949">
   <label for="place">Where</label>
   <input id="place" name="place" value="${esc(m.place ?? '')}" maxlength="200">
-  <label>Who is in it</label>
+  <label>${m.isDocument ? 'People it names' : 'Who is in it'}</label>
   <div class="people-picker" data-name="people" data-initial="${esc(jsonEncode(people))}"></div>
-  ${back == null ? '' : '''<label for="back">Written on the back</label>
-  ${back.isImage ? '<img class="thumb" src="/media/${back.key}/display?w=480" alt="The back">' : ''}
-  <textarea id="back" name="back" spellcheck="true">${esc(back.description ?? m.description ?? '')}</textarea>
-  ${help ? '<div class="help tidy" data-key="${back.key}"><button type="button" class="transcribe">Claude: Transcribe</button></div>' : ''}'''}
+  <label for="transcription">${_writtenOn(m, back)}</label>
+  ${back != null && back.isImage ? '<img class="thumb" src="/media/${back.key}/display?w=480" alt="The back">' : ''}
+  <textarea id="transcription" name="transcription" spellcheck="true"${m.isDocument ? ' class="tall"' : ''}>${esc(back?.transcription ?? m.transcription ?? '')}</textarea>
+  ${help && (m.isImage || m.isDocument) ? '<div class="help tidy" data-key="${(back ?? m).key}"><button type="button" class="transcribe">Claude: Transcribe</button></div>' : ''}
+  <label for="notes">Notes</label>
+  <p class="hint">What is known about it, rather than written on it: who has the original, who scanned it, who identified the people.</p>
+  <textarea id="notes" name="notes" spellcheck="true">${esc(m.notes ?? '')}</textarea>
   <div class="save"><button class="primary">Save</button> <a href="/media/${m.key}">Cancel</a></div>
 </form>
 <script type="module" src="/assets/photos.js"></script>''');
@@ -1895,6 +1928,7 @@ h2.with-action .button { font: 14px var(--ui); padding: 3px 12px; }
 .pager .off, .pager .gap { color: var(--muted); }
 .media img { max-width: 100%; max-height: 80vh; border: 1px solid var(--line); border-radius: 4px; }
 .description { white-space: pre-line; }
+.description:has(+ details.rest[open]) { margin-bottom: 0; }
 .problems, .issues { font: 14px/1.4 var(--ui); margin-bottom: 16px; }
 .issues summary { color: var(--muted); cursor: pointer; }
 .unresolved { text-decoration: underline dotted; text-underline-offset: 3px; color: var(--muted); cursor: help; }
@@ -1969,6 +2003,11 @@ img.thumb { display: block; max-width: 240px; max-height: 240px; border-radius: 
 .photo-card .status { font: 13px var(--ui); color: var(--muted); }
 .photo-card label { margin-top: 8px; }
 .memory .photo-card textarea, .edit-photo textarea { height: 7em; }
+.memory .photo-card textarea.tall, .edit-photo textarea.tall { height: 18em; }
+.edit-photo .hint, .photo-card .hint { margin: 0 0 4px; }
+details.rest > summary { cursor: pointer; color: var(--link); font: 15px var(--ui); margin: -0.4em 0 0.6em; }
+details.rest[open] > summary { display: none; }
+details.rest > .description { margin-top: 0; }
 .photo-card button { font: 13px var(--ui); }
 .photo-card .add-back { font: 13px var(--ui); margin-top: 10px; display: inline-block; }
 .members form, .add-member { display: flex; gap: 8px; align-items: center; margin: 0; }

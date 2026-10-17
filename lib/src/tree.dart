@@ -350,7 +350,8 @@ class Media {
           location: map['location'] as String,
         )
         ..title = map['title'] as String?
-        ..description = map['description'] as String?
+        ..transcription = map['description'] as String?
+        ..notes = map['notes'] as String?
         ..width = map['width'] as int?
         ..height = map['height'] as int?
         ..size = map['size'] as int?
@@ -376,9 +377,14 @@ class Media {
   final String location;
   String? title;
 
-  /// For a photo with writing on its back, the transcription of it. It is
-  /// kept in both files, so the words survive if the back is lost.
-  String? description;
+  /// The words written or printed on it, as written: for a photo with a
+  /// back, the writing on the back. It is kept in both files, so the words
+  /// survive if the back is lost.
+  String? transcription;
+
+  /// What is known about it rather than written on it: where the original
+  /// is, who scanned it, who identified the people.
+  String? notes;
   int? width, height, size;
 
   /// When it was taken, as typed: "about 1949".
@@ -409,7 +415,8 @@ class Media {
     'extension': extension,
     'location': location ?? this.location,
     if (title != null) 'title': title,
-    if (description != null) 'description': description,
+    if (transcription != null) 'description': transcription,
+    if (notes != null) 'notes': notes,
     if (width != null) 'width': width,
     if (height != null) 'height': height,
     if (size != null) 'size': size,

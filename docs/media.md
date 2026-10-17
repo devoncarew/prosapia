@@ -12,7 +12,8 @@ The field names below were checked with exiftool 13.55 in milestone 6.
 | When it was taken, possibly only a year | XMP `photoshop:DateCreated`, which accepts a year or year and month. A date such as "about 1949" is written there as its year, and the words as typed go in XMP `dc:coverage`. A camera's EXIF `DateTimeOriginal` is left as it is |
 | Who is in it | IPTC `Person Shown` (XMP `iptcExt:PersonInImage`), one entry per name |
 | Where each person is in the frame | IPTC Image Regions, one named region per face |
-| Text written on the back | XMP `dc:description`, transcribed as written, in both the front and the back file |
+| Text written on it: on the back of a photo that has one, or on the photo or document itself | XMP `dc:description`, transcribed as written, in both the front and the back file |
+| Notes about it, rather than on it: who has the original, who scanned it | XMP `exif:UserComment`, in both files |
 | Caption or title | XMP `dc:title` |
 | Where it was taken | IPTC `Location Shown`, as its location name (XMP `iptcExt:LocationShown/LocationName`) |
 | Who holds the original, who scanned it | XMP `dc:source` and `dc:rights` |
