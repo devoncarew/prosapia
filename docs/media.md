@@ -32,6 +32,7 @@ embedded id.
 | An uncompressed scan, such as TIFF or PNG | A JPEG, encoded once at high quality. The uncompressed file is not kept |
 | A HEIC, the default from iPhones | That file as it is |
 | A PDF that only wraps one scanned JPEG | That JPEG, extracted unchanged. The PDF wrapper adds nothing, and photo tools read a JPEG better |
+| A document of several pages, as a PDF | That PDF as it is, with metadata written into it as for a photo. Its first page is shown as its picture, on a stack of paper with a PDF badge |
 | A front and a back | Two files, each handled by the rules above |
 
 JPEG is the archival format: it dates from 1992 and everything opens it. This is not
@@ -149,9 +150,10 @@ ways. The script and full measurements are in
 
 ## Open
 
-- Do documents (letters, certificates, census pages) follow the same rules as photos?
-  The sample import brought in 13 PDFs alongside 122 JPEGs. Metadata could be written
-  into the PDFs too.
+- Documents follow the same rules as photos: added the same way, with a title, date,
+  place and the people they name written into the PDF. Still open: reading a document's
+  pages in the site rather than in the browser's PDF viewer, and a text layer (OCR) so
+  that typed documents can be searched.
 - Size. The 122 sample JPEGs total 244 MB, about 2 MB each. That is no problem for Cloud
   Storage, but it may be too much to copy into the GitHub export in full.
 - Audio recordings of relatives: in scope, and with what metadata?

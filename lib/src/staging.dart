@@ -18,7 +18,7 @@ class Staging {
   static final _token = RegExp(r'^[0-9a-f]{20}$');
 
   /// Saves an uploaded file and returns its token and kind, or null if it
-  /// is not a photo Prosapia can store or is too large.
+  /// is not a photo or document Prosapia can store, or is too large.
   Future<({String token, String kind})?> save(Stream<List<int>> body) async {
     _clean();
     final bytes = BytesBuilder(copy: false);
@@ -42,18 +42,18 @@ class Staging {
   /// The file staged under [token], or null.
   File? file(String token) {
     if (!_token.hasMatch(token) || !Directory(dir).existsSync()) return null;
-    for (final kind in const ['jpg', 'heic', 'png', 'tif']) {
+    for (final kind in const ['jpg', 'heic', 'png', 'tif', 'pdf']) {
       final f = File(p.join(dir, '$token.$kind'));
       if (f.existsSync()) return f;
     }
     return null;
   }
 
-  /// The file as it will be stored: a JPEG or HEIC as it is, and any other
-  /// scan encoded once as a JPEG.
+  /// The file as it will be stored: a JPEG, HEIC or PDF as it is, and any
+  /// other scan encoded once as a JPEG.
   Future<File> archival(File staged) async {
     final ext = p.extension(staged.path).substring(1);
-    if (ext == 'jpg' || ext == 'heic') return staged;
+    if (ext == 'jpg' || ext == 'heic' || ext == 'pdf') return staged;
     final out = p.setExtension(staged.path, '.archival.jpg');
     // Quality 92 keeps scans visually lossless at about a third of the
     // size of quality 100; to be checked against a full-resolution scan.
@@ -61,7 +61,8 @@ class Staging {
     return File(out);
   }
 
-  /// A JPEG no wider than [width], for previews and for the model to read.
+  /// A JPEG no wider than [width], for previews and for the model to read;
+  /// for a PDF, of its first page.
   Future<List<int>> preview(File staged, int width) async {
     final out = '${staged.path}.preview-$width.jpg';
     if (!File(out).existsSync()) {
@@ -77,14 +78,15 @@ class Staging {
     return File(out).readAsBytesSync();
   }
 
-  /// What kind of image [data] holds, by its first bytes: `jpg`, `heic`,
-  /// `png` or `tif`.
+  /// What kind of file [data] holds, by its first bytes: `jpg`, `heic`,
+  /// `png`, `tif` or `pdf`.
   static String? kindOf(List<int> data) {
     bool starts(List<int> magic, [int at = 0]) =>
         data.length >= at + magic.length &&
         [for (var i = 0; i < magic.length; i++) data[at + i]].join(',') ==
             magic.join(',');
     if (starts([0xff, 0xd8, 0xff])) return 'jpg';
+    if (starts('%PDF-'.codeUnits)) return 'pdf';
     if (starts([0x89, 0x50, 0x4e, 0x47])) return 'png';
     if (starts([0x49, 0x49, 0x2a, 0x00]) || starts([0x4d, 0x4d, 0x00, 0x2a])) {
       return 'tif';

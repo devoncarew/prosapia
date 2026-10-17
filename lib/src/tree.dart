@@ -380,6 +380,9 @@ class Media {
   String get fileName => '$key.$extension';
   bool get isImage => const {'jpg', 'jpeg', 'heic', 'png'}.contains(extension);
 
+  /// A document whose first page can be shown as a picture.
+  bool get isDocument => extension == 'pdf';
+
   /// What the database keeps about a file so it can be listed and searched
   /// without opening it. The file's embedded metadata remains the authority.
   Map<String, Object?> toMap({String? location}) => {
