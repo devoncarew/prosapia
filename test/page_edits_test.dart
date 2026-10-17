@@ -120,6 +120,10 @@ taught school.
       'hughes-mary-ellen-x2k9ab',
     );
     expect(directoryFor('Zoë', 'p-x2k9ab'), 'zo-x2k9ab');
+    expect(
+      directoryFor('Rudolph H. Wilhelm Jr.', 'p-7z4nh6'),
+      'wilhelm-rudolph-h-jr-7z4nh6',
+    );
     expect(directoryFor('', 'p-x2k9ab'), 'x2k9ab');
   });
 

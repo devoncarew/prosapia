@@ -208,10 +208,9 @@ String _normal(String s) =>
 /// A readable directory name ending in the id, surname first so a listing
 /// groups families: `ducker-mary-x2k9ab`.
 String directoryFor(String name, String id) {
-  final words = name.trim().split(RegExp(r'\s+'));
-  final ordered = words.length > 1
-      ? [words.last, ...words.take(words.length - 1)]
-      : words;
+  // Family name first, then given names, then any "Jr." or "3rd".
+  final parts = nameParts(name);
+  final ordered = [?parts.surname, ...parts.given, ...parts.suffix];
   final slug = ordered
       .join(' ')
       .toLowerCase()
