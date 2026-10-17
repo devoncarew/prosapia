@@ -1776,6 +1776,8 @@ details.more .menu a:hover { background: var(--tint); text-decoration: none; }
 }
 /* The editor takes the page's full width; its preview shows the facts. */
 main > article.editing-on > .infobox { display: none; }
+.help-bar .drawn-from { flex-basis: 100%; color: var(--muted); }
+.help-bar .drawn-from ul { margin: 4px 0 0; padding-left: 20px; color: var(--text); }
 .draft-panel { padding: 12px 14px; margin: 8px 0; border: 1px solid var(--line); border-radius: 6px;
   background: var(--surface); font: 15px var(--ui); }
 .draft-panel label { display: block; margin: 0 0 10px; color: var(--muted); font-size: 14px; }

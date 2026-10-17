@@ -424,6 +424,7 @@ export function mount(form: HTMLFormElement): Mounted {
   interface HelpReply {
     text?: string;
     changed?: number[];
+    drawnFrom?: string[];
     model?: string;
     modelName?: string;
     error?: string;
@@ -519,6 +520,19 @@ export function mount(form: HTMLFormElement): Mounted {
         ['Keep', keep],
       ],
     );
+    // Where a first draft found facts elsewhere in the tree, to check.
+    if (reply.drawnFrom?.length && helpBar) {
+      const sources = document.createElement('div');
+      sources.className = 'drawn-from';
+      const list = document.createElement('ul');
+      for (const item of reply.drawnFrom) {
+        const li = document.createElement('li');
+        li.textContent = item;
+        list.append(li);
+      }
+      sources.append('Drawn from elsewhere in the tree:', list);
+      helpBar.append(sources);
+    }
   }
 
   // ------------------------------------------------------------------- drafts

@@ -188,6 +188,31 @@ void main() {
       expect(user, contains('The story below the facts is empty'));
       expect(user, contains('The editor asks: ${Assistant.firstDraft}'));
       expect(user, isNot(contains('<notes>')));
+      // A first draft draws on the rest of the tree, and says from where.
+      expect(user, contains('<elsewhere>'));
+      expect(
+        user,
+        contains("Thomas Hughes's facts (Margaret Hughes's parent)"),
+      );
+      expect(user, contains(Assistant.drawnFromMarker));
+    });
+
+    test('a revision is not given the rest of the tree', () async {
+      final sent = await ask(
+        (a, p) =>
+            a.draft(person: p, source: p.source, tree: tree, index: index),
+      );
+      expect(userOf(sent), isNot(contains('<elsewhere>')));
+    });
+
+    test('the sources of a first draft are split from its story', () {
+      final split = Assistant.splitDrawnFrom(
+        'She taught.\n\n${Assistant.drawnFromMarker}\n'
+        "- Thomas Hughes's facts: his birth year\n\n",
+      );
+      expect(split.story, 'She taught.');
+      expect(split.drawnFrom, ["Thomas Hughes's facts: his birth year"]);
+      expect(Assistant.splitDrawnFrom('Text.').drawnFrom, isEmpty);
     });
 
     test('research ideas suggest records, not facts', () async {
