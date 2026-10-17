@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'claude.dart';
 import 'diff.dart';
+import 'gather.dart';
 import 'index.dart';
 import 'page_syntax.dart';
 import 'tree.dart';
@@ -33,10 +34,14 @@ class Assistant {
     String notes = '',
   }) {
     final page = ParsedPage.parse(source);
-    final task = page.body.isEmpty
+    final fresh = page.body.isEmpty;
+    final task = fresh
         ? 'The story below the facts is empty. Write it: the markdown that '
               'follows the facts block, from what the page, the people and the '
-              'photos say.'
+              'photos say. From what the tree says elsewhere, choose the few '
+              'details that tell most about this life, and leave out the rest: '
+              'the facts box already lists every fact. Use an excerpt found by '
+              'name only when it is clearly about this person.'
         : 'Rewrite the story below the facts as the editor asks. Keep its '
               'wording, its order and its dated `##` sections wherever you '
               'can, and change only what the request and the notes need: a '
@@ -48,6 +53,9 @@ class Assistant {
       ..writeln()
       ..write(_context(person, source, tree, index))
       ..writeln();
+    // A first draft draws on the whole tree; a revision works in what the
+    // editor gives it, and extra material would only invite additions.
+    if (fresh) user.write(_elsewhere(person, tree, index));
     if (notes.trim().isNotEmpty) {
       user
         ..writeln(
@@ -64,7 +72,11 @@ class Assistant {
       )
       ..writeln()
       ..writeln(
-        'Reply with only the story, in markdown, without the facts block.',
+        'Reply with only the story, in markdown, without the facts block.'
+        '${fresh ? ' If the story uses anything from <elsewhere>, end with a '
+                  'line `$drawnFromMarker` and then a list with one line for '
+                  'each source used: where it was found, and what it gave, such '
+                  'as "- Michael Carew\'s page: the year she moved to Hartford".' : ''}',
       );
     return _clean(
       claude.write(
@@ -94,6 +106,9 @@ class Assistant {
       user:
           '<page>\n${person.source.trimRight()}\n</page>\n\n'
           '${_context(person, person.source, tree, index)}\n'
+          '${_elsewhere(person, tree, index)}'
+          'Do not suggest looking for what the page or the tree already '
+          'says, unless a record would confirm it.\n\n'
           'Suggest four to six records to look for about ${person.name}, the '
           'most useful first. For each, in one or two sentences: what to '
           'search for and where, and which gap on the page it would fill or '
@@ -222,6 +237,48 @@ Paid: Ancestry; Newspapers.com and GenealogyBank (obituaries, notices, local new
         ..writeln('</photos>');
     }
     return sb.toString();
+  }
+
+  /// What the tree says about [person] away from their page, for the
+  /// model, or nothing if it says nothing.
+  static String _elsewhere(Person person, Tree tree, Index index) {
+    final excerpts = elsewhere(person, tree, index);
+    if (excerpts.isEmpty) return '';
+    final sb = StringBuffer(
+      '<elsewhere>\nWhat the tree says about ${person.name} away from their '
+      'own page.\n\n',
+    );
+    for (final e in excerpts) {
+      sb
+        ..writeln(
+          '<excerpt from="${e.from}"${e.byName ? ' found="by name only; may be someone else"' : ''}>',
+        )
+        ..writeln(e.text)
+        ..writeln('</excerpt>');
+    }
+    sb.writeln('</elsewhere>');
+    return sb.toString();
+  }
+
+  /// The line a first draft ends its story with, before saying where facts
+  /// from elsewhere in the tree came from.
+  static const drawnFromMarker = '---drawn-from---';
+
+  /// A first draft's story, and the list of where it drew facts from
+  /// elsewhere in the tree.
+  static ({String story, List<String> drawnFrom}) splitDrawnFrom(String text) {
+    final at = text.indexOf(drawnFromMarker);
+    if (at < 0) return (story: text.trim(), drawnFrom: const []);
+    return (
+      story: text.substring(0, at).trim(),
+      drawnFrom: [
+        for (final line
+            in text.substring(at + drawnFromMarker.length).split('\n'))
+          if (line.trim().replaceFirst(RegExp(r'^[-*]\s*'), '') case final item
+              when item.isNotEmpty)
+            item,
+      ],
+    );
   }
 
   /// Removes a code fence the model may wrap its reply in.

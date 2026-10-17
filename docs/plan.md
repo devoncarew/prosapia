@@ -78,8 +78,10 @@ both people's timelines.
 
 Built so far: **Claude: Draft…** takes a request and notes to work in, which covers
 targeted requests such as "add a brief mention of the trip John took with Jane and Sam
-in 2011", and marks the lines it changed; and **Claude: Research ideas** on a person's
-page suggests records to look for and where, as advice only.
+in 2011", and marks the lines it changed; a first draft is given what the tree says
+about the person elsewhere (paragraphs on other pages, close relatives' facts, photos
+and documents that name them) and lists where it drew from; and **Claude: Research
+ideas** on a person's page suggests records to look for and where, as advice only.
 
 Done when: journeys 1 and 2 can each start from one typed sentence, and nothing the
 model proposes is saved without the person confirming it.
@@ -146,11 +148,15 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 Uses not yet scheduled; the rules every use follows are in
 [design.md](design.md#language-models).
 
-- Resolving names to people. A memory that mentions "Michelle", or notes being revised,
-  could have the name linked to the right person, such as `@carew-michelle-x4k2ab`. The
-  model needs to know who is meant: either give it the likely people with the request
-  (the page's relatives, people with that name nearby in the tree), or give it tools to
-  look people up in the tree as it writes.
+- Resolving names to people, with tools. A memory that mentions "Michelle", or notes
+  being revised, could have the name linked to the right person, such as
+  `@carew-michelle-x4k2ab`. Give the model tools to look people up as it writes:
+  `find_person(name, near)` for candidates and how they are related, `read_page(id)`,
+  and `search_tree(text)` over the full-text index. Cap the calls (about five) so a
+  request stays inside Hosting's 60-second limit.
+- Offer what the tree says elsewhere when revising a story, not only for a first draft,
+  when the editor asks for it ("add anything else the tree knows").
+- Include document text in what a draft is given, once PDFs have a text layer.
 - Transcribing a scanned letter or certificate.
 - Checking: point out conflicts, such as a child born after a parent's death, beyond the
   simple checks in milestone 13.

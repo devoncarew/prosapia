@@ -28,6 +28,12 @@ plain, warm and exact. It is neither an obituary nor a eulogy.
   birth and death; for relatives, name them without their years. Mention a relative's
   birth or death only when it shaped the subject's life, such as a parent who died in
   the subject's childhood.
+- **Short, and chosen.** Two to four short paragraphs, even for a full record. Choose
+  the details that tell most about the life, rather than every fact: the facts box
+  beside the story already lists them all.
+- **From elsewhere in the tree, with care.** A fact from another page, a photo or a
+  document belongs in the story when it is clearly about this person. A paragraph that
+  only shares their name may be about someone else.
 - **Memories are attributed, not absorbed.** A memory is someone's account: "Her niece
   Ann remembers…", not stated as fact.
 - **Markdown:** plain paragraphs. Keep any existing dated `##` sections, which feed the

@@ -530,7 +530,8 @@ Handler siteHandler(
 
   // "Claude: Draft…" in the editor: the story, rewritten as asked. It comes
   // back in its normal form, with the lines that differ from the story
-  // before it, so the editor can show what changed.
+  // before it, so the editor can show what changed, and where a first
+  // draft found facts elsewhere in the tree.
   router.post(
     '/people/<id>/help',
     (Request r, String id) => editing(r, id, (person, member) async {
@@ -551,7 +552,8 @@ Handler siteHandler(
           notes: (body['notes'] as String?) ?? '',
         ),
         more: (reply) {
-          final story = formatPage(reply.text).trimRight();
+          final drawn = Assistant.splitDrawnFrom(reply.text);
+          final story = formatPage(drawn.story).trimRight();
           var line = 0;
           final changed = <int>[];
           for (final d in diffLines(before.trimRight(), story)) {
@@ -561,7 +563,11 @@ Handler siteHandler(
             }
             line++;
           }
-          return {'text': story, 'changed': changed};
+          return {
+            'text': story,
+            'changed': changed,
+            'drawnFrom': drawn.drawnFrom,
+          };
         },
       );
     }),
