@@ -10,12 +10,14 @@ import 'assist.dart';
 import 'auth.dart';
 import 'claude.dart';
 import 'completion.dart';
+import 'diff.dart';
 import 'file_store.dart' show idFromDirectory;
 import 'firestore_store.dart' show contentTypes;
 import 'images.dart';
 import 'index.dart';
 import 'page_edits.dart';
 import 'page_format.dart';
+import 'page_syntax.dart';
 import 'photo_metadata.dart';
 import 'render.dart';
 import 'staging.dart';
@@ -487,13 +489,15 @@ Handler siteHandler(
     body: jsonEncode({'error': message}),
     headers: {'content-type': 'application/json'},
   );
-  Response jsonReply(Reply reply) => reply.refused
+  Response jsonReply(Reply reply, [Map<String, Object?> more = const {}]) =>
+      reply.refused
       ? jsonError('Claude declined to write this.', status: 422)
       : Response.ok(
           jsonEncode({
             'text': reply.text,
             'model': reply.model.id,
             'modelName': reply.model.name,
+            ...more,
           }),
           headers: {
             'content-type': 'application/json',
@@ -501,12 +505,20 @@ Handler siteHandler(
           },
         );
 
-  /// Runs a request for help, answering with JSON for the editor.
-  Future<Response> helping(Future<Reply> Function() call) async {
+  /// Runs a request for help, answering with JSON for the editor. [more]
+  /// adds to the answer from the reply.
+  Future<Response> helping(
+    Future<Reply> Function() call, {
+    Map<String, Object?> Function(Reply)? more,
+  }) async {
     final unavailable = await helpUnavailable();
     if (unavailable != null) return jsonError(unavailable);
     try {
-      return jsonReply(await spend(call()));
+      final reply = await spend(call());
+      return jsonReply(
+        reply,
+        reply.refused ? const {} : more?.call(reply) ?? const {},
+      );
     } on ClaudeException catch (e) {
       stderr.writeln('Claude: $e');
       return jsonError(
@@ -516,36 +528,60 @@ Handler siteHandler(
     }
   }
 
+  // "Claude: Draft…" in the editor: the story, rewritten as asked. It comes
+  // back in its normal form, with the lines that differ from the story
+  // before it, so the editor can show what changed.
   router.post(
     '/people/<id>/help',
     (Request r, String id) => editing(r, id, (person, member) async {
       final body = (jsonDecode(await r.readAsString()) as Map)
           .cast<String, Object?>();
-      final request = HelpRequest.byName(body['request'] as String?);
       final source = ((body['source'] as String?) ?? '').replaceAll(
         '\r\n',
         '\n',
       );
-      final from = (body['from'] as num?)?.toInt() ?? 0;
-      final to = (body['to'] as num?)?.toInt() ?? 0;
-      if (request == null ||
-          (request == HelpRequest.selection &&
-              (from < 0 || to <= from || to > source.length))) {
-        return jsonError('Nothing to help with.', status: 400);
-      }
+      final before = formatPage(ParsedPage.parse(source).body);
       return helping(
-        () => assistant!.help(
-          request,
+        () => assistant!.draft(
           person: person,
           source: source,
           tree: site.tree,
           index: site.index,
-          from: from,
-          to: to,
-          guidance: (body['guidance'] as String?) ?? '',
+          instruction: (body['instruction'] as String?) ?? '',
+          notes: (body['notes'] as String?) ?? '',
         ),
+        more: (reply) {
+          final story = formatPage(reply.text).trimRight();
+          var line = 0;
+          final changed = <int>[];
+          for (final d in diffLines(before.trimRight(), story)) {
+            if (d.kind == DiffKind.removed) continue;
+            if (d.kind == DiffKind.added && d.text.trim().isNotEmpty) {
+              changed.add(line);
+            }
+            line++;
+          }
+          return {'text': story, 'changed': changed};
+        },
       );
     }),
+  );
+
+  // "Claude: Research ideas" on a person's page: where to look next.
+  router.post(
+    '/people/<id>/research',
+    (Request r, String id) => editing(
+      r,
+      id,
+      (person, member) => helping(
+        () => assistant!.researchIdeas(
+          person: person,
+          tree: site.tree,
+          index: site.index,
+        ),
+        more: (reply) => {'html': render(r).markdown(reply.text)},
+      ),
+    ),
   );
 
   router.post(

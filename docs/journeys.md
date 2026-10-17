@@ -87,14 +87,20 @@ Milestone: 13.
 _Margaret's page has dates, an occupation, two memories and five captioned photos, but
 no story._
 
-In the editor, the historian chooses **Claude: Draft**. The model writes a few
+In the editor, the historian chooses **Claude: Draft…**, which suggests "Write a short
+biography from the facts, memories and photo captions." The model writes a few
 paragraphs from what the tree holds, adding nothing it was not given, and they appear in
 place of the empty story; undo would take them away again. The historian edits them and
 saves, and the history records that the revision had help.
 
-Later, the historian learns about Margaret's teaching years and types the new facts as
-rough notes in the story. They select the notes and choose **Claude: Revise selection**,
-and the notes become a paragraph that fits the page around it.
+Later, the historian learns about Margaret's teaching years. They choose **Claude:
+Draft…** again, ask it to "add her years in Hartford", and paste their notes. The model
+works them into the story, keeping its wording elsewhere, and marks the lines it wrote
+or changed.
+
+To find out more, the historian chooses **Claude: Research ideas** on Margaret's page,
+and gets a short list of records to look for and where, such as the 1900 census in
+Scranton on FamilySearch.
 
 Milestone: 16; 17 (weaving memories into an existing biography).
 

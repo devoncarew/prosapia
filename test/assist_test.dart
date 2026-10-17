@@ -123,9 +123,7 @@ void main() {
     final guide = WritingGuide(biographies: 'BIO GUIDE', summaries: 'SUM');
 
     Future<Map<String, Object?>> ask(
-      HelpRequest request, {
-      int from = 0,
-      int to = 0,
+      Future<Reply> Function(Assistant, Person) call, {
       String answer = 'Text.',
     }) async {
       late Map<String, Object?> sent;
@@ -139,54 +137,74 @@ void main() {
         ),
         guide,
       );
-      final p = tree.people['p-7k2m9x']!;
-      final result = await assistant.help(
-        request,
-        person: p,
-        source: p.source,
-        tree: tree,
-        index: index,
-        from: from,
-        to: to,
-      );
+      final result = await call(assistant, tree.people['p-7k2m9x']!);
       return {...sent, 'result': result.text};
     }
 
     String userOf(Map<String, Object?> sent) =>
         ((sent['messages'] as List).single as Map)['content'] as String;
 
-    test('a revision sees the page, the guide and the relatives', () async {
-      final sent = await ask(HelpRequest.revise);
-      expect(sent['model'], 'claude-opus-5-5');
-      expect(sent['system'], contains('BIO GUIDE'));
-      final user = userOf(sent);
-      expect(user, contains('Name: Margaret Hughes'));
-      expect(
-        user,
-        contains(
-          '@hughes-thomas-3f8d1a: Thomas Hughes (born 1852), '
-          "Margaret Hughes's parent",
+    test(
+      'a draft sees the page, the guide, the relatives and the notes',
+      () async {
+        final sent = await ask(
+          (a, p) => a.draft(
+            person: p,
+            source: p.source,
+            tree: tree,
+            index: index,
+            instruction: 'Add her years in Hartford.',
+            notes: 'Taught in Hartford, 1910 to 1915.',
+          ),
+        );
+        expect(sent['model'], 'claude-opus-5-5');
+        expect(sent['system'], contains('BIO GUIDE'));
+        final user = userOf(sent);
+        expect(user, contains('Name: Margaret Hughes'));
+        expect(
+          user,
+          contains(
+            '@hughes-thomas-3f8d1a: Thomas Hughes (born 1852), '
+            "Margaret Hughes's parent",
+          ),
+        );
+        expect(user, contains('Keep its wording'));
+        expect(user, contains('The editor asks: Add her years in Hartford.'));
+        expect(user, contains('<notes>'));
+        expect(user, contains('Taught in Hartford, 1910 to 1915.'));
+      },
+    );
+
+    test('an empty story is drafted, with the suggested request', () async {
+      final sent = await ask(
+        (a, p) => a.draft(
+          person: p,
+          source: 'Name: Margaret Hughes\nBorn: 1887\n',
+          tree: tree,
+          index: index,
         ),
       );
-      expect(user, contains('Rewrite the story'));
+      final user = userOf(sent);
+      expect(user, contains('The story below the facts is empty'));
+      expect(user, contains('The editor asks: ${Assistant.firstDraft}'));
+      expect(user, isNot(contains('<notes>')));
     });
 
-    test('a selection is marked in place', () async {
-      final source = tree.people['p-7k2m9x']!.source;
-      final at = source.indexOf('taught');
+    test('research ideas suggest records, not facts', () async {
       final sent = await ask(
-        HelpRequest.selection,
-        from: at,
-        to: at + 'taught'.length,
+        (a, p) => a.researchIdeas(person: p, tree: tree, index: index),
       );
-      expect(userOf(sent), contains('She <selected>taught</selected> school.'));
-      // Only the selection is improved; relatives would invite additions.
-      expect(userOf(sent), isNot(contains('<people>')));
+      expect(sent['system'], contains('FamilySearch'));
+      final user = userOf(sent);
+      expect(user, contains('Name: Margaret Hughes'));
+      expect(user, contains('not what will be found'));
+      expect(user, contains('living person'));
     });
 
     test('a code fence around the reply is removed', () async {
       final sent = await ask(
-        HelpRequest.draft,
+        (a, p) =>
+            a.draft(person: p, source: p.source, tree: tree, index: index),
         answer: '```markdown\nShe was born in 1887.\n```',
       );
       expect(sent['result'], 'She was born in 1887.');

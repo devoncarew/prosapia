@@ -344,26 +344,25 @@ export function mount(form: HTMLFormElement): Mounted {
   // ------------------------------------------------------------ help from Claude
 
   const helpButtons = document.querySelector<HTMLElement>('.help[data-url]');
+  const panel = document.querySelector<HTMLElement>('.draft-panel');
   const helpBar = document.querySelector<HTMLElement>('.help-bar');
   const helpedBy = form.querySelector<HTMLInputElement>(
     'input[name=helped_by]',
   )!;
   const editable = new Compartment();
 
-  /** Marks the text Claude wrote until it is kept or undone. */
-  const markHelped = StateEffect.define<{ from: number; to: number } | null>();
-  const helpedMark = Decoration.mark({ class: 'cm-helped' });
+  /** Marks the lines Claude wrote or changed, until kept or undone. */
+  const markHelped = StateEffect.define<number[]>();
+  const helpedLine = Decoration.line({ class: 'cm-helped' });
   const helpedField = StateField.define<DecorationSet>({
     create: () => Decoration.none,
     update(marks, tr) {
       for (const e of tr.effects) {
         if (e.is(markHelped)) {
-          return e.value && e.value.to > e.value.from
-            ? Decoration.set([helpedMark.range(e.value.from, e.value.to)])
-            : Decoration.none;
+          return Decoration.set(e.value.map((at) => helpedLine.range(at)));
         }
       }
-      // An undo takes Claude's text away, and the mark with it.
+      // An undo takes Claude's text away, and the marks with it.
       if (tr.isUserEvent('undo')) return Decoration.none;
       return marks.map(tr.changes);
     },
@@ -405,34 +404,41 @@ export function mount(form: HTMLFormElement): Mounted {
     if (helpBar) helpBar.hidden = true;
   }
 
-  function updateHelpButtons(state: EditorState): void {
-    if (!helpButtons) return;
-    const empty = storyIsEmpty(state);
-    const button = (name: string) =>
-      helpButtons.querySelector<HTMLButtonElement>(`[data-request=${name}]`)!;
-    button('draft').hidden = !empty;
-    button('revise').hidden = empty;
-    button('selection').disabled = state.selection.main.empty;
+  /** Shows the Draft panel, with a suggestion when there is no story. */
+  function openPanel(): void {
+    if (!panel) return;
+    hideBar();
+    const instruction = panel.querySelector<HTMLInputElement>('.instruction')!;
+    if (!instruction.value && storyIsEmpty(view.state)) {
+      instruction.value = panel.dataset.first ?? '';
+    }
+    panel.hidden = false;
+    instruction.focus();
+    instruction.select();
+  }
+
+  function closePanel(): void {
+    if (panel) panel.hidden = true;
   }
 
   interface HelpReply {
     text?: string;
+    changed?: number[];
     model?: string;
     modelName?: string;
     error?: string;
   }
 
-  async function askClaude(
-    request: 'draft' | 'revise' | 'selection',
-    guidance = '',
-  ): Promise<void> {
+  /** Asks Claude to rewrite the story as the Draft panel says. */
+  async function askClaude(): Promise<void> {
+    if (!panel) return;
+    const instruction =
+      panel.querySelector<HTMLInputElement>('.instruction')!.value;
+    const notes = panel.querySelector<HTMLTextAreaElement>('.notes')!.value;
     const state = view.state;
-    const { from, to } = state.selection.main;
-    const [replaceFrom, replaceTo] =
-      request === 'selection'
-        ? [from, to]
-        : [storyStart(state), state.doc.length];
+    const [replaceFrom, replaceTo] = [storyStart(state), state.doc.length];
     const before = helpedBy.value;
+    closePanel();
     bar('Claude is writing…', [], false, true);
     busy(view.dom, true);
     view.dispatch({
@@ -445,11 +451,9 @@ export function mount(form: HTMLFormElement): Mounted {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          request,
           source: state.doc.toString(),
-          from,
-          to,
-          guidance,
+          instruction,
+          notes,
         }),
       });
       reply = (await response.json()) as HelpReply;
@@ -465,7 +469,6 @@ export function mount(form: HTMLFormElement): Mounted {
       helpButtons
         ?.querySelectorAll('button')
         .forEach((b) => (b.disabled = false));
-      updateHelpButtons(view.state);
     }
     if (reply.error || reply.text === undefined) {
       bar(reply.error ?? 'Something went wrong.', [['Close', hideBar]], true);
@@ -473,25 +476,37 @@ export function mount(form: HTMLFormElement): Mounted {
     }
 
     // The story is separated from the facts by one blank line.
-    const insert =
-      request === 'selection'
-        ? reply.text
-        : `${replaceFrom === 0 ? '' : '\n\n'}${reply.text.trim()}\n`;
-    const start =
-      replaceFrom + (request === 'selection' || replaceFrom === 0 ? 0 : 2);
+    const lead = replaceFrom === 0 ? '' : '\n\n';
+    const insert = `${lead}${reply.text.trim()}\n`;
+    const start = replaceFrom + lead.length;
+    // The lines Claude added or changed, counted from the story's first.
+    const first =
+      view.state.doc.lineAt(Math.min(replaceFrom, view.state.doc.length))
+        .number + (lead ? 2 : 0);
     view.dispatch({
       changes: { from: replaceFrom, to: replaceTo, insert },
-      effects: markHelped.of({ from: start, to: replaceFrom + insert.length }),
       userEvent: 'input.help',
       scrollIntoView: true,
     });
+    const doc = view.state.doc;
+    const lines = (reply.changed ?? [])
+      .map((n) => first + n)
+      .filter((n) => n >= 1 && n <= doc.lines)
+      .map((n) => doc.line(n).from)
+      .filter((at) => at >= start);
+    view.dispatch({ effects: markHelped.of(lines) });
     helpedBy.value = reply.model ?? '';
     const keep = () => {
-      view.dispatch({ effects: markHelped.of(null) });
+      view.dispatch({ effects: markHelped.of([]) });
       hideBar();
     };
+    const count = lines.length;
     bar(
-      `${reply.modelName ?? 'Claude'} wrote the marked text. ⌘Z or Undo restores what was there.`,
+      `${reply.modelName ?? 'Claude'} ${
+        count === 0
+          ? 'made no changes to the story.'
+          : `wrote or changed the ${count === 1 ? 'marked line' : `${count} marked lines`}.`
+      } ⌘Z or Undo restores what was there.`,
       [
         [
           'Undo',
@@ -504,25 +519,6 @@ export function mount(form: HTMLFormElement): Mounted {
         ['Keep', keep],
       ],
     );
-  }
-
-  function askForGuidance(): void {
-    if (!helpBar) return;
-    const input = document.createElement('input');
-    input.placeholder = 'Anything Claude should know? (optional)';
-    input.setAttribute('aria-label', 'Guidance for Claude');
-    bar('Revise the whole story.', [
-      ['Revise', () => void askClaude('revise', input.value)],
-      ['Cancel', hideBar],
-    ]);
-    helpBar.insertBefore(input, helpBar.querySelector('button'));
-    input.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        void askClaude('revise', input.value);
-      }
-    });
-    input.focus();
   }
 
   // ------------------------------------------------------------------- drafts
@@ -590,8 +586,6 @@ export function mount(form: HTMLFormElement): Mounted {
           activateOnTyping: true,
         }),
         EditorView.updateListener.of((update) => {
-          if (update.docChanged || update.selectionSet)
-            updateHelpButtons(update.state);
           if (update.transactions.some((tr) => tr.isUserEvent('undo')))
             hideBar();
           if (!update.docChanged) return;
@@ -604,14 +598,18 @@ export function mount(form: HTMLFormElement): Mounted {
   });
   textarea.hidden = true;
   textarea.after(view.dom);
-  updateHelpButtons(view.state);
-  helpButtons?.addEventListener('click', (event) => {
-    const request = (event.target as HTMLElement).closest<HTMLButtonElement>(
-      'button[data-request]',
-    )?.dataset.request;
-    if (request === 'revise') askForGuidance();
-    else if (request === 'draft' || request === 'selection')
-      void askClaude(request);
+  helpButtons
+    ?.querySelector('button[data-request=draft]')
+    ?.addEventListener('click', openPanel);
+  panel
+    ?.querySelector('button.go')
+    ?.addEventListener('click', () => void askClaude());
+  panel?.querySelector('button.cancel')?.addEventListener('click', closePanel);
+  panel?.querySelector('.instruction')?.addEventListener('keydown', (event) => {
+    if ((event as KeyboardEvent).key === 'Enter') {
+      event.preventDefault();
+      void askClaude();
+    }
   });
   writeTab.addEventListener('click', () => select('write'));
   previewTab.addEventListener('click', () => select('preview'));
