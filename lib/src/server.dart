@@ -294,6 +294,26 @@ Handler siteHandler(
     }),
   );
 
+  router.get('/people/<id>/text', (Request r, String id) {
+    final person = site.tree.people[id];
+    return person == null
+        ? missing(r, 'No person has the id $id.')
+        : html(render(r).personText(person));
+  });
+
+  // The editor's Format button: the text as it will be saved.
+  router.post(
+    '/people/<id>/format',
+    (Request r, String id) => editing(
+      r,
+      id,
+      (person, member) async => Response.ok(
+        formatPage((await r.readAsString()).replaceAll('\r\n', '\n')),
+        headers: {'content-type': 'text/plain; charset=utf-8'},
+      ),
+    ),
+  );
+
   router.post(
     '/people/<id>/preview',
     (Request r, String id) => editing(r, id, (person, member) async {

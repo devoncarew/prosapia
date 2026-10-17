@@ -251,12 +251,13 @@ $body
       if (_canEdit)
         '<a class="button primary edit" href="${pathOf(p)}?edit" data-edit="/people/${p.id}/edit?fragment">Edit</a>',
       if (_canEdit)
-        '<a class="button" href="/people/${p.id}/memory">Add a memory</a>',
+        '<a class="button" href="/people/${p.id}/memory" title="A story, a trip, something you remember about ${esc(p.name)}, added as its own section at the end of the page">Add a memory</a>',
+      if (_canEdit)
+        '<button type="button" class="button" data-research="/people/${p.id}/research" title="Claude suggests records to look for about ${esc(p.name)}, and where to find them. Nothing is saved.">Claude: Research</button>',
     ];
     final more = [
       if (editable) '<a href="/people/${p.id}/history">View changes</a>',
-      if (_canEdit)
-        '<a href="#research" data-research="/people/${p.id}/research">Claude: Research ideas</a>',
+      '<a href="/people/${p.id}/text">View text</a>',
       if (_canEdit) '<a href="/people/${p.id}/delete">Delete page</a>',
     ];
     final actions = [
@@ -995,6 +996,8 @@ $body
       <button type="button" data-format="person" title="Link a person: type @ and part of a name">@ Person</button>
       <button type="button" data-format="date" title="Mark a date">Date</button>
       <button type="button" data-format="place" title="Mark a place">Place</button>
+      <span class="spacer"></span>
+      <button type="button" data-tidy="/people/${p.id}/format" title="Tidy the text as it will be saved: spacing, quotes and line lengths">Format</button>
     </div>
     <textarea id="source" name="source" spellcheck="true" required aria-label="Page text">${esc(source)}</textarea>
   </div>
@@ -1120,6 +1123,15 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}''');
 </form>''');
     return page('A page for $name', sb.toString());
   }
+
+  /// [p]'s page as it is written: its facts and story as text.
+  String personText(Person p) => page(
+    'Text of ${p.name}',
+    '<h1>Text of ${personLink(p.id)}</h1>'
+        '<p class="lead">The page as it is written, facts first and then the story.'
+        '${_canEdit ? ' <a href="${pathOf(p)}?edit">Edit it</a>' : ''}</p>'
+        '<pre class="source">${esc(p.source)}</pre>',
+  );
 
   /// Asks before deleting [p]'s page. [changed] are the other pages that
   /// keep what they say about [p] with the plain name.
@@ -1819,6 +1831,7 @@ main > article.editing-on > .infobox { display: none; }
 .format button { border: none; background: none; color: var(--muted); padding: 3px 8px; border-radius: 4px;
   font: 14px var(--ui); min-width: 28px; }
 .format button:hover { background: var(--tint); color: var(--text); }
+.format .spacer { flex: 1; }
 .format .sep { width: 1px; background: var(--line); margin: 2px 6px; }
 .similar { list-style: none; padding: 0; font: 15px/1.5 var(--ui); }
 .similar li { margin-bottom: 8px; }

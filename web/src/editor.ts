@@ -18,6 +18,7 @@ import {
   defaultKeymap,
   history,
   historyKeymap,
+  isolateHistory,
   undo,
 } from '@codemirror/commands';
 import {
@@ -249,6 +250,13 @@ function labels(context: CompletionContext): CompletionResult | null {
 /** The formatting buttons above the text, as on GitHub. */
 function toolbar(form: HTMLFormElement, view: EditorView): void {
   form.querySelector('.format')?.addEventListener('click', (event) => {
+    const tidy = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      'button[data-tidy]',
+    );
+    if (tidy) {
+      void tidyText(view, tidy);
+      return;
+    }
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
       'button[data-format]',
     );
@@ -256,6 +264,33 @@ function toolbar(form: HTMLFormElement, view: EditorView): void {
     format(view, button.dataset.format!);
     view.focus();
   });
+}
+
+/**
+ * Replaces the text with what the server would save: the page's normal
+ * form. One step, so undo puts the text back as it was.
+ */
+async function tidyText(view: EditorView, button: HTMLButtonElement) {
+  button.disabled = true;
+  try {
+    const response = await fetch(button.dataset.tidy!, {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain' },
+      body: view.state.doc.toString(),
+    });
+    if (!response.ok) return;
+    const tidied = await response.text();
+    if (tidied !== view.state.doc.toString()) {
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: tidied },
+        // Its own undo step, apart from what was typed just before.
+        annotations: isolateHistory.of('full'),
+      });
+    }
+  } finally {
+    button.disabled = false;
+    view.focus();
+  }
 }
 
 function format(view: EditorView, kind: string): void {

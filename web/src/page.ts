@@ -85,7 +85,7 @@ document.addEventListener('keydown', (event) => {
 
 // "Claude: Research ideas": where to look next, shown above the page.
 // Nothing is saved; Copy puts the list on the clipboard.
-const research = document.querySelector<HTMLAnchorElement>('a[data-research]');
+const research = document.querySelector<HTMLElement>('[data-research]');
 const ideas = document.querySelector<HTMLElement>('.research-ideas');
 
 interface ResearchReply {
@@ -97,7 +97,6 @@ interface ResearchReply {
 
 async function researchIdeas(): Promise<void> {
   if (!research || !ideas) return;
-  if (more) more.open = false;
   const heading = document.createElement('h2');
   heading.textContent = 'Research ideas';
   const status = document.createElement('p');

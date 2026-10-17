@@ -116,7 +116,29 @@ List<String> _wrap(String label, List<String> parts, int width) {
     }
   }
   lines.add(line);
-  return lines;
+  // A part too long for a line of its own is broken between words: an
+  // indented line is joined back with a single space, so it reads the same.
+  return [for (final l in lines) ..._words(l, width)];
+}
+
+/// [line] broken between words into lines of at most [width], the second
+/// and later indented by two spaces.
+List<String> _words(String line, int width) {
+  if (line.length <= width) return [line];
+  final indent = line.startsWith('  ') ? '  ' : '';
+  final out = <String>[];
+  var current = '';
+  for (final word in line.trim().split(' ')) {
+    final start = current.isEmpty ? (out.isEmpty ? indent : '  ') : '$current ';
+    if (current.isNotEmpty && start.length + word.length > width) {
+      out.add(current);
+      current = '  $word';
+    } else {
+      current = '$start$word';
+    }
+  }
+  out.add(current);
+  return out;
 }
 
 /// What a fact line says, for checking that a rewritten line says the same.
