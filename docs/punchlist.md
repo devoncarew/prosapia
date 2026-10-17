@@ -1,7 +1,6 @@
 ## Carew family
 
 - review and add notes from Carew.Frances.Davidson.Dwyer.thumbnail.family.notes.pdf
-- add Howard's thesis to his page: `Howard.Carew.Thesis.pdf`, built from the loose JPEGs
 - reconcile pictures from ftmb file to make sure no pictures unintentionally left out
 - convert the 'Frances_Carew_Master.wmv' video to something youtube friendly; upload;
   add to Frances' page as a reference
@@ -9,6 +8,5 @@
 
 ## General
 
-- remove or revise "Your unsaved changes from ... have been brought back"
-- send invitations from a shared address (a Google Group or similar) rather than the
-  owner's own email
+- we should be able to store notes, or a transcription, with an image (for an image or a
+  birth certificate, or, and image of a letter)

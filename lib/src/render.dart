@@ -252,14 +252,12 @@ $body
         '<a class="button primary edit" href="${pathOf(p)}?edit" data-edit="/people/${p.id}/edit?fragment">Edit</a>',
       if (_canEdit)
         '<a class="button" href="/people/${p.id}/memory">Add a memory</a>',
-      if (_canEdit)
-        '<a class="button" href="/media/add?person=${p.id}">Add photos</a>',
     ];
     final more = [
-      if (editable) '<a href="/people/${p.id}/history">Change history</a>',
+      if (editable) '<a href="/people/${p.id}/history">View changes</a>',
       if (_canEdit)
         '<a href="#research" data-research="/people/${p.id}/research">Claude: Research ideas</a>',
-      if (_canEdit) '<a href="/people/${p.id}/delete">Delete</a>',
+      if (_canEdit) '<a href="/people/${p.id}/delete">Delete page</a>',
     ];
     final actions = [
       ...buttons,
@@ -279,7 +277,7 @@ $body
     head.write('</div>');
     head.write('</div>');
     final edited = editable && p.editedBy != null && p.editedAt != null
-        ? '<p class="edited">Edited by ${esc(p.editedBy)} ${ago(p.editedAt!)} · <a href="/people/${p.id}/history">change history</a></p>'
+        ? '<p class="edited">Edited by ${esc(p.editedBy)} ${ago(p.editedAt!)} · <a href="/people/${p.id}/history">View changes</a></p>'
         : '';
     return page(
       editor == null ? p.displayName : 'Editing ${p.name}',
@@ -357,9 +355,13 @@ $body
             for (final key in index.mediaOf(p.id))
               if (!tree.media[key]!.isBack) tree.media[key]!,
           ];
-    if (media.isNotEmpty) {
+    final adding = actions
+        ? '<a class="button add-photos" href="/media/add?person=${p.id}">Add photos</a>'
+        : '';
+    if (media.isNotEmpty || adding.isNotEmpty) {
       sb.write(
-        '<h2>Photos and documents <span class="years">(${media.length})</span></h2>${strip(media)}',
+        '<h2 class="with-action"><span>Photos and documents${media.isEmpty ? '' : ' <span class="years">(${media.length})</span>'}</span>$adding</h2>'
+        '${media.isEmpty ? '<p class="empty">No photos or documents name ${esc(p.name)} yet.</p>' : strip(media)}',
       );
     }
     sb.write('</div></article>');
@@ -715,7 +717,12 @@ $body
   /// Photos and documents in one row that scrolls sideways, for a page that
   /// may have many. The row keeps its place when the reader comes back.
   String strip(Iterable<Media> items) =>
-      '<div class="strip">'
+      // Many photos take two or three rows, so the row is not too long.
+      '<div class="strip rows-${items.length <= 6
+          ? 1
+          : items.length <= 16
+          ? 2
+          : 3}">'
       '<button type="button" class="prev" aria-label="Earlier" hidden>‹</button>'
       '<div class="gallery">${items.map(_thumbnail).join()}</div>'
       '<button type="button" class="next" aria-label="Later" hidden>›</button>'
@@ -1635,6 +1642,7 @@ mark { background: var(--mark); color: inherit; }
     8px 8px 0 0 var(--line); }
 .media figure.document figcaption { margin-top: 14px; }
 .media figure.document figcaption .years { margin-left: 8px; }
+.photo-card .status progress { width: 160px; vertical-align: middle; margin-left: 6px; }
 .photo-card img.document { background: #fff; box-shadow: 3px 3px 0 0 var(--line), 6px 6px 0 0 var(--line); }
 .gallery .file { display: grid; place-items: center; background: var(--surface); color: var(--muted);
                  font-weight: 600; letter-spacing: 0.05em; }
@@ -1644,7 +1652,14 @@ mark { background: var(--mark); color: inherit; }
   padding-bottom: 6px; }
 .strip .gallery a { flex: 0 0 160px; scroll-snap-align: start; }
 @media (max-width: 700px) { .strip .gallery a { flex-basis: 120px; } }
-.strip button { position: absolute; top: 60px; z-index: 1; width: 36px; height: 36px; padding: 0;
+.strip.rows-2 .gallery, .strip.rows-3 .gallery { display: grid; grid-auto-flow: column;
+  grid-template-columns: none; grid-auto-columns: 136px; gap: 12px; }
+.strip.rows-2 .gallery { grid-template-rows: repeat(2, auto); }
+.strip.rows-3 .gallery { grid-template-rows: repeat(3, auto); }
+@media (max-width: 700px) { .strip.rows-2 .gallery, .strip.rows-3 .gallery { grid-auto-columns: 110px; } }
+h2.with-action { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+h2.with-action .button { font: 14px var(--ui); padding: 3px 12px; }
+.strip button { position: absolute; top: calc(50% - 30px); z-index: 1; width: 36px; height: 36px; padding: 0;
   border-radius: 50%; font: 22px/1 var(--ui); background: var(--surface);
   box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
 .strip .prev { left: -12px; }

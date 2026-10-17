@@ -1,11 +1,11 @@
 // The page editor, with Write and Preview tabs.
 // The text is plain: facts as "Label: value" lines, then the story. The
-// editor helps without hiding that: it highlights labels, @ references and
-// marked dates and places; it completes people after @, places inside
-// [place: …] and labels at the start of a fact line; and it keeps unsaved
-// text if the tab is closed. When the tree allows it, Claude can draft or
-// revise the story, or a selection: its text replaces what it acted on as one
-// step, so undo restores the original.
+// editor helps without hiding that: it highlights labels, @ references,
+// quoted values and marked dates and places; it completes people after @,
+// places after place: and labels at the start of a fact line; and it asks
+// before leaving with changes unsaved. When the tree allows it, Claude can
+// draft the story, or work new information into it: its text replaces the
+// story as one step, so undo restores the original.
 
 import {
   autocompletion,
@@ -328,7 +328,7 @@ export interface Mounted {
   /** Whether the text differs from what the page had. */
   changed(): boolean;
 
-  /** Removes the editor, forgetting any draft kept for it. */
+  /** Removes the editor. */
   unmount(): void;
 }
 
@@ -340,11 +340,7 @@ export function mount(form: HTMLFormElement): Mounted {
   const textarea = document.getElementById('source') as HTMLTextAreaElement;
   const preview = document.getElementById('preview')!;
   const previewUrl = form.dataset.preview!;
-  const basedOn = form.querySelector<HTMLInputElement>(
-    'input[name=based_on]',
-  )!.value;
   const original = textarea.value;
-  const draftKey = `prosapia.draft.${new URL(form.action).pathname}`;
 
   // ------------------------------------------------------------- write/preview
 
@@ -572,44 +568,6 @@ export function mount(form: HTMLFormElement): Mounted {
     }
   }
 
-  // ------------------------------------------------------------------- drafts
-
-  interface Draft {
-    basedOn: string;
-    text: string;
-    savedAt: number;
-  }
-
-  function readDraft(): Draft | null {
-    try {
-      const raw = localStorage.getItem(draftKey);
-      return raw ? (JSON.parse(raw) as Draft) : null;
-    } catch {
-      return null;
-    }
-  }
-
-  function writeDraft(text: string): void {
-    try {
-      if (text === original) localStorage.removeItem(draftKey);
-      else
-        localStorage.setItem(
-          draftKey,
-          JSON.stringify({ basedOn, text, savedAt: Date.now() }),
-        );
-    } catch {
-      // Storage may be unavailable; the draft is a convenience only.
-    }
-  }
-
-  function clearDraft(): void {
-    try {
-      localStorage.removeItem(draftKey);
-    } catch {
-      // ignore
-    }
-  }
-
   // ------------------------------------------------------------------- set up
 
   const view = new EditorView({
@@ -642,7 +600,6 @@ export function mount(form: HTMLFormElement): Mounted {
           if (!update.docChanged) return;
           const text = update.state.doc.toString();
           textarea.value = text;
-          writeDraft(text);
         }),
       ],
     }),
@@ -665,49 +622,10 @@ export function mount(form: HTMLFormElement): Mounted {
   writeTab.addEventListener('click', () => select('write'));
   previewTab.addEventListener('click', () => select('preview'));
 
-  // Offer back any unsaved text from a closed tab.
-  const draft = readDraft();
-  if (draft && draft.text !== original) {
-    const notice = document.createElement('p');
-    notice.className = 'message draft';
-    const when = new Date(draft.savedAt).toLocaleString();
-    notice.textContent =
-      draft.basedOn === basedOn
-        ? `Your unsaved changes from ${when} have been brought back. `
-        : `You have unsaved changes from ${when}, made to an earlier version of this page. `;
-    const use = document.createElement('button');
-    use.type = 'button';
-    const discard = document.createElement('button');
-    discard.type = 'button';
-    discard.textContent = 'Discard them';
-    const apply = (text: string): void =>
-      view.dispatch({
-        changes: { from: 0, to: view.state.doc.length, insert: text },
-      });
-    if (draft.basedOn === basedOn) {
-      apply(draft.text);
-    } else {
-      use.textContent = 'Use them anyway';
-      use.addEventListener('click', () => {
-        apply(draft.text);
-        notice.remove();
-      });
-      notice.append(use, ' ');
-    }
-    discard.addEventListener('click', () => {
-      apply(original);
-      clearDraft();
-      notice.remove();
-    });
-    notice.append(discard);
-    form.before(notice);
-  }
-
   let saving = false;
   form.addEventListener('submit', () => {
     textarea.value = view.state.doc.toString();
     saving = true;
-    clearDraft();
   });
   const guard = (event: BeforeUnloadEvent): void => {
     if (!saving && view.state.doc.toString() !== original)
@@ -721,7 +639,6 @@ export function mount(form: HTMLFormElement): Mounted {
     changed: () => view.state.doc.toString() !== original,
     unmount: () => {
       window.removeEventListener('beforeunload', guard);
-      clearDraft();
       view.destroy();
     },
   };

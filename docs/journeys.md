@@ -25,8 +25,9 @@ These apply to every journey that adds or changes something.
 - **Warn, don't block.** A child born after their mother's death, or a parent aged
   eight, produces a gentle question, not an error. Real records are messy, and the
   editor may know something the checks do not.
-- **Nothing typed is lost.** Unsaved input survives a closed tab or a dropped
-  connection. Every save can be undone.
+- **Nothing is lost by accident.** Leaving the editor with changes unsaved asks first,
+  and every save can be undone. Unsaved text is not kept once the editor is closed:
+  edits are small, and are saved or set aside at once.
 - **Plain text, lightly marked.** A page is "Name: value" fact lines and prose, with `@`
   for people and `[date: …]` and `[place: …]` where marking helps. No YAML or GEDCOM
   tags. Ids appear only after `@` in the editor, inserted by completion; readers see
