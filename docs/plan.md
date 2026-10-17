@@ -29,6 +29,19 @@ links to, not here.
 
 ## Milestones
 
+### Milestone 20: dogfooding and polish
+
+Using the deployed site on the real tree, and fixing what that turns up. Small items are
+kept in the [punch list](punchlist.md) and worked from there.
+
+- Fixes first: anything that loses work, shows wrong information, or fails on the real
+  tree.
+- A design pass over the photo pages. The person page, the editor, the change history
+  and Recent changes have had theirs.
+
+Done when: the family historian has used the deployed site for a few weeks, and what
+they found is fixed or moved to Known future work.
+
 ### Milestone 18: the first visit
 
 Journey 10. Everything below is built; what is left is the Done when, which needs
@@ -44,31 +57,23 @@ relatives who have not seen the site before.
 Done when: a relative who has never seen Prosapia can accept an invitation, find their
 own family, and add a memory without help.
 
-### Milestone 20: dogfooding and polish
+### Milestone 21: video
 
-Using the deployed site on the real tree, and fixing what that turns up. Small items are
-kept in the [punch list](punchlist.md) and worked from there.
+Short clips stored, long videos linked, as proposed in [media.md](media.md). The family
+has at least one video to add (Frances's), and the loader skips video today.
 
-- A design pass over the photo pages. The person page, the editor, the change history
-  and Recent changes have had theirs.
+- Upload a short clip from Photos or a person's page, stored like a photo up to a size
+  limit (working figure 50 MB), with a poster frame for the gallery and playback in the
+  page.
+- Files over Cloud Run's 32 MB request limit go straight to storage with a signed upload
+  address; the same path serves large TIFF scans.
+- Add a long video as a link (YouTube, a shared drive) with a title, date, place and the
+  people in it, shown in the gallery and on those people's pages like any other media.
+- Since video files cannot reliably carry embedded text, the database record is the
+  authority; settle how such media is exported.
 
-Done when: the family historian has used the deployed site for a few weeks, and what
-they found is fixed or moved to Known future work.
-
-### Milestone 15: events and memories
-
-Journeys 1 and 7.
-
-- Add an event to someone's life: a kind (moved, married, served, emigrated, graduated,
-  or anything else), a forgiving date and place, the other people involved, and
-  optionally some words and a photo.
-- An event involving several people appears on each of their timelines. Settle the
-  shared-events question in [content-model.md](content-model.md), and how an event is
-  written in the page syntax, to do this.
-- Memories gain an optional date, place and people, and show on the timeline when dated.
-
-Done when: an event with two people involved, entered from one person's page, appears on
-both people's timelines.
+Done when: a short phone clip and a linked long video each appear on the right people's
+pages, and the 50 MB limit is confirmed or changed.
 
 ### Milestone 17: more help from the model
 
@@ -86,29 +91,20 @@ ideas** on a person's page suggests records to look for and where, as advice onl
 Done when: journeys 1 and 2 can each start from one typed sentence, and nothing the
 model proposes is saved without the person confirming it.
 
-### Milestone 19: editing on a phone
+### Milestone 15: events and memories
 
-- Adding a memory, correcting a fact and tagging a photo work comfortably on a phone.
+Journeys 1 and 7.
 
-Done when: journey 7 works on a phone.
+- Add an event to someone's life: a kind (moved, married, served, emigrated, graduated,
+  or anything else), a forgiving date and place, the other people involved, and
+  optionally some words and a photo.
+- An event involving several people appears on each of their timelines. Settle the
+  shared-events question in [content-model.md](content-model.md), and how an event is
+  written in the page syntax, to do this.
+- Memories gain an optional date, place and people, and show on the timeline when dated.
 
-### Milestone 7: GEDCOM import
-
-The spike in [spikes/gedcom_import](../spikes/gedcom_import/README.md) already converts
-a real GEDCOM 5.5.1 export into the file layout, and milestone 12 makes it the way a
-tree is first loaded. This milestone brings import into the app, for trees already in
-use.
-
-- Import from the browser: upload a GEDCOM file, preview what it will add, apply it as
-  one logged change that can be undone as a whole.
-- Read GEDCOM 7.0 as well as 5.5.1, and verify the tags listed in
-  [content-model.md](content-model.md) against the specification.
-- Re-import: match people already in the tree by their GEDCOM reference instead of
-  duplicating them.
-- GEDCOM export.
-
-Done when: a real export imports through the app, a second import of the same file
-changes nothing, and the mapping table is confirmed or corrected.
+Done when: an event with two people involved, entered from one person's page, appears on
+both people's timelines.
 
 ## Known future work
 
@@ -129,13 +125,12 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 
 ### Editing
 
-- A formatted editor for the story, for relatives who will not write markdown.
-- Talk pages: a discussion thread per person.
 - Watchlist: follow a person and hear about changes.
 - Blame: for any sentence or fact, who added it and when.
-- Contributions from people who are not members, such as a correction sent by email.
 - Optional review of edits, for families that want it.
 - A way to report a mistake without editing, for those who would rather not.
+- Editing on a phone (was milestone 19): adding a memory, correcting a fact and tagging
+  a photo work comfortably on one, so that journey 7 works on a phone.
 
 ### Sources and research
 
@@ -169,16 +164,27 @@ Uses not yet scheduled; the rules every use follows are in
 
 - Choose the JPEG quality for scans from a real full-resolution scanner output; 92 is a
   placeholder.
-- Upload files larger than Cloud Run's 32 MB request limit, such as large TIFF scans,
-  straight to storage with a signed upload address.
 - Documents: read a PDF's pages in the site, and add a text layer (OCR) to typed ones so
   they can be searched.
-- Video: store short clips, link to long ones, as proposed in [media.md](media.md).
 - Multi-page scanned PDFs, such as the two baby books: keep as one document, or store as
   a set of page images.
 - Audio recordings.
 - Suggesting where faces are in a photo.
 - Check that embedded text survives email, photo services and messaging apps.
+
+### Import and export
+
+GEDCOM import in the app (was milestone 7). The spike in
+[spikes/gedcom_import](../spikes/gedcom_import/README.md) already converts a real GEDCOM
+5.5.1 export into the file layout, and is how a tree is first loaded.
+
+- Import from the browser: upload a GEDCOM file, preview what it will add, and apply it
+  as one logged change that can be undone as a whole.
+- Re-import: match people already in the tree by their GEDCOM reference, so a second
+  import of the same file changes nothing.
+- Read GEDCOM 7.0 as well as 5.5.1, and verify the tags listed in
+  [content-model.md](content-model.md) against the specification.
+- GEDCOM export.
 
 ### Views
 
@@ -187,6 +193,9 @@ Uses not yet scheduled; the rules every use follows are in
 - Printing: family books and wall charts.
 
 ### Sharing and privacy
+
+Prosapia is in a private preview, shared only with a few trusted testers, so none of
+this is needed until a wider preview is chosen. It should be done before then.
 
 - The sharing model: visibility levels per person, and treating living people as private
   by default.
