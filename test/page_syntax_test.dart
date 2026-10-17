@@ -52,6 +52,19 @@ void main() {
     expect(married.event.place, 'Trinity Episcopal Church, Hartford, CT');
   });
 
+  test('a date may follow the place', () {
+    final q = Person.fromSource(
+      'p-0',
+      'x-0',
+      'Name: Q\nBorn: "Portland, Oregon", "18 March 1914"\n'
+          'Buried: River View Cemetery, "Portland, Oregon"\n',
+    );
+    expect(q.born?.place, 'Portland, Oregon');
+    expect(q.born?.date?.year, 1914);
+    expect(q.buried?.place, 'River View Cemetery, Portland, Oregon');
+    expect(q.buried?.date, isNull);
+  });
+
   test('other facts read as what, when, where', () {
     final job = p.facts.firstWhere((f) => f.label == 'Occupation');
     expect(job.description, 'Founder & President, Carew Corporation');

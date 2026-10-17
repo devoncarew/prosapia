@@ -156,12 +156,13 @@ Settled at the start of milestone 13:
 
 - **Forgiving, and then well formed.** A line without quotes is still read: a date with
   a comma, `January 6, 1911`, is read whole, and the plain parts of an event that follow
-  its date are read together as its place, as in `Born: 6 January 1911, Brooklyn, NY`.
-  When a page is saved, its normal form quotes and labels the parts where that reads
-  exactly the same, so `Born: 6 January 1911, "Brooklyn, NY"` is what is stored, and
-  people learn the form from their own pages. A line that would read differently is left
-  as written. `[date: …]` and `[place: …]` are still read in fact lines, and become
-  labels on save.
+  its date are read together as its place, as in `Born: 6 January 1911, Brooklyn, NY`. A
+  date may also come after the place, as in `Born: "Portland, Oregon", 18 March 1914`,
+  provided it has a year. When a page is saved, its normal form quotes and labels the
+  parts where that reads exactly the same, so `Born: 6 January 1911, "Brooklyn, NY"` is
+  what is stored, and people learn the form from their own pages. A line that would read
+  differently is left as written. `[date: …]` and `[place: …]` are still read in fact
+  lines, and become labels on save.
 - **Sources** are text for now, shown on the page as a small "source" mark with the
   title on hover. When source records exist, `source:` will also take a link to one.
 - **A marriage is its own line**, read like `Born:`, with the partner as well. It

@@ -220,7 +220,12 @@ class Person {
           sources.add(segment.source);
         case TextSegment():
           final asDate = TreeDate.parse(segment.value);
-          if (date == null && place.isEmpty && asDate.understood) {
+          // A date may come after the place, as in `"Portland, Oregon",
+          // 18 March 1914`; there it needs a year, so a word of a place is
+          // not taken for one.
+          if (date == null &&
+              asDate.understood &&
+              (place.isEmpty || asDate.year != null)) {
             date = asDate;
           } else {
             place.add(segment.value);
