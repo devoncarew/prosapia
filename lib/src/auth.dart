@@ -41,6 +41,10 @@ class Sessions {
 
   /// The member for this request; present on every request the middleware
   /// lets through to a protected page.
+  /// Forgets what is known about [email]'s membership, after it changes,
+  /// so their next page reads it again.
+  void forget(String email) => _members.remove(email);
+
   static Member? memberOf(Request request) =>
       request.context['member'] as Member?;
 

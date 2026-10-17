@@ -469,6 +469,8 @@ $body
     final more = [
       if (editable) '<a href="/people/${p.id}/history">View changes</a>',
       '<a href="/people/${p.id}/text">View text</a>',
+      if (editable && viewer != null && viewer!.person != p.id)
+        '<form method="post" action="/people/${p.id}/me"><button title="Make this your page: your home page and family tree start here">This is me</button></form>',
       if (_canEdit) '<a href="/people/${p.id}/delete">Delete page</a>',
     ];
     final actions = [
@@ -1753,7 +1755,7 @@ ${available ? '' : '<p class="message">This server has no Anthropic API key, so 
         '<form method="post" action="/settings/members"><input type="hidden" name="email" value="${esc(m.email)}">';
     final who = m.person == null ? null : tree.people[m.person];
     return '<tr><td>${esc(m.name ?? '')}<br><span class="years">${esc(m.email)}</span></td>'
-        '<td>${who == null ? '' : personLink(who.id)}</td>'
+        '<td>${who == null ? (self ? '<span class="years">Choose “This is me” in the ⋯ menu on your page</span>' : '') : personLink(who.id)}</td>'
         '<td>${self ? '${m.role.name} (you)' : '$form${_roleSelect(m.role)} <button>Change</button></form>'}</td>'
         '<td>${self ? '' : '<a href="/settings/invitation?email=${Uri.encodeQueryComponent(m.email)}">Invitation</a>'}</td>'
         '<td>${self ? '' : '$form<input type="hidden" name="action" value="remove"><button>Remove</button></form>'}</td></tr>';
@@ -2049,6 +2051,10 @@ details.more .menu { position: absolute; right: 0; top: calc(100% + 4px); z-inde
   box-shadow: 0 4px 16px rgba(0,0,0,0.15); font: 15px var(--ui); }
 details.more .menu a { display: block; padding: 6px 14px; color: var(--text); }
 details.more .menu a:hover { background: var(--tint); text-decoration: none; }
+details.more .menu form { margin: 0; }
+details.more .menu button { display: block; width: 100%; text-align: left; padding: 6px 14px; border: none;
+  border-radius: 0; background: none; color: var(--text); font: inherit; }
+details.more .menu button:hover { background: var(--tint); }
 @media (min-width: 1100px) {
   main > article.person { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 0 40px;
     align-items: start; }
