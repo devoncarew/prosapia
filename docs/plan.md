@@ -70,8 +70,6 @@ People need to see where someone sits in the family to find their way around. Th
 is an hourglass, two generations each way, and anyone in it can be chosen to centre it
 on them; going further is moving, not zooming out.
 
-- Settle the home page: whether it shows the viewer's own chart in place of the list of
-  their close family.
 - Try it with relatives on the real tree, and on a phone, and adjust what it shows.
 
 Built so far: **Family tree** in the header and on each person's page opens the chart:
@@ -80,7 +78,8 @@ partners beside, and children (grouped by their other parent) and grandchildren 
 Cards give a name, years, a photo and a hint of more family beyond the chart; large
 families are counted rather than shown in full. Choosing someone recentres it in place,
 with the cards moving to their new places, and the address changes so Back works. It
-starts on the viewer's own page, or on the person with the most family around them.
+starts on the viewer's own page, or on the person with the most family around them. The
+home page shows the viewer's own chart.
 
 Done when: from any person's page a relative can see their parents, grandparents,
 partners and children at a glance, and move to any of them in one click.

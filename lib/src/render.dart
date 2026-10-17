@@ -115,24 +115,19 @@ $body
       sb.write(
         '<div><h2>${esc(person.displayName)}</h2>'
         '${person.years.isEmpty ? '' : '<p class="years">${person.years}</p>'}'
-        '<p><a class="button primary" href="${pathOf(person)}">Go to your page</a> '
-        '<a class="button" href="${pathOf(person)}/family">Your family tree</a>'
+        '<p><a class="button primary" href="${pathOf(person)}">Go to your page</a>'
         '${_canEdit ? ' <a class="button" href="/people/${person.id}/memory">Add a memory</a>' : ''}</p>',
       );
-      final family = [
-        for (final (label, ids) in [
-          ('Parents', index.parentsOf(person.id)),
-          ('Partners', index.partnersOf(person.id)),
-          ('Brothers and sisters', index.siblingsOf(person.id)),
-          ('Children', index.childrenOf(person.id)),
-        ])
-          if (ids.isNotEmpty)
-            '<dt>$label</dt><dd>${ids.map(personLink).join(', ')}</dd>',
-      ];
-      if (family.isNotEmpty) {
-        sb.write('<dl class="family">${family.join()}</dl>');
-      }
       sb.write('</div></section>');
+      final chart = family(person, embedded: true);
+      if (chart.isNotEmpty) {
+        sb.write(
+          '<h2>Your family</h2>$chart'
+          '<p class="meta">Choose anyone to see their family, or '
+          '<a href="${pathOf(person)}/family">open your family tree</a>.</p>'
+          '<script type="module" src="/assets/family.js"></script>',
+        );
+      }
     }
     sb.write(
       '<h2>Find your way around</h2><ul class="try">'
@@ -250,8 +245,9 @@ $body
 
   /// [p]'s family tree, two generations each way. Choosing anyone in it
   /// centres it on them. A [fragment] is the chart alone, for the page's
-  /// script to put in place of the one shown.
-  String family(Person p, {bool fragment = false}) {
+  /// script to put in place of the one shown; an [embedded] one is the
+  /// chart without its title, for another page to show.
+  String family(Person p, {bool fragment = false, bool embedded = false}) {
     final h = Hourglass.of(p, tree, index);
     var count = 0;
     final named = <String>{};
@@ -331,7 +327,7 @@ $body
       }
       up.write(
         '<div class="anc">'
-        '${grand.isEmpty ? '' : '<div class="row">${grand.map((g) => g.html).join()}</div>'}'
+        '<div class="row">${grand.map((g) => g.html).join()}</div>'
         '${c.html}</div>',
       );
     }
@@ -411,14 +407,19 @@ $body
     }
 
     final alone = h.size == 0;
+    if (embedded && alone) return '';
     final chart = StringBuffer(
-      '<section class="family-view" data-title="${esc('${p.name}\'s family')}">'
-      '<div class="person-head"><div class="title"><div class="name">'
-      '<h1>${esc(p.displayName)}\'s family</h1>'
-      '${p.years.isEmpty ? '' : '<span class="lead">${p.years}</span>'}</div>'
-      '<div class="actions"><a class="button" href="${pathOf(p)}">Go to ${esc(p.name)}\'s page</a></div>'
-      '</div></div>',
+      '<section class="family-view${embedded ? ' embedded' : ''}" data-title="${esc('${p.name}\'s family')}">',
     );
+    if (!embedded) {
+      chart.write(
+        '<div class="person-head"><div class="title"><div class="name">'
+        '<h1>${esc(p.displayName)}\'s family</h1>'
+        '${p.years.isEmpty ? '' : '<span class="lead">${p.years}</span>'}</div>'
+        '<div class="actions"><a class="button" href="${pathOf(p)}">Go to ${esc(p.name)}\'s page</a></div>'
+        '</div></div>',
+      );
+    }
     if (alone) {
       chart.write(
         '<p class="empty">No family is recorded for ${esc(p.name)} yet. '
@@ -434,10 +435,10 @@ $body
       '<div class="side after">${after.join()}</div></div>'
       '${down.isEmpty ? '' : '<div class="gen down">$down</div>'}'
       '</div></div>'
-      '${alone ? '' : '<p class="meta">Choose anyone to centre the tree on them.</p>'}'
+      '${alone || embedded ? '' : '<p class="meta">Choose anyone to centre the tree on them.</p>'}'
       '</section>',
     );
-    if (fragment) return chart.toString();
+    if (fragment || embedded) return chart.toString();
     return page(
       '${p.name}\'s family',
       '$chart<script type="module" src="/assets/family.js"></script>',
@@ -1983,9 +1984,6 @@ select { font: 14px var(--ui); padding: 4px 6px; border: 1px solid var(--line); 
   background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
 .start img { width: 160px; border-radius: 4px; display: block; }
 .start h2 { margin-top: 0; border: none; }
-.family { font: 16px/1.5 var(--ui); margin: 12px 0 0; }
-.family dt { color: var(--muted); font-size: 14px; margin-top: 6px; }
-.family dd { margin: 0; }
 .try li { margin-bottom: 8px; }
 .recent li { margin-bottom: 8px; }
 .research { max-width: 760px; }
@@ -2155,13 +2153,20 @@ button:disabled { opacity: 0.6; cursor: default; }
 }
 /* The family tree: rows of small cards, with lines drawn by family.js. It
    takes the whole width of the window, since a large family is wide. */
-main:has(> .family-view) { max-width: none; }
+main:has(> .family-view:not(.embedded)) { max-width: none; }
 .family-scroll { overflow-x: auto; margin: 8px -24px 0; padding: 8px 24px 16px; scrollbar-width: thin; }
 .family { position: relative; width: max-content; min-width: 100%; display: flex; flex-direction: column;
   align-items: center; gap: 36px; font: 14px/1.3 var(--ui); }
 .family > svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
   overflow: visible; }
 .family .gen { display: flex; justify-content: center; align-items: flex-start; gap: 24px; }
+/* Grandparents in one row and parents in the next, so parents line up
+   whether or not their own parents are shown. */
+.family .gen.up { display: grid; grid-auto-flow: column; grid-template-rows: auto auto;
+  gap: 36px 24px; justify-content: center; justify-items: center; }
+.family .gen.up .anc { display: contents; }
+.family .gen.up .anc > .row { align-self: end; }
+.family .gen.up .anc > .card { align-self: start; }
 .family .gen.self { display: grid; grid-template-columns: 1fr auto 1fr; gap: 24px; align-items: start;
   width: 100%; }
 .family .side { display: flex; gap: 12px; align-items: flex-start; }
@@ -2171,7 +2176,7 @@ main:has(> .family-view) { max-width: none; }
 .family .anc, .family .desc { display: flex; flex-direction: column; align-items: center; gap: 36px; }
 .family .gen.down { gap: 40px; }
 .family .group { display: flex; gap: 16px; align-items: flex-start; }
-.family .card { position: relative; z-index: 1; display: flex; gap: 8px; align-items: center; width: 172px;
+.family .card { position: relative; z-index: 1; display: flex; gap: 8px; align-items: center; width: 210px;
   padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
   color: var(--text); }
 .family .card:hover { text-decoration: none; border-color: var(--link); }

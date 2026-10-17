@@ -5,6 +5,12 @@
 const svgNS = 'http://www.w3.org/2000/svg';
 
 type Union = { p: string[]; c: string[] };
+type Box = { top: number; height: number };
+
+// Where a line between two cards side by side meets them: level with the
+// middle of the shorter, so it reaches both.
+const level = (a: Box, b: Box) =>
+  Math.max(a.top, b.top) + Math.min(a.height, b.height) / 2;
 
 function draw(): void {
   const chart = document.querySelector<HTMLElement>('.family');
@@ -22,6 +28,7 @@ function draw(): void {
       bottom: r.bottom - origin.top,
       x: r.left - origin.left + r.width / 2,
       y: r.top - origin.top + r.height / 2,
+      height: r.height,
     };
   };
   const svg = document.createElementNS(svgNS, 'svg');
@@ -38,8 +45,7 @@ function draw(): void {
   for (const [a, b] of couples) {
     const [l, r] = [box(a), box(b)].sort((x, y) => (x?.x ?? 0) - (y?.x ?? 0));
     if (!l || !r) continue;
-    const y = (l.y + r.y) / 2;
-    path(`M${l.right} ${y}H${r.left}`, 'couple');
+    path(`M${l.right} ${level(l, r)}H${r.left}`, 'couple');
   }
 
   // Parents to children: down from the couple's line, or from a single
@@ -53,7 +59,7 @@ function draw(): void {
     if (parents.length === 2) {
       const [l, r] = parents.sort((a, b) => a.x - b.x);
       x = (l.right + r.left) / 2;
-      y = (l.y + r.y) / 2;
+      y = level(l, r);
     } else {
       x = parents[0].x;
       y = parents[0].bottom;
@@ -114,7 +120,9 @@ document.addEventListener('click', (e) => {
   const link = (e.target as Element).closest<HTMLAnchorElement>(
     '.family a.card:not(.center), .family a.more',
   );
-  if (!link) return;
+  // On another page, such as the home page, the link opens the family
+  // tree page itself.
+  if (!link || !location.pathname.endsWith('/family')) return;
   e.preventDefault();
   void show(link.pathname, true);
 });
