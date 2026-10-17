@@ -316,11 +316,7 @@ class PhotoCard {
       accept: 'image/jpeg,image/heic,image/png,image/tiff,.heic,.tif,.tiff',
       hidden: true,
     });
-    const addBack = element('a', {
-      href: '#',
-      className: 'add-back',
-      textContent: 'Add the back',
-    });
+    const addBack = element('a', { href: '#', textContent: 'Add the back' });
     addBack.addEventListener('click', (e) => {
       e.preventDefault();
       backInput.click();
@@ -344,35 +340,44 @@ class PhotoCard {
       'Written on it',
       this.transcription,
     );
+    const transcribe = page.help
+      ? transcribeButton(this.transcription, () =>
+          this.back
+            ? { token: this.back, back: true }
+            : { token: this.front ?? '', back: false },
+        )
+      : undefined;
     const textArea = element(
       'div',
       { hidden: true },
       writtenLabel,
       writtenInput,
-      ...(page.help
-        ? [
-            transcribeButton(this.transcription, () =>
-              this.back
-                ? { token: this.back, back: true }
-                : { token: this.front ?? '', back: false },
-            ),
-          ]
-        : []),
+      ...(transcribe ? [transcribe] : []),
       ...field('Notes', this.notes),
     );
-    const addText = element('a', {
-      href: '#',
-      className: 'add-back',
-      textContent: 'Add a transcription or notes',
-    });
+    const link = (text: string, action: () => void) => {
+      const a = element('a', { href: '#', textContent: text });
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        action();
+      });
+      return a;
+    };
+    // With Claude, reading the writing is the usual first step, so it
+    // comes first, and opens the fields with Claude already reading.
+    const textLinks = transcribe
+      ? [
+          link('Claude: Transcribe', () => {
+            openText();
+            transcribe.querySelector('button')?.click();
+          }),
+          link('Add notes', () => openText()),
+        ]
+      : [link('Add a transcription or notes', () => openText())];
     const openText = () => {
-      addText.hidden = true;
+      for (const a of textLinks) a.hidden = true;
       textArea.hidden = false;
     };
-    addText.addEventListener('click', (e) => {
-      e.preventDefault();
-      openText();
-    });
     backInput.addEventListener('change', () => {
       writtenLabel.textContent = 'Written on the back';
       openText();
@@ -388,10 +393,9 @@ class PhotoCard {
         ...field('Where', this.place),
         peopleLabel,
         pickerEl,
-        addBack,
+        element('p', { className: 'card-links' }, ...textLinks, addBack),
         backInput,
         backArea,
-        addText,
         textArea,
         element('p', {}, remove),
       ),

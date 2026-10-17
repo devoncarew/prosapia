@@ -2011,7 +2011,7 @@ details.rest > summary { cursor: pointer; color: var(--link); font: 15px var(--u
 details.rest[open] > summary { display: none; }
 details.rest > .description { margin-top: 0; }
 .photo-card button { font: 13px var(--ui); }
-.photo-card .add-back { font: 13px var(--ui); margin-top: 10px; display: inline-block; }
+.photo-card .card-links { display: flex; flex-wrap: wrap; gap: 4px 20px; font: 13px var(--ui); margin: 10px 0 0; }
 .members form, .add-member { display: flex; gap: 8px; align-items: center; margin: 0; }
 .add-member { margin-top: 12px; max-width: 640px; }
 a.button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
