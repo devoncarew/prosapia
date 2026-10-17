@@ -126,6 +126,22 @@ void main() {
       expect(formatPage(out), out);
     });
 
+    test('a part too long for a line is broken between words', () {
+      const line =
+          'Occupation: hand on S.C. Loveland motor ship & cadet on S.S. Zarembo '
+          'of Barber Steamship Co. between US and Africa, February to July 1934';
+      final out = facts(line);
+      expect(
+        out,
+        'Name: A\n'
+        'Occupation: hand on S.C. Loveland motor ship & cadet on S.S. Zarembo of Barber\n'
+        '  Steamship Co. between US and Africa,\n'
+        '  February to July 1934\n',
+      );
+      expect(out.split('\n').every((l) => l.length <= 80), isTrue);
+      expect(formatPage(out), out);
+    });
+
     test('a line that would read differently is kept as written', () {
       // "Jr." would become a second child if the parts were quoted apart.
       expect(
