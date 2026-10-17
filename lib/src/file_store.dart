@@ -74,6 +74,7 @@ class FileStore extends TreeStore {
       '-q',
       '-XMP-dc:Title',
       '-XMP-dc:Description',
+      '-XMP-exif:UserComment',
       '-XMP-iptcExt:PersonInImageWDetails',
       '-XMP-photoshop:DateCreated',
       '-XMP-dc:Coverage',
@@ -102,7 +103,8 @@ class FileStore extends TreeStore {
       );
       final meta = embedded[p.basename(file.path)] ?? const {};
       item.title = meta['Title']?.toString();
-      item.description = meta['Description']?.toString();
+      item.transcription = meta['Description']?.toString();
+      item.notes = meta['UserComment']?.toString();
       item.width = meta['ImageWidth'] as int?;
       item.height = meta['ImageHeight'] as int?;
       item.size = file.lengthSync();

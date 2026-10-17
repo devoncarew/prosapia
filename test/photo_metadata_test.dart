@@ -44,7 +44,8 @@ void main() {
         title: 'Ann & Thomas, at the lake',
         date: 'about June 1949',
         place: 'Hartford, CT',
-        back: 'Lake Compounce\nJune 1949',
+        transcription: 'Lake Compounce\nJune 1949',
+        notes: 'Original with Aunt Muriel; scanned 2024',
         people: [
           (id: 'p-3f8d1a', name: 'Thomas Hughes'),
           (id: 'p-9c4e2b', name: 'Ann Price, Jr.'),
@@ -57,6 +58,7 @@ void main() {
     expect(meta['Identifier'], 'prosapia:m-5t1q8z');
     expect(meta['Title'], 'Ann & Thomas, at the lake');
     expect(meta['Description'], 'Lake Compounce\nJune 1949');
+    expect(meta['UserComment'], 'Original with Aunt Muriel; scanned 2024');
     expect(meta['DateCreated'], '1949:06');
     expect(meta['Coverage'], 'about June 1949');
     expect(meta['LocationShown'], [
@@ -100,6 +102,7 @@ void main() {
     expect(again['Title'], 'At the lake');
     for (final cleared in [
       'Description',
+      'UserComment',
       'DateCreated',
       'Coverage',
       'LocationShown',
@@ -115,7 +118,7 @@ void main() {
     final args = metadataArgs(
       'm-5t1q8z-back',
       PhotoDetails(
-        back: 'June 1949',
+        transcription: 'June 1949',
         people: [(id: 'p-3f8d1a', name: 'Thomas Hughes')],
       ),
     );

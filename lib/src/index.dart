@@ -81,7 +81,7 @@ class Index {
         'media',
         m.key,
         m.title ?? '',
-        m.description ?? '',
+        [m.transcription, m.notes].nonNulls.join('\n'),
       ]);
     }
     db.execute('commit');

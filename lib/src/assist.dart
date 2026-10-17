@@ -143,20 +143,23 @@ Paid: Ancestry; Newspapers.com and GenealogyBank (obituaries, notices, local new
   );
 
   /// Transcribes the writing on the back of a photo, given as a JPEG.
-  Future<Reply> transcribeBack(List<int> jpeg) => _clean(
+  /// The words on an image: [what] it is, such as "the back of a photo"
+  /// or "page 2 of 5 of a document".
+  Future<Reply> transcribe(List<int> jpeg, {required String what}) => _clean(
     claude.write(
       Model.writer,
       images: [jpeg],
       system:
-          'You transcribe the writing on the backs of old family photos, for '
-          'a family-history wiki.',
+          'You transcribe old family photos, letters, certificates and other '
+          'documents, handwritten or printed, for a family-history wiki.',
       user:
-          'This is the back of a photo. Transcribe the writing on it exactly '
-          'as written, keeping its line breaks, spelling and abbreviations. '
-          'Write [illegible] for a word you cannot read, and [?] after a '
-          'word you are unsure of. Ignore printed processing marks unless '
-          'they include a date. If there is no writing, reply with nothing. '
-          'Reply with only the transcription.',
+          'This is $what. Transcribe the writing on it exactly as written, '
+          'keeping its line breaks, spelling and abbreviations. Write '
+          '[illegible] for a word you cannot read, and [?] after a word you '
+          'are unsure of. For a form, give each printed label with what was '
+          'filled in beside it. Ignore printed processing marks unless they '
+          'include a date. If there is no writing, reply with nothing. Reply '
+          'with only the transcription.',
     ),
   );
 
@@ -225,7 +228,7 @@ Paid: Ancestry; Newspapers.com and GenealogyBank (obituaries, notices, local new
     final photos = [
       for (final key in index.mediaOf(person.id))
         if (tree.media[key] case final m? when m.title != null)
-          '- ${m.title}${m.description == null ? '' : ': ${m.description}'}',
+          '- ${m.title}${m.transcription == null ? '' : ': ${m.transcription}'}',
     ];
     final sb = StringBuffer('<people>\n');
     people.forEach((ref, about) => sb.writeln('$ref: $about'));

@@ -44,3 +44,34 @@ class DisplayCopies {
     return File(tmp).renameSync(out);
   }
 }
+
+/// The number of pages in the PDF [pdf]; 1 if it cannot be read.
+Future<int> pageCount(File pdf) async {
+  final result = await Process.run('vipsheader', ['-f', 'n-pages', pdf.path]);
+  return int.tryParse('${result.stdout}'.trim()) ?? 1;
+}
+
+/// A JPEG of page [page], counted from 1, of the PDF [pdf], no larger than
+/// [size] on either side; null if it cannot be made. Made each time it is
+/// asked for: it is for the model to read, not to show.
+Future<List<int>?> pdfPage(File pdf, int page, int size) async {
+  final work = Directory.systemTemp.createTempSync('prosapia_page');
+  try {
+    final out = p.join(work.path, 'page.jpg');
+    final result = await Process.run('vips', [
+      'thumbnail',
+      '${pdf.path}[page=${page - 1}]',
+      '$out[Q=85,strip]',
+      '$size',
+      '--height',
+      '$size',
+    ]);
+    if (result.exitCode != 0) {
+      stderr.writeln('page $page of ${pdf.path} failed: ${result.stderr}');
+      return null;
+    }
+    return File(out).readAsBytesSync();
+  } finally {
+    work.deleteSync(recursive: true);
+  }
+}

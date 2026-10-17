@@ -1155,24 +1155,39 @@ Handler siteHandler(
     );
   });
 
+  // Claude: Transcribe. A document is read one page at a time, so each
+  // request stays well inside Hosting's time limit: the reply says how many
+  // pages there are, and the browser asks for each in turn.
   router.post('/media/transcribe', (Request r) async {
     if (editor(r) == null) return notAllowed(r);
     final body = (jsonDecode(await r.readAsString()) as Map)
         .cast<String, Object?>();
-    // A back not yet added, by its upload token, or one already stored.
+    final page = max(1, (body['page'] as num?)?.toInt() ?? 1);
+    // A photo or document not yet added, by its upload token, or one
+    // already stored.
     List<int>? jpeg;
+    var pages = 1;
+    var what = body['back'] == true ? 'the back of a photo' : 'a photo';
     final staged = uploads.file('${body['token']}');
-    if (staged != null) {
+    final stored = site.tree.media['${body['key']}'];
+    final file =
+        staged ?? (stored == null ? null : await site.store.localFile(stored));
+    if (file != null && file.path.toLowerCase().endsWith('.pdf')) {
+      pages = await pageCount(file);
+      if (page > pages) return jsonError('There is no such page.', status: 404);
+      jpeg = await pdfPage(file, page, 1568);
+      what = pages == 1 ? 'a document' : 'page $page of $pages of a document';
+    } else if (staged != null) {
       jpeg = await uploads.preview(staged, 1568);
-    } else if (site.tree.media['${body['key']}'] case final media?) {
-      jpeg = (await copies.get(
-        media,
-        await site.store.localFile(media),
-        1920,
-      ))?.readAsBytesSync();
+    } else if (stored != null && file != null) {
+      if (stored.isBack) what = 'the back of a photo';
+      jpeg = (await copies.get(stored, file, 1920))?.readAsBytesSync();
     }
     if (jpeg == null) return jsonError('There is no such photo.', status: 404);
-    return helping(() => assistant!.transcribeBack(jpeg!));
+    return helping(
+      () => assistant!.transcribe(jpeg!, what: what),
+      more: (_) => {'pages': pages},
+    );
   });
 
   /// The people with these ids, by id and name.
@@ -1194,7 +1209,8 @@ Handler siteHandler(
       ..title = details.title
       ..date = details.date
       ..place = details.place
-      ..description = details.back
+      ..transcription = details.transcription
+      ..notes = details.notes
       ..set = details.set
       ..setIndex = details.setIndex;
     media.people
@@ -1233,7 +1249,8 @@ Handler siteHandler(
         title: text(photo['title']),
         date: text(photo['date']),
         place: text(photo['place']),
-        back: back == null ? null : text(photo['backText']),
+        transcription: text(photo['transcription']),
+        notes: text(photo['notes']),
         people: shown(((photo['people'] as List?) ?? const []).cast<String>()),
         set: set,
         setIndex: set == null ? null : i + 1,
@@ -1307,7 +1324,8 @@ Handler siteHandler(
       title: field('title'),
       date: field('date'),
       place: field('place'),
-      back: back == null ? null : field('back'),
+      transcription: field('transcription'),
+      notes: field('notes'),
       people: shown(fields['people'] ?? const []),
       set: media.set,
       setIndex: media.setIndex,

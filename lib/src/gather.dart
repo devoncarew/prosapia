@@ -102,8 +102,9 @@ List<Excerpt> elsewhere(
       if (m.people.length > 1)
         'Also named: ${[for (final id in m.people)
           if (id != person.id) tree.people[id]?.name ?? id].join(', ')}',
-      if (m.description ?? back?.description case final writing?)
-        'Written on it: $writing',
+      if (m.transcription ?? back?.transcription case final writing?)
+        'Written on it: ${_clip(writing)}',
+      if (m.notes case final notes?) 'Notes: ${_clip(notes)}',
     ];
     if (text.isEmpty) continue;
     add(
@@ -114,6 +115,14 @@ List<Excerpt> elsewhere(
     );
   }
   return found;
+}
+
+/// A long transcription or notes cut to about [length] characters, at a
+/// word, so one document does not use up what a draft is given.
+String _clip(String text, [int length = 3000]) {
+  if (text.length <= length) return text;
+  final cut = text.lastIndexOf(RegExp(r'\s'), length);
+  return '${text.substring(0, cut > 0 ? cut : length).trimRight()} …';
 }
 
 /// The facts a relative's excerpt leaves out: their name is in the heading,

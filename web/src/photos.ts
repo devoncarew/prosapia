@@ -134,6 +134,7 @@ interface Reply {
   title?: string;
   date?: string;
   text?: string;
+  pages?: number;
   location?: string;
   error?: string;
 }
@@ -196,10 +197,14 @@ function field(label: string, input: HTMLInputElement | HTMLTextAreaElement) {
   return [element('label', { htmlFor: id }, label), input];
 }
 
-/** Offers Claude's reading of a back, with a way to put the text back. */
+/**
+ * Offers Claude's reading of a photo, its back or a document, with a way to
+ * put the text back. A document is read a page at a time, each its own
+ * request, so a long one does not run into the server's time limit.
+ */
 function transcribeButton(
   text: HTMLTextAreaElement,
-  request: () => Record<string, string>,
+  request: () => Record<string, string | boolean>,
 ): HTMLElement {
   const button = element('button', {
     type: 'button',
@@ -211,16 +216,40 @@ function transcribeButton(
     void (async () => {
       const before = text.value;
       button.disabled = true;
-      status.replaceChildren(' ', spinner(), 'Claude is reading the back…');
       busy(text, true);
-      const reply = await post('/media/transcribe', JSON.stringify(request()));
+      const read: string[] = [];
+      let pages = 1;
+      let error: string | undefined;
+      for (let page = 1; page <= pages; page++) {
+        status.replaceChildren(
+          ' ',
+          spinner(),
+          pages > 1
+            ? `Claude is reading page ${page} of ${pages}…`
+            : 'Claude is reading it…',
+        );
+        const reply = await post(
+          '/media/transcribe',
+          JSON.stringify({ ...request(), page }),
+        );
+        if (reply.error || reply.text === undefined) {
+          error = reply.error ?? 'Something went wrong.';
+          break;
+        }
+        pages = reply.pages ?? 1;
+        read.push(reply.text);
+        // What is read so far shows as it comes.
+        text.value = joinPages(read, pages);
+      }
       busy(text, false);
       button.disabled = false;
-      if (reply.error || reply.text === undefined) {
-        status.textContent = ` ${reply.error ?? 'Something went wrong.'}`;
-        return;
+      if (error) {
+        if (!read.length) text.value = before;
+        status.textContent = read.length
+          ? ` Stopped after page ${read.length}: ${error}`
+          : ` ${error}`;
+        if (!read.length) return;
       }
-      text.value = reply.text;
       text.classList.add('helped');
       const undo = element('button', { type: 'button', textContent: 'Undo' });
       undo.addEventListener('click', () => {
@@ -228,10 +257,19 @@ function transcribeButton(
         text.classList.remove('helped');
         status.textContent = '';
       });
-      status.replaceChildren(' Claude read the back. ', undo);
+      if (!error) status.replaceChildren(' Check what Claude read. ', undo);
+      else status.append(' ', undo);
     })();
   });
   return element('div', { className: 'help tidy' }, button, status);
+}
+
+/** The pages of a document read so far, each under its page number. */
+function joinPages(read: string[], pages: number): string {
+  if (pages <= 1) return read.join('');
+  return read
+    .map((text, i) => `— Page ${i + 1} —\n\n${text.trim()}`)
+    .join('\n\n');
 }
 
 // ------------------------------------------------------------ add photos
@@ -250,7 +288,8 @@ class PhotoCard {
     maxLength: 200,
     placeholder: 'As above',
   });
-  readonly backText = element('textarea', { spellcheck: true });
+  readonly transcription = element('textarea', { spellcheck: true });
+  readonly notes = element('textarea', { spellcheck: true });
   readonly people: PeoplePicker;
 
   constructor(
@@ -297,15 +336,47 @@ class PhotoCard {
       });
     });
     const backStatus = element('p', { className: 'status' });
-    backArea.append(
-      backPreview,
-      backStatus,
-      ...field('Written on the back', this.backText),
+    backArea.append(backPreview, backStatus);
+
+    // The words on it, and notes about it: a link opens them for a photo,
+    // and they are open for a document or a photo with its back.
+    const [writtenLabel, writtenInput] = field(
+      'Written on it',
+      this.transcription,
     );
-    if (page.help)
-      backArea.append(
-        transcribeButton(this.backText, () => ({ token: this.back ?? '' })),
-      );
+    const textArea = element(
+      'div',
+      { hidden: true },
+      writtenLabel,
+      writtenInput,
+      ...(page.help
+        ? [
+            transcribeButton(this.transcription, () =>
+              this.back
+                ? { token: this.back, back: true }
+                : { token: this.front ?? '', back: false },
+            ),
+          ]
+        : []),
+      ...field('Notes', this.notes),
+    );
+    const addText = element('a', {
+      href: '#',
+      className: 'add-back',
+      textContent: 'Add a transcription or notes',
+    });
+    const openText = () => {
+      addText.hidden = true;
+      textArea.hidden = false;
+    };
+    addText.addEventListener('click', (e) => {
+      e.preventDefault();
+      openText();
+    });
+    backInput.addEventListener('change', () => {
+      writtenLabel.textContent = 'Written on the back';
+      openText();
+    });
 
     this.el.append(
       element('div', {}, preview, status),
@@ -320,6 +391,8 @@ class PhotoCard {
         addBack,
         backInput,
         backArea,
+        addText,
+        textArea,
         element('p', {}, remove),
       ),
     );
@@ -330,6 +403,9 @@ class PhotoCard {
         addBack.hidden = true;
         peopleLabel.textContent = 'People it names';
         preview.classList.add('document');
+        writtenLabel.textContent = 'Transcription';
+        this.transcription.classList.add('tall');
+        openText();
         if (reply.title && !this.title.value) this.title.value = reply.title;
         if (reply.date && !this.date.value) this.date.value = reply.date;
       }
@@ -430,7 +506,8 @@ class AddPhotos {
           title: c.title.value,
           date: c.date.value.trim() || date,
           place: c.place.value.trim() || place,
-          backText: c.backText.value,
+          transcription: c.transcription.value,
+          notes: c.notes.value,
           people: [...new Set([...this.shared.ids, ...c.people.ids])],
         })),
       }),
@@ -450,7 +527,7 @@ class AddPhotos {
 function editPhoto(form: HTMLFormElement): void {
   new PeoplePicker(form.querySelector('.people-picker')!);
   const help = form.querySelector<HTMLElement>('.help[data-key]');
-  const text = form.querySelector<HTMLTextAreaElement>('#back');
+  const text = form.querySelector<HTMLTextAreaElement>('#transcription');
   if (help && text) {
     help.replaceWith(
       transcribeButton(text, () => ({ key: help.dataset.key! })),
