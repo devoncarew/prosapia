@@ -75,12 +75,11 @@ both people's timelines.
 - Entry from a sentence: typing "Margaret moved to Chicago with her sister in spring
   1925" proposes fact lines or an event, for the person to check before saving.
 - Weave loose memories into an existing biography, as a proposed edit.
-- Targeted requests: "add a brief mention of the trip John took with Jane and Sam in
-  2011".
-- Claude: Research ideas, on a person's page: from the facts on the page, its gaps and
-  close relatives, a short list of specific records to look for and where (the 1880
-  census in Scranton on FamilySearch; an obituary in the Scranton papers). Advice only;
-  nothing is written to the page.
+
+Built so far: **Claude: Draft…** takes a request and notes to work in, which covers
+targeted requests such as "add a brief mention of the trip John took with Jane and Sam
+in 2011", and marks the lines it changed; and **Claude: Research ideas** on a person's
+page suggests records to look for and where, as advice only.
 
 Done when: journeys 1 and 2 can each start from one typed sentence, and nothing the
 model proposes is saved without the person confirming it.

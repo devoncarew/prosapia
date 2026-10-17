@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:markdown/markdown.dart' as md;
 
+import 'assist.dart';
 import 'claude.dart';
 import 'completion.dart';
 import 'contradictions.dart';
@@ -256,6 +257,8 @@ $body
     ];
     final more = [
       if (editable) '<a href="/people/${p.id}/history">Change history</a>',
+      if (_canEdit)
+        '<a href="#research" data-research="/people/${p.id}/research">Claude: Research ideas</a>',
       if (_canEdit) '<a href="/people/${p.id}/delete">Delete</a>',
     ];
     final actions = [
@@ -280,7 +283,8 @@ $body
         : '';
     return page(
       editor == null ? p.displayName : 'Editing ${p.name}',
-      '$head${personArticle(p, editor: editor)}${editor == null ? edited : ''}'
+      '$head${editor == null && _canEdit ? '<section class="research-ideas" id="research" hidden aria-live="polite"></section>' : ''}'
+      '${personArticle(p, editor: editor)}${editor == null ? edited : ''}'
       '${editor != null
           ? '<script type="module" src="/assets/editor.js"></script>'
           : _canEdit
@@ -957,15 +961,14 @@ $body
     <button type="button" role="tab" id="tab-preview" aria-selected="false" aria-controls="panel-preview">Preview</button>
     ${help
           ? '''<span class="help" data-url="/people/${p.id}/help">
-      <button type="button" data-request="draft" title="Write the story from the facts, memories and photo captions">Claude: Draft</button>
-      <button type="button" data-request="revise" title="Rewrite the whole story">Claude: Revise…</button>
-      <button type="button" data-request="selection" title="Rewrite the selected text" disabled>Claude: Revise selection</button>
+      <button type="button" data-request="draft" title="Write the story, or work new information into it">Claude: Draft…</button>
     </span>'''
           : helpOff != null && viewer?.role == Role.owner
           ? '<span class="help off">${esc(helpOff)} <a href="/settings">Settings</a></span>'
           : ''}
   </div>
   <div class="help-bar" hidden role="status"></div>
+  ${help ? _draftPanel : ''}
   <div class="tab-panel" id="panel-write" role="tabpanel" aria-labelledby="tab-write">
     <div class="format" role="toolbar" aria-label="Formatting">
       <button type="button" data-format="heading" title="Heading">H</button>
@@ -1005,6 +1008,18 @@ $body
   </details>
 </form>
 ''';
+
+  /// What "Claude: Draft…" opens: what to do, and anything new to work in.
+  static const _draftPanel =
+      '''
+<div class="draft-panel" hidden data-first="${Assistant.firstDraft}">
+  <label>What should Claude do?
+    <input class="instruction" maxlength="300" placeholder="Work in what we learned about his years in the Navy"></label>
+  <label>Notes to work in, if any: notes, a letter, an obituary
+    <textarea class="notes" rows="4" spellcheck="true"></textarea></label>
+  <p class="hint">Claude rewrites the story, keeping its wording where it can. The lines it changes are marked, and Undo puts the story back.</p>
+  <div><button type="button" class="primary go">Draft</button> <button type="button" class="cancel">Cancel</button></div>
+</div>''';
 
   /// [p]'s page with the editor in place of its content: opened directly,
   /// or shown again after a save that could not be made.
@@ -1761,6 +1776,18 @@ details.more .menu a:hover { background: var(--tint); text-decoration: none; }
 }
 /* The editor takes the page's full width; its preview shows the facts. */
 main > article.editing-on > .infobox { display: none; }
+.draft-panel { padding: 12px 14px; margin: 8px 0; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--surface); font: 15px var(--ui); }
+.draft-panel label { display: block; margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+.draft-panel input, .draft-panel textarea { display: block; width: 100%; margin-top: 4px; padding: 6px 10px;
+  font: 16px/1.5 var(--ui); color: var(--text); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 6px; }
+.draft-panel .hint { margin: 0 0 10px; }
+.draft-panel button.primary { font-size: 15px; padding: 6px 16px; }
+.research-ideas { margin: 0 0 24px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--surface); }
+.research-ideas h2 { margin-top: 0; }
+.research-ideas .actions { margin: 10px 0 0; }
 .format { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
 .format button { border: none; background: none; color: var(--muted); padding: 3px 8px; border-radius: 4px;
   font: 14px var(--ui); min-width: 28px; }

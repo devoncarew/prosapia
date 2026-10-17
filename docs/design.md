@@ -53,8 +53,9 @@ shape every use:
   fast.
 - **Nothing a model writes enters the record without a person choosing it.** The model's
   text replaces what it was asked to act on, in the editor; the person reads it, edits
-  or undoes it, and saves it as an edit under their own name. Each action says what it
-  acts on: the whole story, or the selection.
+  or undoes it, and saves it as an edit under their own name. The lines it wrote or
+  changed are marked until they are kept or undone. Advice, such as research ideas, is
+  shown and never saved.
 - **The history says so.** A revision saved with a model's help is marked "with" the
   model, such as "with Claude Opus", so anyone reading the history can tell.
 

@@ -6,21 +6,6 @@ import 'index.dart';
 import 'page_syntax.dart';
 import 'tree.dart';
 
-/// What can be asked of the model from the editor.
-enum HelpRequest {
-  /// Write the story of a page that has none.
-  draft,
-
-  /// Rewrite the whole story.
-  revise,
-
-  /// Rewrite only the selected text.
-  selection;
-
-  static HelpRequest? byName(String? name) =>
-      values.where((r) => r.name == name).firstOrNull;
-}
-
 /// Help from a language model with writing a page, following the rules in
 /// docs/design.md and the voice in docs/writing.md. Nothing here saves
 /// anything: it returns text for a person to keep or undo.
@@ -30,82 +15,57 @@ class Assistant {
   final Claude claude;
   final WritingGuide guide;
 
-  /// Rewrites part of [person]'s page. [source] is the page as it stands in
-  /// the editor, not yet saved; for [HelpRequest.selection], [from] and [to]
-  /// are the selected range in it. [guidance] is an optional sentence from
-  /// the editor. Returns the new story, or the selection's replacement.
-  Future<Reply> help(
-    HelpRequest request, {
+  /// What "Claude: Draft…" suggests doing when a page has no story yet.
+  static const firstDraft =
+      'Write a short biography from the facts, memories and photo captions.';
+
+  /// Writes the story of [person]'s page. [source] is the page as it stands
+  /// in the editor, not yet saved. [instruction] says what is wanted, and
+  /// [notes] is new information to work in: notes, a letter, an obituary.
+  /// An empty story is drafted from the page and the people around it; an
+  /// existing one keeps its wording wherever it can. Returns the new story.
+  Future<Reply> draft({
     required Person person,
     required String source,
     required Tree tree,
     required Index index,
-    int from = 0,
-    int to = 0,
-    String guidance = '',
+    String instruction = '',
+    String notes = '',
   }) {
     final page = ParsedPage.parse(source);
-    // A selection is improved on its own terms; the relatives and photos
-    // would only invite the model to add to it.
-    final context = request == HelpRequest.selection
-        ? ''
-        : _context(person, source, tree, index);
-    final task = switch (request) {
-      HelpRequest.draft =>
-        'The story below the facts is empty. Write it: the markdown that '
-            'follows the facts block, from what the page, the people and the '
-            'photos say.',
-      HelpRequest.revise =>
-        'Rewrite the story below the facts so it reads well and follows the '
-            'guide. Keep everything it says, and its dated `##` sections. '
-            'Bring in facts from the facts block that the story leaves out, '
-            'where they fit.',
-      HelpRequest.selection =>
-        'Improve only the text between <selected> and </selected>. Work out '
-            'what is wanted from the selection itself: notes or a list of '
-            'facts become a clear paragraph; rough or dictated prose is '
-            'tidied, with its grammar and voice improved; prose that already '
-            'reads well needs only light changes. Use only what the selection '
-            'says: do not bring in facts from the rest of the page, and do not '
-            'try to fill out the biography. The rest of the page is there '
-            'only so the new text fits the voice and flow around it.',
-    };
-    final marked = request == HelpRequest.selection
-        ? '${source.substring(0, from)}<selected>${source.substring(from, to)}'
-              '</selected>${source.substring(to)}'
-        : source;
+    final task = page.body.isEmpty
+        ? 'The story below the facts is empty. Write it: the markdown that '
+              'follows the facts block, from what the page, the people and the '
+              'photos say.'
+        : 'Rewrite the story below the facts as the editor asks. Keep its '
+              'wording, its order and its dated `##` sections wherever you '
+              'can, and change only what the request and the notes need: a '
+              'sentence that is already right stays exactly as it is.';
     final user = StringBuffer()
       ..writeln('<page>')
-      ..writeln(marked.trimRight())
+      ..writeln(source.trimRight())
       ..writeln('</page>')
       ..writeln()
-      ..write(context)
-      ..writeln()
-      ..writeln(task);
-    if (guidance.trim().isNotEmpty) {
+      ..write(_context(person, source, tree, index))
+      ..writeln();
+    if (notes.trim().isNotEmpty) {
       user
-        ..writeln()
-        ..writeln('The editor adds: ${guidance.trim()}');
+        ..writeln(
+          '<notes>\nNew information from the editor, to work into the story. '
+          'Use what it says; do not add to it.\n\n${notes.trim()}\n</notes>',
+        )
+        ..writeln();
     }
     user
+      ..writeln(task)
       ..writeln()
       ..writeln(
-        request == HelpRequest.selection
-            ? 'Reply with only the replacement text, in markdown.'
-            : 'Reply with only the story, in markdown, without the facts '
-                  'block.',
+        'The editor asks: ${instruction.trim().isEmpty ? (page.body.isEmpty ? firstDraft : 'Improve the story so it reads well and follows the guide.') : instruction.trim()}',
+      )
+      ..writeln()
+      ..writeln(
+        'Reply with only the story, in markdown, without the facts block.',
       );
-    if (page.body.isEmpty && request == HelpRequest.revise) {
-      // Nothing to revise; draft instead.
-      return help(
-        HelpRequest.draft,
-        person: person,
-        source: source,
-        tree: tree,
-        index: index,
-        guidance: guidance,
-      );
-    }
     return _clean(
       claude.write(
         Model.writer,
@@ -114,6 +74,40 @@ class Assistant {
       ),
     );
   }
+
+  /// Where to look next for [person]: specific records that would fill the
+  /// gaps on their page, and where to find them. Advice only, in markdown.
+  Future<Reply> researchIdeas({
+    required Person person,
+    required Tree tree,
+    required Index index,
+  }) => _clean(
+    claude.write(
+      Model.writer,
+      system:
+          'You help members of a family-history wiki find records about '
+          'their relatives. They are capable but new to genealogy research. '
+          'Suggest specific records, not general advice: which record, for '
+          'which place and years, and on which site. Prefer the free sites '
+          'listed below, and say when a record is only on a paid one.\n\n'
+          '$_researchSites',
+      user:
+          '<page>\n${person.source.trimRight()}\n</page>\n\n'
+          '${_context(person, person.source, tree, index)}\n'
+          'Suggest four to six records to look for about ${person.name}, the '
+          'most useful first. For each, in one or two sentences: what to '
+          'search for and where, and which gap on the page it would fill or '
+          'which fact it would confirm. Do not state any fact about '
+          '${person.name} that the page does not; you are suggesting where '
+          'to look, not what will be found. If the page names a living '
+          'person, do not suggest searching for them.\n\n'
+          'Reply with only a markdown list.',
+    ),
+  );
+
+  static const _researchSites = '''
+Free: FamilySearch (censuses, births, marriages, deaths, church and immigration records; its Research Wiki says which records exist for a place and time); US censuses 1790 to 1950, on FamilySearch; Find a Grave and BillionGraves (cemeteries and headstones); Chronicling America (historic US newspapers); the US National Archives (immigration, naturalization, military service); Ellis Island passenger lists (New York arrivals); Library and Archives Canada; FreeBMD (England and Wales births, marriages and deaths from 1837); the Internet Archive and Google Books (county histories, city directories, yearbooks, family histories); public libraries, which often offer Ancestry Library Edition and newspaper archives free.
+Paid: Ancestry; Newspapers.com and GenealogyBank (obituaries, notices, local news); Fold3 (US military records); MyHeritage and Findmypast (Europe, Britain and Ireland).''';
 
   /// Tidies a memory as typed or dictated, keeping the teller's voice.
   Future<Reply> tidyMemory(Person person, String title, String text) => _clean(

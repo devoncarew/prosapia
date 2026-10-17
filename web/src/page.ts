@@ -3,6 +3,7 @@
 // Discard puts the story back. The editor's code is loaded only when it is
 // first needed.
 
+import { busy, spinner } from './busy';
 import type { Mounted } from './editor';
 
 const edit = document.querySelector<HTMLAnchorElement>('a[data-edit]');
@@ -80,4 +81,74 @@ document.addEventListener('click', (event) => {
 });
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && more?.open) more.open = false;
+});
+
+// "Claude: Research ideas": where to look next, shown above the page.
+// Nothing is saved; Copy puts the list on the clipboard.
+const research = document.querySelector<HTMLAnchorElement>('a[data-research]');
+const ideas = document.querySelector<HTMLElement>('.research-ideas');
+
+interface ResearchReply {
+  text?: string;
+  html?: string;
+  modelName?: string;
+  error?: string;
+}
+
+async function researchIdeas(): Promise<void> {
+  if (!research || !ideas) return;
+  if (more) more.open = false;
+  const heading = document.createElement('h2');
+  heading.textContent = 'Research ideas';
+  const status = document.createElement('p');
+  status.append(spinner(), 'Claude is looking at what the page has and lacks…');
+  ideas.replaceChildren(heading, status);
+  ideas.hidden = false;
+  busy(ideas, true);
+  ideas.scrollIntoView({ block: 'nearest' });
+  let reply: ResearchReply;
+  try {
+    const response = await fetch(research.dataset.research!, {
+      method: 'POST',
+    });
+    reply = (await response.json()) as ResearchReply;
+  } catch {
+    reply = {
+      error: 'Claude could not be reached just now. Please try again.',
+    };
+  }
+  busy(ideas, false);
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.textContent = 'Close';
+  close.addEventListener('click', () => (ideas.hidden = true));
+  const actions = document.createElement('p');
+  actions.className = 'actions';
+  if (reply.error || reply.html === undefined) {
+    status.textContent = reply.error ?? 'Something went wrong.';
+    actions.append(close);
+    ideas.append(actions);
+    return;
+  }
+  const list = document.createElement('div');
+  list.className = 'prose';
+  list.innerHTML = reply.html;
+  const note = document.createElement('p');
+  note.className = 'meta';
+  note.textContent = `Suggestions by ${reply.modelName ?? 'Claude'}: where to look, not what you will find. Nothing here is saved.`;
+  const copy = document.createElement('button');
+  copy.type = 'button';
+  copy.textContent = 'Copy';
+  copy.addEventListener('click', () => {
+    void navigator.clipboard.writeText(reply.text ?? '').then(() => {
+      copy.textContent = 'Copied';
+    });
+  });
+  actions.append(copy, ' ', close);
+  ideas.replaceChildren(heading, list, note, actions);
+}
+
+research?.addEventListener('click', (event) => {
+  event.preventDefault();
+  void researchIdeas();
 });
