@@ -21,10 +21,13 @@ class Tree {
 /// Something that happened at a time and place: a birth, a burial, the date
 /// and place parts of any fact.
 class Event {
-  Event({this.date, this.place});
+  Event({this.date, this.place, this.sources = const []});
 
   final TreeDate? date;
   final String? place;
+
+  /// Where the fact comes from, as written: `1920 census, Hartford, CT`.
+  final List<String> sources;
 
   bool get isEmpty => date == null && place == null;
 }
@@ -111,9 +114,9 @@ class Person {
       case 'name':
         name = line.value;
       case 'nickname':
-        nicknames.addAll(line.segments.map((s) => s.text));
+        nicknames.addAll(line.segments.map((s) => s.value));
       case 'also known as':
-        alsoKnownAs.addAll(line.segments.map((s) => s.text));
+        alsoKnownAs.addAll(line.segments.map((s) => s.value));
       case 'sex':
         sex = line.value;
       case 'photo':
@@ -133,16 +136,21 @@ class Person {
             christened = event;
         }
       case _ when coupleEvents.contains(key):
-        var segments = line.segments;
+        // The partner is the `@` reference, wherever it is in the line;
+        // or else the first plain part that is not a date.
+        final segments = [...line.segments];
         PersonRef? partner;
-        final first = segments.isEmpty ? null : segments.first;
-        if (first is RefSegment) {
-          partner = PersonRef.page(first.personId);
-          segments = segments.skip(1).toList();
-        } else if (first is TextSegment &&
-            !TreeDate.parse(first.text).understood) {
-          partner = PersonRef.named(first.text);
-          segments = segments.skip(1).toList();
+        final ref = segments.whereType<RefSegment>().firstOrNull;
+        final named = segments
+            .whereType<TextSegment>()
+            .where((s) => !TreeDate.parse(s.value).understood)
+            .firstOrNull;
+        if (ref != null) {
+          partner = PersonRef.page(ref.personId);
+          segments.remove(ref);
+        } else if (named != null) {
+          partner = PersonRef.named(named.value);
+          segments.remove(named);
         }
         couples.add(
           CoupleEvent(
@@ -173,10 +181,10 @@ class Person {
     if (segment is RefSegment) {
       return PersonRef.page(segment.personId, qualifier: segment.qualifier);
     }
-    if (segment is TextSegment && !RegExp(r'\d').hasMatch(segment.text)) {
-      final m = _namedWithQualifier.firstMatch(segment.text);
+    if (segment is TextSegment && !RegExp(r'\d').hasMatch(segment.value)) {
+      final m = _namedWithQualifier.firstMatch(segment.value);
       return m == null
-          ? PersonRef.named(segment.text)
+          ? PersonRef.named(segment.value)
           : PersonRef.named(m[1]!, qualifier: m[2]!.trim());
     }
     final hint =
@@ -196,6 +204,7 @@ class Person {
   }) {
     TreeDate? date;
     final place = <String>[];
+    final sources = <String>[];
     for (final segment in segments) {
       switch (segment) {
         case DateSegment():
@@ -207,18 +216,24 @@ class Person {
           }
         case PlaceSegment():
           place.add(segment.place);
+        case SourceSegment():
+          sources.add(segment.source);
         case TextSegment():
-          final asDate = TreeDate.parse(segment.text);
+          final asDate = TreeDate.parse(segment.value);
           if (date == null && place.isEmpty && asDate.understood) {
             date = asDate;
           } else {
-            place.add(segment.text);
+            place.add(segment.value);
           }
         case RefSegment():
           break;
       }
     }
-    return Event(date: date, place: place.isEmpty ? null : place.join(', '));
+    return Event(
+      date: date,
+      place: place.isEmpty ? null : place.join(', '),
+      sources: sources,
+    );
   }
 
   Fact _fact(FactLine line) {
@@ -226,12 +241,15 @@ class Person {
     String? place;
     final description = <String>[];
     final people = <PersonRef>[];
+    final sources = <String>[];
     for (final segment in line.segments) {
       switch (segment) {
         case DateSegment():
           date ??= segment.date;
         case PlaceSegment():
           place ??= segment.place;
+        case SourceSegment():
+          sources.add(segment.source);
         case RefSegment():
           people.add(
             PersonRef.page(segment.personId, qualifier: segment.qualifier),
@@ -239,18 +257,18 @@ class Person {
         case TextSegment():
           // A part that is wholly a date is the fact's date; the rest
           // describes the fact.
-          final asDate = TreeDate.parse(segment.text);
+          final asDate = TreeDate.parse(segment.value);
           if (date == null && asDate.understood) {
             date = asDate;
           } else {
-            description.add(segment.text);
+            description.add(segment.value);
           }
       }
     }
     return Fact(
       line.label,
       description.join(', '),
-      Event(date: date, place: place),
+      Event(date: date, place: place, sources: sources),
       people,
     );
   }

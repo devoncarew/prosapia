@@ -81,4 +81,58 @@ void main() {
     final once = formatPage(page);
     expect(formatPage(once), once);
   });
+
+  group('fact lines', () {
+    String facts(String lines) => formatPage('Name: A\n$lines\n');
+
+    test('a value with commas is quoted', () {
+      expect(
+        facts('Born: 6 January 1911,  Brooklyn, NY, USA'),
+        'Name: A\nBorn: 6 January 1911, "Brooklyn, NY, USA"\n',
+      );
+      expect(
+        facts('Born: January 6, 1911, Brooklyn'),
+        'Name: A\nBorn: "January 6, 1911", Brooklyn\n',
+      );
+    });
+
+    test('a place beside a named partner is labelled', () {
+      expect(
+        facts('Married: Ann Price, 1884, Hartford, CT'),
+        'Name: A\nMarried: Ann Price, 1884, place: "Hartford, CT"\n',
+      );
+    });
+
+    test('marks become labels', () {
+      expect(
+        facts('Occupation: teacher, 1908 to 1920, [place: Scranton, PA]'),
+        'Name: A\nOccupation: teacher, 1908 to 1920, place: "Scranton, PA"\n',
+      );
+    });
+
+    test('a long line is carried on, and reads the same', () {
+      const line =
+          'Married: @howard-irene-genevive-4dd34j, 4 August 1910, '
+          'Brooklyn, New York City, New York, '
+          'source: "New York, New York City Marriage Records, 1829-1938"';
+      final out = facts(line);
+      expect(
+        out,
+        'Name: A\n'
+        'Married: @howard-irene-genevive-4dd34j, 4 August 1910,\n'
+        '  "Brooklyn, New York City, New York",\n'
+        '  source: "New York, New York City Marriage Records, 1829-1938"\n',
+      );
+      expect(formatPage(out), out);
+    });
+
+    test('a line that would read differently is kept as written', () {
+      // "Jr." would become a second child if the parts were quoted apart.
+      expect(
+        facts('Children: Margaret Hughes, Jr.'),
+        'Name: A\nChildren: Margaret Hughes, Jr.\n',
+      );
+      expect(facts('Note: one,  two'), 'Name: A\nNote: one, two\n');
+    });
+  });
 }

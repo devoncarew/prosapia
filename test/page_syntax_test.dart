@@ -103,4 +103,59 @@ Prose.''');
     expect(scotty.displayName, 'Allan “Scotty” MacLean Davidson');
     expect(p.displayName, 'Howard Joseph Carew');
   });
+
+  group('parts of a fact', () {
+    Person read(String facts) =>
+        Person.fromSource('p-1', 'x-1', 'Name: A\n$facts\n');
+
+    test('a quoted value keeps its commas; a part can be labelled', () {
+      final p = read('Born: "January 6, 1990", place: "Portland, OR"');
+      expect(p.born!.date!.raw, 'January 6, 1990');
+      expect(p.born!.date!.understood, isTrue);
+      expect(p.born!.place, 'Portland, OR');
+      expect(p.issues, isEmpty);
+    });
+
+    test('an unquoted date with a comma is still read whole', () {
+      final p = read('Born: January 6, 1911, Brooklyn, NY');
+      expect(p.born!.date!.raw, 'January 6, 1911');
+      expect(p.born!.place, 'Brooklyn, NY');
+    });
+
+    test('the partner is found anywhere, and a source is kept', () {
+      final p = read(
+        'Married: 4 August 1910, @howard-irene-4dd34j, '
+        'place: "Brooklyn, New York City, New York",\n'
+        '  source: "New York, New York City Marriage Records, 1829-1938"',
+      );
+      final c = p.couples.single;
+      expect(c.partner!.id, 'p-4dd34j');
+      expect(c.event.date!.raw, '4 August 1910');
+      expect(c.event.place, 'Brooklyn, New York City, New York');
+      expect(c.event.sources, [
+        'New York, New York City Marriage Records, 1829-1938',
+      ]);
+      expect(p.issues, isEmpty);
+    });
+
+    test('a named partner, wherever it is', () {
+      final p = read('Married: 1884, Ann Price, place: "Hartford, CT"');
+      expect(p.couples.single.partner!.name, 'Ann Price');
+      expect(p.couples.single.event.place, 'Hartford, CT');
+    });
+
+    test('quotes inside a value are doubled', () {
+      final p = read('Occupation: "Editor, ""The Courant""", 1920');
+      expect(p.facts.single.description, 'Editor, "The Courant"');
+      expect(p.facts.single.event.date!.raw, '1920');
+    });
+
+    test('a quoted name with a comma is one person', () {
+      final p = read('Children: "Margaret Hughes, Jr.", @hughes-mary-x2k9ab');
+      expect(p.children.map((r) => r.name ?? r.id), [
+        'Margaret Hughes, Jr.',
+        'p-x2k9ab',
+      ]);
+    });
+  });
 }

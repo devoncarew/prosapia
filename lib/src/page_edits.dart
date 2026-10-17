@@ -42,7 +42,7 @@ String? nameToReference(
     for (final (i, segment) in segments.indexed) {
       if (couple && i > 0) break; // the partner is named first
       if (segment is! TextSegment) continue;
-      final (written, qualifier) = splitQualifier(segment.text);
+      final (written, qualifier) = splitQualifier(segment.value);
       if (!sameName(written, name)) continue;
       done = true;
       return [
@@ -237,15 +237,27 @@ String? _editFacts(String source, List<String>? Function(FactLine) edit) {
   }
   var changed = false;
   final out = lines.sublist(0, i);
-  for (; i < lines.length && lines[i].trim().isNotEmpty; i++) {
-    final m = ParsedPage.labelPattern.firstMatch(lines[i]);
-    final parts = m == null ? null : edit(FactLine(m[1]!.trim(), m[2]!.trim()));
-    if (parts == null) {
-      out.add(lines[i]);
-      continue;
+  while (i < lines.length && lines[i].trim().isNotEmpty) {
+    // A fact and the indented lines that carry it on.
+    var end = i + 1;
+    while (end < lines.length &&
+        lines[end].trim().isNotEmpty &&
+        ParsedPage.continues(lines[end])) {
+      end++;
     }
-    changed = true;
-    if (parts.isNotEmpty) out.add('${m![1]!.trim()}: ${parts.join(', ')}');
+    final m = ParsedPage.labelPattern.firstMatch(lines[i]);
+    final value = [
+      if (m != null) m[2]!.trim(),
+      for (final line in lines.sublist(i + 1, end)) line.trim(),
+    ].join(' ');
+    final parts = m == null ? null : edit(FactLine(m[1]!.trim(), value));
+    if (parts == null) {
+      out.addAll(lines.sublist(i, end));
+    } else {
+      changed = true;
+      if (parts.isNotEmpty) out.add('${m![1]!.trim()}: ${parts.join(', ')}');
+    }
+    i = end;
   }
   out.addAll(lines.skip(i));
   return changed ? out.join('\n') : null;
