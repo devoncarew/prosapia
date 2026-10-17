@@ -1,10 +1,12 @@
+import 'fact_format.dart';
 import 'page_syntax.dart';
 
 /// The width prose is wrapped to.
 const pageWidth = 80;
 
 /// Writes a page in its normal form, so that pages that read the same are
-/// written the same: fact lines with single spaces, one blank line between
+/// written the same: fact lines with their parts quoted and labelled where
+/// that makes them read reliably (see fact_format.dart), one blank line between
 /// blocks, and paragraphs and list items wrapped at [width] columns. What
 /// the page says, and how it renders, is unchanged. Code, tables, quotes
 /// and HTML are left as written.
@@ -20,14 +22,25 @@ String formatPage(String source, {int width = pageWidth}) {
   if (i < lines.length &&
       ParsedPage.labelPattern.firstMatch(lines[i])?[1]?.toLowerCase() ==
           'name') {
-    for (; i < lines.length && lines[i].trim().isNotEmpty; i++) {
+    while (i < lines.length && lines[i].trim().isNotEmpty) {
+      // A fact and the indented lines that carry it on.
+      var end = i + 1;
+      while (end < lines.length &&
+          lines[end].trim().isNotEmpty &&
+          ParsedPage.continues(lines[end])) {
+        end++;
+      }
       final m = ParsedPage.labelPattern.firstMatch(lines[i]);
       if (m == null) {
-        out.add(_spaces(lines[i]));
+        out.addAll([for (final line in lines.sublist(i, end)) _spaces(line)]);
       } else {
-        final value = _spaces(m[2]!);
-        out.add('${_spaces(m[1]!)}:${value.isEmpty ? '' : ' $value'}');
+        final value = [
+          m[2]!,
+          ...lines.sublist(i + 1, end),
+        ].map(_spaces).where((v) => v.isNotEmpty).join(' ');
+        out.addAll(formatFact(_spaces(m[1]!), value, width: width));
       }
+      i = end;
     }
   }
   final body = _Body(width).format(lines.sublist(i));

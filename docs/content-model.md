@@ -132,20 +132,45 @@ Settled at the start of milestone 13:
 
 - **The facts block starts with a `Name:` line** and runs to the first blank line. There
   are no `---` fences, so the exported files show as plain text, not as broken YAML.
-- **One line per fact.** Repeat a label for more of the same kind, such as several
-  `Occupation:` lines. Relationship lines are the exception: `Parents:`, `Children:`,
-  `Partner:` and `Siblings:` take a comma-separated list.
-- **The parts of a line are separated by commas.** Life events (`Born`, `Christened`,
-  `Died`, `Buried`) read as date then place, unmarked:
-  `Born: 6 January 1911, Brooklyn, NY, USA`. Other facts read as what, when, where: the
-  first part is the fact itself, any part that reads as a date is its date, and a place
-  must be marked `[place: …]`, since "Carew Corporation" or "US Navy" is not a place.
-  Unmarked text that fits nowhere stays part of the description.
-- **A marriage is its own line:**
-  `Married: @dwyer-frances-davidson-ka2b3c, 7 January 1945, [place: Trinity Episcopal Church, Hartford, CT]`,
-  read like `Born:`. It implies the partnership, so a `Partner:` line is needed only for
-  couples with no recorded marriage. `Divorced:` and similar two-person events take the
-  same shape. Milestone 15 may later make these shorthand for fuller events.
+- **One fact per line.** Repeat a label for more of the same kind, such as several
+  `Occupation:` lines. A line indented by two spaces carries on the fact above it, so a
+  long fact can be written over several lines.
+- **A fact is a list of parts, separated by commas.** A part with a comma of its own is
+  written in quotes, `"Brooklyn, NY"`, with any quote inside it doubled (`""`). A part
+  can say what it is with a label, `date:`, `place:` or `source:`, as in
+  `place: "Hartford, CT"`. A part without a label is known by its form: an `@` reference
+  is a person, and a part that reads as a date is the date. What a plain part means
+  depends on the fact:
+
+  <!-- prettier-ignore -->
+  | Fact | A plain part is |
+  | --- | --- |
+  | `Parents`, `Children`, `Siblings`, `Partner` | a person without a page |
+  | `Married`, `Divorced` and other two-person events | the partner, if there is no `@` reference; then the place |
+  | `Born`, `Christened`, `Died`, `Buried` | the place |
+  | Any other fact, such as `Occupation` | the description |
+  | `Name`, `Note`, `Sex` | not parts: the whole line, as written |
+
+  Once its parts are quoted or labelled, a fact can be written in any order:
+  `Married: @howard-irene-genevive-4dd34j, 4 August 1910, place: "Brooklyn, NY", source: "New York City Marriage Records"`.
+
+- **Forgiving, and then well formed.** A line without quotes is still read: a date with
+  a comma, `January 6, 1911`, is read whole, and the plain parts of an event that follow
+  its date are read together as its place, as in `Born: 6 January 1911, Brooklyn, NY`.
+  When a page is saved, its normal form quotes and labels the parts where that reads
+  exactly the same, so `Born: 6 January 1911, "Brooklyn, NY"` is what is stored, and
+  people learn the form from their own pages. A line that would read differently is left
+  as written. `[date: …]` and `[place: …]` are still read in fact lines, and become
+  labels on save.
+- **Sources** are text for now, shown on the page as a small "source" mark with the
+  title on hover. When source records exist, `source:` will also take a link to one.
+- **A marriage is its own line**, read like `Born:`, with the partner as well. It
+  implies the partnership, so a `Partner:` line is needed only for couples with no
+  recorded marriage. `Divorced:` and similar two-person events take the same shape.
+  Milestone 15 may later make these shorthand for fuller events.
+- **In the story,** dates and places are written as prose, and can be marked so they are
+  read reliably: `[date: 2026]`, `[place: Hartford, CT]`. The same names, `date` and
+  `place`, are used in fact lines and in prose.
 - **Relationship lines hold references and names only.** Prosapia reads the `@`
   references and plain names, and one qualifier in parentheses for the kind of
   relationship: `Parents: @behler-paul-ww9wcn (adopted)`. Any other text on the line is

@@ -56,6 +56,7 @@ const marks = {
   label: Decoration.mark({ class: 'cm-label' }),
   ref: Decoration.mark({ class: 'cm-ref' }),
   marked: Decoration.mark({ class: 'cm-marked' }),
+  quoted: Decoration.mark({ class: 'cm-quoted' }),
   heading: Decoration.mark({ class: 'cm-heading' }),
 };
 
@@ -68,9 +69,28 @@ function decorate(view: EditorView): DecorationSet {
       const line = view.state.doc.lineAt(pos);
       const found: [number, number, Decoration][] = [];
       if (facts.has(line.number)) {
-        const label = /^\s*[A-Za-z][A-Za-z ]{0,30}?\s*:/.exec(line.text);
+        // A fact's label, unless the line carries on the fact above it.
+        const label = /^[A-Za-z][A-Za-z ]{0,30}?\s*:/.exec(line.text);
         if (label)
           found.push([line.from, line.from + label[0].length, marks.label]);
+        // A part's label, and quoted values.
+        for (const m of line.text.matchAll(
+          /(?:^\s+|,\s*|:\s*)((?:date|place|source)\s*:)/gi,
+        )) {
+          const at = m.index + m[0].length - m[1].length;
+          found.push([
+            line.from + at,
+            line.from + at + m[1].length,
+            marks.marked,
+          ]);
+        }
+        for (const m of line.text.matchAll(/"(?:[^"]|"")*"/g)) {
+          found.push([
+            line.from + m.index,
+            line.from + m.index + m[0].length,
+            marks.quoted,
+          ]);
+        }
       } else if (/^#{1,6} /.test(line.text)) {
         found.push([line.from, line.to, marks.heading]);
       }
@@ -150,6 +170,23 @@ async function people(
 async function places(
   context: CompletionContext,
 ): Promise<CompletionResult | null> {
+  // In a fact line, "place: " and a place, perhaps opening a quote.
+  const part = context.matchBefore(/\bplace\s*:\s*"?[^",\]]*/i);
+  if (part && !part.text.startsWith('[')) {
+    const typed = /:\s*"?(.*)$/.exec(part.text)![1];
+    const opened = /:\s*"/.test(part.text);
+    const response = await fetch(`/api/places?q=${encodeURIComponent(typed)}`);
+    if (!response.ok) return null;
+    const found = (await response.json()) as string[];
+    return {
+      from: part.to - typed.length - (opened ? 1 : 0),
+      filter: false,
+      options: found.map((place) => ({
+        label: place,
+        apply: place.includes(',') || opened ? `"${place}"` : place,
+      })),
+    };
+  }
   const inside = context.matchBefore(/\[\s*place\s*:\s*[^\]]*/i);
   if (!inside) return null;
   const typed = /:\s*(.*)$/.exec(inside.text)![1];

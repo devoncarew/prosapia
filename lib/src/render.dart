@@ -452,6 +452,12 @@ $body
     return sb.toString();
   }
 
+  /// Where [e] comes from, as small marks with the source on hover.
+  String cite(Event e) => [
+    for (final source in e.sources)
+      ' <span class="cite" title="${esc(source)}" tabindex="0">source</span>',
+  ].join();
+
   /// A date as typed, with how it was read shown on hover.
   String date(TreeDate d) => d.understood
       ? '<span class="date" title="Read as: ${esc(d.meaning)}">${esc(d.display)}</span>'
@@ -504,9 +510,10 @@ $body
     String event(Event? e) => e == null
         ? ''
         : [
-            if (e.date != null) date(e.date!),
-            if (e.place != null) esc(e.place),
-          ].join('<br>');
+                if (e.date != null) date(e.date!),
+                if (e.place != null) esc(e.place),
+              ].join('<br>') +
+              cite(e);
 
     String qualified(String id, List<PersonRef> stated, {bool years = false}) {
       final q = stated
@@ -604,19 +611,20 @@ $body
     void add(TreeDate? date, String html) => date == null || !date.understood
         ? undated.add(date == null ? html : '$html, ${this.date(date)}')
         : dated.add((date: date, html: html));
-    String at(String? place) =>
-        place == null ? '' : ' <span class="place">${esc(place)}</span>';
+    String at(Event e) =>
+        '${e.place == null ? '' : ' <span class="place">${esc(e.place)}</span>'}'
+        '${cite(e)}';
 
-    if (p.born?.date != null) add(p.born!.date, 'Born${at(p.born!.place)}');
+    if (p.born?.date != null) add(p.born!.date, 'Born${at(p.born!)}');
     if (p.christened != null) {
-      add(p.christened!.date, 'Christened${at(p.christened!.place)}');
+      add(p.christened!.date, 'Christened${at(p.christened!)}');
     }
     for (final f in p.facts) {
       final people = f.people.map(ref).join(', ');
       add(
         f.event.date,
         '<span class="kind">${esc(f.label)}</span> ${esc(f.description)}'
-        '${people.isEmpty ? '' : ' with $people'}${at(f.event.place)}',
+        '${people.isEmpty ? '' : ' with $people'}${at(f.event)}',
       );
     }
     // Couple events stated on this page, and on partners' pages about this
@@ -636,7 +644,7 @@ $body
       if (!seen.add(key)) continue;
       add(
         c.event.date,
-        '${esc(c.kind)}${partner == null ? '' : ' ${ref(partner)}'}${at(c.event.place)}',
+        '${esc(c.kind)}${partner == null ? '' : ' ${ref(partner)}'}${at(c.event)}',
       );
     }
     for (final id in index.childrenOf(p.id)) {
@@ -652,8 +660,8 @@ $body
       final d = TreeDate.parse(m[1]!);
       if (d.understood) add(d, esc(m[2]));
     }
-    if (p.died?.date != null) add(p.died!.date, 'Died${at(p.died!.place)}');
-    if (p.buried != null) add(p.buried!.date, 'Buried${at(p.buried!.place)}');
+    if (p.died?.date != null) add(p.died!.date, 'Died${at(p.died!)}');
+    if (p.buried != null) add(p.buried!.date, 'Buried${at(p.buried!)}');
     for (final note in p.notes) {
       undated.add('<span class="kind">Note</span> ${esc(note)}');
     }
@@ -994,14 +1002,14 @@ $body
   <details class="legend">
     <summary>How to write a page</summary>
     <dl>
-      <dt><code>Born: 6 January 1911, Brooklyn, NY</code></dt>
-      <dd>A fact: a label, a colon, then its parts separated by commas. Dates can be written as you would say them: <code>about 1925</code>, <code>spring 1925</code>, <code>the 1880s</code>.</dd>
-      <dt><code>Occupation: teacher, 1908 to 1920, [place: Scranton, PA]</code></dt>
-      <dd>Other facts read as what, when, where. Mark a place with <code>[place: …]</code>.</dd>
+      <dt><code>Born: 6 January 1911, "Brooklyn, NY"</code></dt>
+      <dd>A fact: a label, a colon, then its parts separated by commas. A part with a comma of its own goes in quotes; Prosapia adds them when it can tell. Dates can be written as you would say them: <code>about 1925</code>, <code>spring 1925</code>, <code>the 1880s</code>.</dd>
+      <dt><code>Occupation: teacher, 1908 to 1920, place: "Scranton, PA"</code></dt>
+      <dd>A part can say what it is: <code>date:</code>, <code>place:</code> or <code>source:</code>. Otherwise a date is known by its form, and other text is the fact's place or description.</dd>
       <dt><code>Parents: @</code> then a name</dt>
-      <dd>Type <code>@</code> and part of a name to link a person already in the tree. A plain name means someone without a page yet.</dd>
-      <dt><code>Married: @…, 1945, Hartford, CT</code></dt>
-      <dd>Relationships: <code>Parents</code>, <code>Children</code>, <code>Partner</code>, <code>Siblings</code>, <code>Married</code>.</dd>
+      <dd>Type <code>@</code> and part of a name to link a person already in the tree. A plain name means someone without a page.</dd>
+      <dt><code>Married: @…, 1945, "Hartford, CT",</code><br><code>&nbsp;&nbsp;source: "Connecticut marriage records"</code></dt>
+      <dd>Relationships: <code>Parents</code>, <code>Children</code>, <code>Partner</code>, <code>Siblings</code>, <code>Married</code>. A line indented by two spaces carries on the fact above it.</dd>
       <dt>A blank line</dt>
       <dd>Ends the facts. Below it, write in <a href="https://commonmark.org/help/" target="_blank" rel="noopener">markdown</a>; <code>[date: …]</code> and <code>[place: …]</code> mark dates and places in the story.</dd>
     </dl>
@@ -1790,6 +1798,8 @@ main > article.editing-on > .infobox { display: none; }
   background: var(--surface); }
 .research-ideas h2 { margin-top: 0; }
 .research-ideas .actions { margin: 10px 0 0; }
+.cite { font: 12px var(--ui); color: var(--muted); border-bottom: 1px dotted var(--muted);
+  cursor: help; white-space: nowrap; }
 .format { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
 .format button { border: none; background: none; color: var(--muted); padding: 3px 8px; border-radius: 4px;
   font: 14px var(--ui); min-width: 28px; }
@@ -1821,6 +1831,8 @@ button.danger { background: #b3261e; border-color: #8c1d18; color: #fff; }
 .cm-marked { color: #8a5a00; }
 @media (prefers-color-scheme: dark) { .cm-marked { color: #e0b35a; } }
 .cm-heading { font-weight: 700; }
+.cm-quoted { color: #2f6f3e; }
+@media (prefers-color-scheme: dark) { .cm-quoted { color: #8fd19e; } }
 .cm-tooltip.cm-tooltip-autocomplete { font: 14px var(--ui); background: var(--surface);
   color: var(--text); border: 1px solid var(--line); border-radius: 6px; overflow: hidden;
   box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
