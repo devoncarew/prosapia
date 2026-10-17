@@ -447,8 +447,7 @@ $body
   }
 
   static String surnameOf(Person p) {
-    final words = p.name.trim().split(RegExp(r'\s+'));
-    return words.length > 1 ? words.last : 'Other';
+    return nameParts(p.name).surname ?? 'Other';
   }
 
   // ---------------------------------------------------------------- person

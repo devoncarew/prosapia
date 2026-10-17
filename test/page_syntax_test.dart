@@ -52,6 +52,22 @@ void main() {
     expect(married.event.place, 'Trinity Episcopal Church, Hartford, CT');
   });
 
+  test('a name may have a number or a suffix', () {
+    final q = Person.fromSource(
+      'p-0',
+      'x-0',
+      'Name: Q\nChildren: June Wilhelm, "Rudie Wilhelm 3rd", 1920\n',
+    );
+    expect(q.children.map((c) => c.name), [
+      'June Wilhelm',
+      'Rudie Wilhelm 3rd',
+    ]);
+    expect(q.issues.single, contains('"1920" is not a person'));
+    expect(nameParts('Rudolph H. Wilhelm Jr.').surname, 'Wilhelm');
+    expect(nameParts('Rudie Wilhelm 3rd').suffix, ['3rd']);
+    expect(nameParts('Cher').surname, isNull);
+  });
+
   test('a date may follow the place', () {
     final q = Person.fromSource(
       'p-0',

@@ -137,13 +137,14 @@ const _skipped = {
 /// full name, other full names, and given name or nickname with surname.
 Set<String> _namesOf(Person person) {
   final words = person.name.trim().split(RegExp(r'\s+'));
+  final surname = nameParts(person.name).surname ?? words.last;
   return {
     if (words.length > 1) person.name.trim(),
     for (final other in person.alsoKnownAs)
       if (other.trim().contains(' ')) other.trim(),
-    if (words.length > 2) '${words.first} ${words.last}',
+    if (words.length > 2) '${words.first} $surname',
     if (words.length > 1)
-      for (final nickname in person.nicknames) '$nickname ${words.last}',
+      for (final nickname in person.nicknames) '$nickname $surname',
   };
 }
 

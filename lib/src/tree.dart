@@ -181,7 +181,12 @@ class Person {
     if (segment is RefSegment) {
       return PersonRef.page(segment.personId, qualifier: segment.qualifier);
     }
-    if (segment is TextSegment && !RegExp(r'\d').hasMatch(segment.value)) {
+    // A plain part is a name, unless it has a year in it, as a date or
+    // "married 1945" would, or has no letters. A name may have a small
+    // number, as in "Rudie Wilhelm 3rd".
+    if (segment is TextSegment &&
+        RegExp(r'\p{L}', unicode: true).hasMatch(segment.value) &&
+        !RegExp(r'\d{3}').hasMatch(segment.value)) {
       final m = _namedWithQualifier.firstMatch(segment.value);
       return m == null
           ? PersonRef.named(segment.value)
@@ -432,3 +437,27 @@ class Media {
     'people': people,
   };
 }
+
+/// A name in its parts: the given names, the family name, and anything
+/// after it such as "Jr." or "3rd", which is not the family name.
+({List<String> given, String? surname, List<String> suffix}) nameParts(
+  String name,
+) {
+  final words = name.trim().split(RegExp(r'\s+'))
+    ..removeWhere((w) => w.isEmpty);
+  var end = words.length;
+  while (end > 1 && _suffixes.hasMatch(words[end - 1])) {
+    end--;
+  }
+  if (end < 2) return (given: words, surname: null, suffix: const []);
+  return (
+    given: words.sublist(0, end - 1),
+    surname: words[end - 1],
+    suffix: words.sublist(end),
+  );
+}
+
+final _suffixes = RegExp(
+  r'^(jr|sr|ii|iii|iv|v|vi|\d+(st|nd|rd|th)|esq|phd|md)\.?,?$',
+  caseSensitive: false,
+);
