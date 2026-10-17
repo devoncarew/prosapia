@@ -317,6 +317,18 @@ Handler siteHandler(
           );
   });
 
+  // "This is me": a member says which page is theirs, so their home page and
+  // family tree start there. It changes nothing else about them.
+  router.post('/people/<id>/me', (Request r, String id) async {
+    final member = Sessions.memberOf(r);
+    final person = site.tree.people[id];
+    if (member == null || !site.store.editable) return notAllowed(r);
+    if (person == null) return missing(r, 'No person has the id $id.');
+    await site.store.setMember(member.email, member.role, person: person.id);
+    sessions?.forget(member.email);
+    return seeOther('/');
+  });
+
   router.get('/people/<id>/text', (Request r, String id) {
     final person = site.tree.people[id];
     return person == null
