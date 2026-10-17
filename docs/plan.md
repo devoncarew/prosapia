@@ -29,38 +29,11 @@ links to, not here.
 
 ## Milestones
 
-### Milestone 20: dogfooding and polish
-
-Using the deployed site on the real tree, and fixing what that turns up. Small items are
-kept in the [punch list](punchlist.md) and worked from there.
-
-- Fixes first: anything that loses work, shows wrong information, or fails on the real
-  tree.
-- A design pass over the photo pages. The person page, the editor, the change history
-  and Recent changes have had theirs.
-
-Done when: the family historian has used the deployed site for a few weeks, and what
-they found is fixed or moved to Known future work.
-
-### Milestone 18: the first visit
-
-Journey 10. Everything below is built; what is left is the Done when, which needs
-relatives who have not seen the site before.
-
-- An invitation email that says who invited them and what Prosapia is.
-- Readable addresses for people's pages, such as `/people/carew-howard-joseph-tbczm8`,
-  so a link someone shares says who it is. Only the trailing id is relied on.
-- A home page that orients a newcomer: a welcome, their own page with their close family
-  and Add a memory, the latest changes, and where to go next.
-- Every page readable on a phone, since a first visit is often on one.
-
-Done when: a relative who has never seen Prosapia can accept an invitation, find their
-own family, and add a memory without help.
-
 ### Milestone 21: video
 
 Short clips stored, long videos linked, as proposed in [media.md](media.md). The family
-has at least one video to add (Frances's), and the loader skips video today.
+has videos to add (Frances's is now on YouTube, to link), and the loader skips video
+today.
 
 - Upload a short clip from Photos or a person's page, stored like a photo up to a size
   limit (working figure 50 MB), with a poster frame for the gallery and playback in the
@@ -75,21 +48,36 @@ has at least one video to add (Frances's), and the loader skips video today.
 Done when: a short phone clip and a linked long video each appear on the right people's
 pages, and the 50 MB limit is confirmed or changed.
 
-### Milestone 17: more help from the model
+### Milestone 22: notes and transcriptions on photos and documents
 
-- Entry from a sentence: typing "Margaret moved to Chicago with her sister in spring
-  1925" proposes fact lines or an event, for the person to check before saving.
-- Weave loose memories into an existing biography, as a proposed edit.
+A birth certificate, a letter or the back of a photo says things worth keeping as text.
+Today only the writing on a photo's back is kept, as its description.
 
-Built so far: **Claude: Draft…** takes a request and notes to work in, which covers
-targeted requests such as "add a brief mention of the trip John took with Jane and Sam
-in 2011", and marks the lines it changed; a first draft is given what the tree says
-about the person elsewhere (paragraphs on other pages, close relatives' facts, photos
-and documents that name them) and lists where it drew from; and **Claude: Research
-ideas** on a person's page suggests records to look for and where, as advice only.
+- Notes on any photo or document: a transcription of what is written on it, and notes
+  about it (where it came from, what it shows), edited from the photo's page.
+- **Claude: Transcribe** when adding a photo or document and when viewing one, proposing
+  a transcription for the person to check before saving. Handwriting is read by the
+  model; typed pages may use OCR. Multi-page PDFs are read page by page.
+- The transcription is written into the file where the format allows, as the writing on
+  a back is now, searchable, and given to a first draft as what the document says.
 
-Done when: journeys 1 and 2 can each start from one typed sentence, and nothing the
-model proposes is saved without the person confirming it.
+Done when: a scanned certificate and a handwritten letter each have a checked
+transcription that search finds and a first draft can draw on.
+
+### Milestone 23: a family tree view
+
+People need to see where someone sits in the family to find their way around. Not every
+chart is needed; one useful view is.
+
+- A small tree on a person's page or its own page: parents and grandparents above,
+  partners and children below, each a link, so a newcomer can move up and down the
+  family.
+- Choose between an ancestor chart, a descendant chart or an hourglass of both, and how
+  far it goes, by trying them on the real tree.
+- Readable on a phone, by scrolling or by fewer generations.
+
+Done when: from any person's page a relative can see their parents, grandparents,
+partners and children at a glance, and move to any of them in one click.
 
 ### Milestone 15: events and memories
 
@@ -151,8 +139,9 @@ Uses not yet scheduled; the rules every use follows are in
   request stays inside Hosting's 60-second limit.
 - Offer what the tree says elsewhere when revising a story, not only for a first draft,
   when the editor asks for it ("add anything else the tree knows").
-- Include document text in what a draft is given, once PDFs have a text layer.
-- Transcribing a scanned letter or certificate.
+- Entry from a sentence: typing "Margaret moved to Chicago with her sister in spring
+  1925" proposes fact lines or an event, for the person to check before saving.
+- Weave loose memories into an existing biography, as a proposed edit.
 - Checking: point out conflicts, such as a child born after a parent's death, beyond the
   simple checks in milestone 13.
 - Research leads: Claude searches open sites (Find a Grave, Chronicling America, the
@@ -164,8 +153,8 @@ Uses not yet scheduled; the rules every use follows are in
 
 - Choose the JPEG quality for scans from a real full-resolution scanner output; 92 is a
   placeholder.
-- Documents: read a PDF's pages in the site, and add a text layer (OCR) to typed ones so
-  they can be searched.
+- Documents: read a PDF's pages in the site, rather than only its first page's preview.
+- A design pass over the photo pages.
 - Multi-page scanned PDFs, such as the two baby books: keep as one document, or store as
   a set of page images.
 - Audio recordings.
@@ -185,10 +174,14 @@ GEDCOM import in the app (was milestone 7). The spike in
 - Read GEDCOM 7.0 as well as 5.5.1, and verify the tags listed in
   [content-model.md](content-model.md) against the specification.
 - GEDCOM export.
+- Data export: download the whole tree (pages, photos, documents and their details) as
+  an archive a family can keep or take elsewhere, from Settings.
 
 ### Views
 
-- Family tree and descendant charts.
+- Fuller family tree and descendant charts, beyond milestone 23's view.
+- Every page readable on a phone (left open from milestone 18). Viewing works; check
+  each page on a real phone and fix what does not.
 - A "needs source" report.
 - Printing: family books and wall charts.
 
@@ -223,6 +216,19 @@ this is needed until a wider preview is chosen. It should be done before then.
 
 Newest first.
 
+- **Milestone 20, dogfooding and polish.** Using the deployed site on the real tree
+  brought a new fact syntax with quoted and labelled parts, a Format button and normal
+  form, change history with a friendly diff, viewer-local times, paged photos and a
+  photo strip, PDF documents, upload progress and undo for deleted pages. Polish items
+  are now noted as the site is used, in the [punch list](punchlist.md).
+- **Milestone 18, the first visit.** Invited relatives get an email saying who invited
+  them and what Prosapia is; people's pages have readable addresses; and a home page
+  welcomes a newcomer with the latest changes and where to go next. Problems with first
+  sign-in are logged as bugs; checking every page on a phone is in Known future work.
+- **Milestone 17, more help from the model.** **Claude: Draft…** takes a request and
+  notes to work in and marks the lines it changed; a first draft is given what the tree
+  says about the person elsewhere and lists where it drew from; and **Claude: Research**
+  suggests records to look for and where, as advice only.
 - **Milestone 5, deploy and backup.** The server runs on Cloud Run in `us-west1` behind
   Firebase Hosting at `prosapia.app`, with its own service account and the Anthropic key
   in Secret Manager; owners invite members, change their roles and remove them from
