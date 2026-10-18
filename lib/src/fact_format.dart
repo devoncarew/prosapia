@@ -1,4 +1,5 @@
 import 'dates.dart';
+import 'page_format.dart';
 import 'page_syntax.dart';
 import 'tree.dart';
 
@@ -11,9 +12,13 @@ const _whole = {'name', 'note', 'sex', 'photo'};
 ///
 /// The line is only rewritten when the new form reads exactly as the old
 /// one does; otherwise it is kept as written, with single spaces.
-List<String> formatFact(String label, String value, {int width = 80}) {
+List<String> formatFact(String label, String value, {int width = pageWidth}) {
   final plain = '$label: $value'.trim();
-  if (_whole.contains(_key(label)) || value.isEmpty) return [_spaces(plain)];
+  // A whole value, such as a note, is broken between words; its lines are
+  // joined again with a single space, so it reads the same.
+  if (_whole.contains(_key(label)) || value.isEmpty) {
+    return _words(_spaces(plain), width);
+  }
   final parts = _parts(FactLine(label, value));
   final rewritten = '$label: ${parts.join(', ')}';
   if (_meaning(rewritten) != _meaning(plain)) return [_spaces(plain)];

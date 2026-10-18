@@ -1,4 +1,5 @@
 import 'package:prosapia/src/page_format.dart';
+import 'package:prosapia/src/tree.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -16,10 +17,12 @@ void main() {
     );
   });
 
-  test('paragraphs are joined and wrapped at 80 columns', () {
+  test('paragraphs are joined and wrapped at 88 columns', () {
     final words = List.filled(30, 'word').join(' ');
     final out = formatPage('Name: A\n\nShort\nlines $words');
-    expect(out.split('\n').skip(2).every((l) => l.length <= 80), isTrue);
+    final lines = out.split('\n').skip(2).where((l) => l.isNotEmpty);
+    expect(lines.every((l) => l.length <= 88), isTrue);
+    expect(lines.first.length, greaterThan(80));
     expect(out, startsWith('Name: A\n\nShort lines word word'));
   });
 
@@ -47,7 +50,7 @@ void main() {
   test('list items wrap with a hanging indent', () {
     final long = List.filled(20, 'word').join(' ');
     expect(
-      formatPage('Name: A\n\n-   one\n- $long\n  more\n1. x'),
+      formatPage('Name: A\n\n-   one\n- $long\n  more\n1. x', width: 80),
       'Name: A\n\n- one\n- ${List.filled(15, 'word').join(' ')}\n'
       '  word word word word word more\n1. x\n',
     );
@@ -141,7 +144,7 @@ void main() {
       const line =
           'Occupation: hand on S.C. Loveland motor ship & cadet on S.S. Zarembo '
           'of Barber Steamship Co. between US and Africa, February to July 1934';
-      final out = facts(line);
+      final out = formatPage('Name: A\n$line\n', width: 80);
       expect(
         out,
         'Name: A\n'
@@ -150,7 +153,25 @@ void main() {
         '  February to July 1934\n',
       );
       expect(out.split('\n').every((l) => l.length <= 80), isTrue);
+      expect(formatPage(out, width: 80), out);
+    });
+
+    test('a long note is broken between words, and reads the same', () {
+      const note =
+          'Note: In 2026 the Canadian writer Matthew Walthert published a book about '
+          'Scotty. Peter Carew helped by answering questions about family records '
+          'and providing several of the photographs in it.';
+      final out = facts(note);
+      expect(
+        out,
+        'Name: A\n'
+        'Note: In 2026 the Canadian writer Matthew Walthert published a book about Scotty. Peter\n'
+        '  Carew helped by answering questions about family records and providing several of the\n'
+        '  photographs in it.\n',
+      );
       expect(formatPage(out), out);
+      final read = Person.fromSource('p-0', 'x-0', out).notes.single;
+      expect('Note: $read', note);
     });
 
     test('a line that would read differently is kept as written', () {

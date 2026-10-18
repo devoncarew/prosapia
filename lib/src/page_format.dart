@@ -2,7 +2,7 @@ import 'fact_format.dart';
 import 'page_syntax.dart';
 
 /// The width prose is wrapped to.
-const pageWidth = 80;
+const pageWidth = 88;
 
 /// Writes a page in its normal form, so that pages that read the same are
 /// written the same: fact lines with their parts quoted and labelled where

@@ -188,7 +188,7 @@ Settled at the start of milestone 13:
   other label is kept as a fact of that kind and shown as written.
 - **What was typed is what is kept.** A page is stored as typed, after a light
   formatting pass that never changes what it says or how it renders: single spaces in
-  fact lines, one blank line between blocks, and paragraphs and list items wrapped at 80
+  fact lines, one blank line between blocks, and paragraphs and list items wrapped at 88
   columns, with links and `[date: …]` and `[place: …]` marks kept on one line. Code,
   quotes, tables and HTML are left alone. Prosapia reads structure from the page each
   time, and shows how it understood a date rather than rewriting it.
