@@ -1365,23 +1365,6 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     <a class="button discard" href="${pathOf(p)}">Discard</a>
     <button class="primary" title="Publish (⌘ Enter)">Publish <kbd>⌘ ⏎</kbd></button>
   </div>
-  <p class="hint">Facts first, one per line, starting with <code>Name:</code>; then a blank line and the story.</p>
-  <details class="legend">
-    <summary>How to write a page</summary>
-    <p>See <a href="/help/writing" target="_blank" rel="noopener">a whole example page, and answers to common questions</a>.</p>
-    <dl>
-      <dt><code>Born: 6 January 1911, "Brooklyn, NY"</code></dt>
-      <dd>A fact: a label, a colon, then its parts separated by commas. A part with a comma of its own goes in quotes; Prosapia adds them when it can tell. Dates can be written as you would say them: <code>about 1925</code>, <code>spring 1925</code>, <code>the 1880s</code>.</dd>
-      <dt><code>Occupation: teacher, 1908 to 1920, place: "Scranton, PA"</code></dt>
-      <dd>A part can say what it is: <code>date:</code>, <code>place:</code> or <code>source:</code>. Otherwise a date is known by its form, and other text is the fact's place or description.</dd>
-      <dt><code>Parents: @</code> then a name</dt>
-      <dd>Type <code>@</code> and part of a name to link a person already in the tree. A plain name means someone without a page.</dd>
-      <dt><code>Married: @…, 1945, "Hartford, CT",</code><br><code>&nbsp;&nbsp;source: "Connecticut marriage records"</code></dt>
-      <dd>Relationships: <code>Parents</code>, <code>Children</code>, <code>Partner</code>, <code>Siblings</code>, <code>Married</code>. A line indented by two spaces carries on the fact above it.</dd>
-      <dt>A blank line</dt>
-      <dd>Ends the facts. Below it, write in <a href="https://commonmark.org/help/" target="_blank" rel="noopener">markdown</a>; <code>[date: …]</code> and <code>[place: …]</code> mark dates and places in the story.</dd>
-    </dl>
-  </details>
 </form>
 ''';
 
@@ -2138,7 +2121,7 @@ img.thumb { display: block; max-width: 240px; max-height: 240px; border-radius: 
 .faq p code { font-size: 0.85em; }
 .faq pre { margin: 0; padding: 8px 12px; overflow-x: auto; font-size: 13px; background: var(--tint);
   border: 1px solid var(--line); border-radius: 6px; }
-.format .guide-link { font: 13px var(--ui); margin-right: 12px; white-space: nowrap; }
+.format .guide-link { font: 13px var(--ui); margin-right: 12px; white-space: nowrap; padding: 3px 8px; }
 img.thumb.large { max-width: min(480px, 100%); max-height: 480px; }
 .people-picker { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px;
   border: 1px solid var(--line); border-radius: 6px; background: var(--surface); position: relative; }
@@ -2250,11 +2233,7 @@ main > article.editing-on > .infobox { display: none; }
 .add-person fieldset label { display: block; margin: 6px 0 0; color: var(--text); font-size: 15px; }
 .add-person fieldset input { width: auto; margin-right: 6px; }
 button.danger { background: #b3261e; border-color: #8c1d18; color: #fff; }
-.legend { margin-top: 12px; font: 14px/1.5 var(--ui); color: var(--muted); }
-.legend summary { cursor: pointer; }
-.legend dt { margin-top: 8px; color: var(--text); }
-.legend dd { margin: 2px 0 0 0; }
-.legend code, label code { font-size: 12px; }
+label code { font-size: 12px; }
 .editor .cm-editor { min-height: 60vh; background: var(--surface); color: var(--text);
   font: 15px/1.6 ui-monospace, Menlo, monospace; border-radius: 0 0 6px 6px; }
 .editor .cm-editor .cm-content { min-height: 60vh; caret-color: var(--text); padding: 12px 4px; }
