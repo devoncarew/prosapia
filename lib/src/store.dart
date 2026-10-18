@@ -80,6 +80,16 @@ abstract class TreeStore {
     required String summary,
   }) => throw UnsupportedError('This store is read-only.');
 
+  /// Deletes photos, or with [restore] brings deleted ones back, as one
+  /// entry in the log. A deleted photo's file is kept, so the change can be
+  /// undone.
+  Future<void> deleteMedia(
+    List<Media> files, {
+    required Member author,
+    required String summary,
+    bool restore = false,
+  }) => throw UnsupportedError('This store is read-only.');
+
   /// Every saved version of a person's page, newest first.
   Future<List<Revision>> history(String personId) async => const [];
 
@@ -232,6 +242,7 @@ class Change {
     required this.at,
     required this.pages,
     this.media = const [],
+    this.mediaDeleted = false,
     this.summaryBy,
   });
 
@@ -246,6 +257,9 @@ class Change {
 
   /// The photos and other files added or changed, by key.
   final List<String> media;
+
+  /// Whether the change deleted the photos in [media].
+  final bool mediaDeleted;
 
   /// The model that wrote [summary], if one did.
   final String? summaryBy;

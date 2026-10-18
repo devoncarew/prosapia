@@ -116,9 +116,38 @@ class FirestoreStore extends TreeStore {
     }
     each(results[1], (data) {
       final media = Media.fromMap(data);
-      tree.media[media.key] = media;
+      (data['deleted'] == true ? tree.deletedMedia : tree.media)[media.key] =
+          media;
     });
     return tree;
+  }
+
+  @override
+  Future<void> deleteMedia(
+    List<Media> files, {
+    required Member author,
+    required String summary,
+    bool restore = false,
+  }) async {
+    final batch = _db.batch();
+    for (final m in files) {
+      batch.set(_tree.collection('media').doc(m.key), {
+        'deleted': !restore,
+      }, options: const SetOptions.merge());
+    }
+    batch.set(_tree.collection('changes').doc(), {
+      'pages': <String, int>{},
+      'media': [for (final m in files) m.key],
+      if (!restore) 'mediaDeleted': true,
+      'author': author.email,
+      'authorName': ?author.name,
+      'summary': summary,
+      'at': FieldValue.serverTimestamp,
+    });
+    batch.set(_tree, {
+      'version': const FieldValue.increment(1),
+    }, options: const SetOptions.merge());
+    await batch.commit();
   }
 
   @override
@@ -340,6 +369,7 @@ class FirestoreStore extends TreeStore {
     at: _time(data['at']),
     pages: ((data['pages'] as Map?) ?? const {}).cast<String, int>(),
     media: ((data['media'] as List?) ?? const []).cast<String>(),
+    mediaDeleted: data['mediaDeleted'] == true,
     summaryBy: data['summaryBy'] as String?,
   );
 
