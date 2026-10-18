@@ -135,6 +135,7 @@ $body
       '<li><a href="/family">The family tree</a>: anyone with their parents, grandparents, children and grandchildren.</li>'
       '<li><a href="/media">Photos and documents</a>.</li>'
       '<li><a href="/research">Research</a>: where to look for more about the family.</li>'
+      '${_canEdit ? '<li><a href="/help/writing">How to write a page</a>: an example, and answers to common questions.</li>' : ''}'
       '${_canEdit ? '<li>Anything can be corrected: choose Edit on a page. Every change is kept, so nothing can be lost.</li>' : ''}'
       '</ul>',
     );
@@ -444,6 +445,73 @@ $body
       '$chart<script type="module" src="/assets/family.js"></script>',
       wide: true,
     );
+  }
+
+  // ----------------------------------------------------------------- guide
+
+  /// An example page, for the writing guide. Its people are invented, and
+  /// have no pages, so their names show as written.
+  static const examplePage = '''Name: Margaret Ellen Hughes
+Nickname: Peggy
+Also known as: Margaret Ellen Price
+Sex: female
+Born: 14 March 1887, "Scranton, PA"
+Died: about 1961, "Hartford, CT"
+Parents: Thomas Hughes, Ann Price
+Siblings: Owen Hughes
+Married: Walter Price, 12 June 1910, place: "St. Luke's Church, Scranton, PA",
+  source: Pennsylvania marriage records
+Children: Ruth Price, John Price (adopted)
+Occupation: teacher, 1905 to 1910, place: "Scranton, PA"
+Residence: 1930, place: "Hartford, CT", source: 1930 census
+Note: Her mother's family came from Wales.
+
+Margaret grew up in Scranton, where her father kept a hardware store. She trained as a
+teacher and taught at the Adams Avenue school until she married Walter Price in 1910.
+
+## 1923: The move to Hartford
+
+In [date: spring 1923] the family moved to [place: Hartford, CT], where Walter had found
+work with an insurance company. *Peggy* never liked the winters there.
+''';
+
+  /// How to write a page: one whole example, then answers to the questions
+  /// people ask while editing. Opened from the editor in its own tab.
+  String writingGuide() {
+    final example = Person.fromSource('p-example', 'example', examplePage);
+    String q(String id, String question, String answer, [String? text]) =>
+        '<section class="faq" id="$id"><h3><a href="#$id">$question</a></h3>'
+        '<p>$answer</p>${text == null ? '' : '<pre><code>${esc(text)}</code></pre>'}</section>';
+    return page('How to write a page', '''
+<h1>How to write a page</h1>
+<p class="lead">A page is plain text: facts first, one per line, then a blank line and the story. Here is a whole page, as you would type it and as it looks. Below are answers to common questions.</p>
+<h2>An example</h2>
+<div class="guide-example">
+  <div><h3>What you type</h3><pre class="source"><code>${esc(examplePage)}</code></pre></div>
+  <div><h3>How it looks</h3><div class="preview">${personArticle(example, preview: true)}</div></div>
+</div>
+<h2>Questions</h2>
+${q('child', 'How do I add a child?', 'Add a <code>Children:</code> line, or add to the one there, with names separated by commas. Type <code>@</code> and part of a name to link someone who already has a page. A plain name is someone without a page yet; on the page it gets a button to give them one, which fills in what is known, such as both parents.', 'Children: @hughes-margaret-ellen-x2k9ab, Ruth Price')}
+${q('parents', 'How do I add parents, or brothers and sisters?', 'The same way, with <code>Parents:</code> or <code>Siblings:</code>. A relationship only needs writing on one of the two pages; both show it.', 'Parents: Thomas Hughes, Ann Price\nSiblings: Owen Hughes')}
+${q('marriage', 'How do I record a marriage, or a partner?', 'A <code>Married:</code> line gives the partner, the date and the place. For a couple with no marriage recorded, use <code>Partner:</code>. <code>Divorced:</code>, <code>Separated:</code> and <code>Engaged:</code> work like <code>Married:</code>.', 'Married: Walter Price, 12 June 1910, "Scranton, PA"\nPartner: Walter Price')}
+${q('dates', 'What if I only roughly know when?', 'Write it as you would say it. These all work: <code>about 1925</code>, <code>spring 1925</code>, <code>June 1949</code>, <code>the 1880s</code>, <code>before 1900</code>, <code>between 1880 and 1885</code>, <code>14 March 1887</code>, <code>March 14, 1887</code>. A date the page cannot read is listed at the top of the page, so you can fix it.')}
+${q('places', 'How do I write a place with a comma in it?', 'Put it in quotes, as in <code>"Hartford, CT"</code>. If you forget, Format and Publish add them when it is clear what you meant.', 'Born: 14 March 1887, "Scranton, PA"')}
+${q('labels', 'How do I say which part is which?', 'Most of the time Prosapia can tell: a date reads as a date, and for <code>Born:</code>, <code>Died:</code> and the like the rest is the place. When it might be unclear, say what a part is with <code>date:</code>, <code>place:</code> or <code>source:</code>; then the parts can come in any order.', 'Occupation: teacher, 1905 to 1910, place: "Scranton, PA"')}
+${q('source', 'How do I say where a fact came from?', 'Add a <code>source:</code> part: a record, a book, a letter, or who told you. It shows on the page as a small “source” mark.', 'Residence: 1930, place: "Hartford, CT", source: 1930 census')}
+${q('names', 'How do I add a nickname, a maiden name or another spelling?', '<code>Nickname:</code> is what the family called them; it shows in quotes in their name. <code>Also known as:</code> is any other full name: a maiden or married name, a changed name, another spelling.', 'Nickname: Peggy\nAlso known as: Margaret Ellen Price')}
+${q('adopted', 'What about adopted, step or foster relations?', 'Put the kind in parentheses after the name.', 'Children: John Price (adopted)\nParents: @hughes-thomas-3f8d1a (step)')}
+${q('facts', 'Where do jobs, schools, military service or homes go?', 'Any label works, one fact per line: <code>Occupation:</code>, <code>Education:</code>, <code>Military:</code>, <code>Residence:</code>, <code>Religion:</code>, or whatever fits. Repeat a label for more than one. Each shows in the timeline when it has a date.', 'Occupation: teacher, 1905 to 1910\nEducation: "Scranton High School", 1904')}
+${q('note', 'Where does something go that is not a fact?', 'A <code>Note:</code> line holds a short remark as written. Anything longer belongs in the story, below the facts.', "Note: Her mother's family came from Wales.")}
+${q('story', 'How do I write the story?', 'Below the facts, after a blank line, write as you would anywhere: paragraphs separated by blank lines. Start a line with <code>##</code> for a section heading. <code>*Italics*</code>, <code>**bold**</code> and lists work too; the buttons above the editor add them.', '## 1923: The move to Hartford')}
+${q('link', 'How do I mention a person in the story?', 'Type <code>@</code> and part of their name, and choose them. The page shows their name as a link.', 'She married @price-walter-7k2m9x in 1910.')}
+${q('marks', 'What are [date: …] and [place: …]?', 'Marks for a date or a place in the story, so Prosapia reads them reliably. They show as ordinary text. The Date and Place buttons add them.', 'In [date: spring 1923] the family moved to [place: Hartford, CT].')}
+${q('long', 'A fact is too long for one line.', 'Carry it on to the next line, indented by two spaces. Format does this for you.', 'Married: Walter Price, 12 June 1910, place: "St. Luke\'s Church, Scranton, PA",\n  source: Pennsylvania marriage records')}
+${q('format', 'What does the Format button do?', 'It tidies the text the way Publish will save it: single spaces, quotes and labels where they make the meaning clear, and long lines wrapped. It never changes what the page says; a line it cannot be sure of is left as you wrote it.')}
+${q('photos', 'How do I add photos?', 'Not in the text: choose <strong>Add photos</strong> on the person\'s page, or go to Photos. A photo names the people in it, and shows on each of their pages. To choose the one at the top of a page, open the photo and choose “Use as … main photo”.')}
+${q('mistake', 'What if I make a mistake?', 'Nothing is lost. Every version of a page is kept: choose ⋯ then <strong>View changes</strong> on the page to see them, and restore any one. A deleted page can be brought back from its address.')}
+${q('problems', 'What is the list of problems at the top of a page?', 'Lines Prosapia could not read, such as a date it does not understand or a fact without a label. The page still saves; the list says what to fix.')}
+${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Claude: Draft…</strong> above the editor writes or revises the story from the facts, or works in something new you give it. You see what it changed before anything is saved.')}
+''');
   }
 
   static String surnameOf(Person p) {
@@ -1017,7 +1085,7 @@ $body
     final sb = StringBuffer('<article class="media">');
     if (_canEdit && !front.isBack) {
       sb.write(
-        '<p class="actions"><a href="/media/${front.key}/edit">Edit details</a></p>',
+        '<p class="actions"><a href="/media/${front.key}/edit">Edit details</a> · <a href="/media/${front.key}/delete">Delete</a></p>',
       );
     }
     sb.write('<h1>${esc(front.title ?? 'Untitled')}</h1>');
@@ -1113,16 +1181,10 @@ $body
   String addPhotos(Person? person, {required bool help}) =>
       page(person == null ? 'Add photos' : 'Add photos of ${person.name}', '''
 <h1>Add photos${person == null ? '' : ' of ${esc(person.name)}'}</h1>
-<p class="lead">Choose one photo or several, or documents as PDFs. What you type here applies to all of them; you can change it for any one below.</p>
-<form class="memory add-photos" data-person="${person?.id ?? ''}" data-help="$help">
-  <label for="shared_date">When, if you know</label>
-  <input id="shared_date" name="date" maxlength="80" placeholder="about 1949">
-  <label for="shared_place">Where</label>
-  <input id="shared_place" name="place" maxlength="200" placeholder="Hartford, CT">
-  <label>Who is in them</label>
-  <div class="people-picker" data-name="people" data-initial="${esc(jsonEncode([
+<p class="lead">Choose one photo or several, or documents as PDFs. Then say what you know about each: a caption, when and where, and who is in it.</p>
+<form class="memory add-photos" data-person="${person?.id ?? ''}" data-help="$help" data-people="${esc(jsonEncode([
         if (person != null) {'id': person.id, 'name': person.name},
-      ]))}"></div>
+      ]))}">
   <label for="files">Photos and documents</label>
   <input id="files" type="file" multiple accept="image/jpeg,image/heic,image/png,image/tiff,application/pdf,.heic,.tif,.tiff,.pdf">
   <div class="photo-list"></div>
@@ -1142,7 +1204,7 @@ $body
 <h1>Edit: ${esc(m.title ?? 'Untitled')}</h1>
 <p class="lead">These details are written into the photo file itself, so a copy that leaves Prosapia still carries them.</p>
 <form class="memory edit-photo" method="post" action="/media/${m.key}/edit" data-help="$help">
-  ${m.isImage ? '<img class="thumb" src="/media/${m.key}/display?w=480" alt="">' : ''}
+  ${m.isImage || m.isDocument ? '<img class="thumb large" src="/media/${m.key}/display?w=960" alt="">' : ''}
   <label for="title">Caption</label>
   <input id="title" name="title" value="${esc(m.title ?? '')}" maxlength="200">
   <label for="date">When</label>
@@ -1152,7 +1214,7 @@ $body
   <label>${m.isDocument ? 'People it names' : 'Who is in it'}</label>
   <div class="people-picker" data-name="people" data-initial="${esc(jsonEncode(people))}"></div>
   <label for="transcription">${_writtenOn(m, back)}</label>
-  ${back != null && back.isImage ? '<img class="thumb" src="/media/${back.key}/display?w=480" alt="The back">' : ''}
+  ${back != null && back.isImage ? '<img class="thumb large" src="/media/${back.key}/display?w=960" alt="The back">' : ''}
   <textarea id="transcription" name="transcription" spellcheck="true"${m.isDocument ? ' class="tall"' : ''}>${esc(back?.transcription ?? m.transcription ?? '')}</textarea>
   ${help && (m.isImage || m.isDocument) ? '<div class="help tidy" data-key="${(back ?? m).key}"><button type="button" class="transcribe">Claude: Transcribe</button></div>' : ''}
   <label for="notes">Notes</label>
@@ -1242,6 +1304,7 @@ $body
       <button type="button" data-format="date" title="Mark a date">Date</button>
       <button type="button" data-format="place" title="Mark a place">Place</button>
       <span class="spacer"></span>
+      <a class="guide-link" href="/help/writing" target="_blank" rel="noopener" title="A whole example page, and answers to common questions. Opens in a new tab.">Format example and editing FAQ…</a>
       <button type="button" data-tidy="/people/${p.id}/format" title="Tidy the text as it will be saved: spacing, quotes and line lengths">Format</button>
     </div>
     <textarea id="source" name="source" spellcheck="true" required aria-label="Page text">${esc(source)}</textarea>
@@ -1256,6 +1319,7 @@ $body
   <p class="hint">Facts first, one per line, starting with <code>Name:</code>; then a blank line and the story.</p>
   <details class="legend">
     <summary>How to write a page</summary>
+    <p>See <a href="/help/writing" target="_blank" rel="noopener">a whole example page, and answers to common questions</a>.</p>
     <dl>
       <dt><code>Born: 6 January 1911, "Brooklyn, NY"</code></dt>
       <dd>A fact: a label, a colon, then its parts separated by commas. A part with a comma of its own goes in quotes; Prosapia adds them when it can tell. Dates can be written as you would say them: <code>about 1925</code>, <code>spring 1925</code>, <code>the 1880s</code>.</dd>
@@ -1404,7 +1468,6 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}''');
     return page('Delete ${p.name}', sb.toString());
   }
 
-  /// What is shown at a deleted page's address.
   /// What is shown at a deleted page's address. [undo] is the change that
   /// deleted it, when it can be undone whole: the page comes back, and so
   /// do the links to it on other pages.
@@ -1418,6 +1481,36 @@ ${!_canEdit
       : p.revision > 1
       ? '<form method="post" action="/people/${p.id}/restore"><input type="hidden" name="number" value="${p.revision - 1}"><button>Bring the page back</button></form>'
       : ''}''');
+
+  /// Asks before deleting a photo or document.
+  String deleteMedia(Media m) {
+    final what = m.isDocument ? 'document' : 'photo';
+    final main = [
+      for (final p in tree.people.values)
+        if (p.photo == m.key) p,
+    ];
+    return page('Delete ${m.title ?? 'a $what'}', '''
+<h1>Delete “${esc(m.title ?? 'Untitled')}”?</h1>
+<p class="lead">The $what leaves the tree${tree.media.containsKey('${m.id}-back') ? ', with its back' : ''}. Its file is kept, and the deletion can be undone from Recent changes or from the $what's address.</p>
+${m.isImage || m.isDocument ? '<img class="thumb large" src="/media/${m.key}/display?w=960" alt="">' : ''}
+${main.isEmpty ? '' : '<p>It is the main photo on ${main.map((p) => personLink(p.id)).join(', ')}. ${main.length == 1 ? 'That page' : 'Those pages'} will show no photo until another is chosen.</p>'}
+<form class="memory" method="post" action="/media/${m.key}/delete">
+  <div class="save"><button class="danger">Delete the $what</button> <a href="/media/${m.key}">Cancel</a></div>
+</form>''');
+  }
+
+  /// What is shown at a deleted photo's address. [undo] is the change that
+  /// deleted it, when it can be undone.
+  String deletedMedia(Media m, {Change? undo}) {
+    final what = m.isDocument ? 'document' : 'photo';
+    return page(
+      m.title ?? 'Untitled',
+      '''
+<h1>${esc(m.title ?? 'Untitled')}</h1>
+<p class="lead">This $what was deleted.</p>
+${_canEdit && undo != null && undoable(undo) ? '<form method="post" action="/changes/${undo.id}/undo"><button>Bring the $what back</button></form>' : ''}''',
+    );
+  }
 
   /// Explains a save that was refused because the page had moved on.
   String conflictNotice(Revision theirs, String before) =>
@@ -1605,8 +1698,8 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
     final photos = c.media.where((key) => !key.endsWith('-back')).toList();
     final media = [
       for (final key in photos.take(5))
-        '<a href="/media/$key">${esc(tree.media[key]?.title ?? 'Untitled')}</a> '
-            '<span class="years">(${tree.media[key]?.isImage ?? true ? 'photo' : 'document'})</span>',
+        '<a href="/media/$key">${esc((tree.media[key] ?? tree.deletedMedia[key])?.title ?? 'Untitled')}</a> '
+            '<span class="years">(${(tree.media[key] ?? tree.deletedMedia[key])?.isImage ?? true ? 'photo' : 'document'})</span>',
       if (photos.length > 5) '${photos.length - 5} more',
     ].join(', ');
     final only = c.pages.length == 1 && c.media.isEmpty
@@ -1625,7 +1718,9 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
   /// offered.
   bool undoable(Change c) =>
       _canEdit &&
-      c.media.isEmpty &&
+      (c.mediaDeleted
+          ? c.media.every(tree.deletedMedia.containsKey)
+          : c.media.isEmpty) &&
       c.pages.length <= 10 &&
       c.pages.entries.every(
         (e) => (tree.people[e.key] ?? tree.deleted[e.key])?.revision == e.value,
@@ -1983,6 +2078,19 @@ label.check input { width: auto; }
 .shown button { font-size: 13px; }
 img.thumb { display: block; max-width: 240px; max-height: 240px; border-radius: 4px; margin-top: 10px;
   border: 1px solid var(--line); }
+.guide-example { display: grid; gap: 24px; }
+.guide-example h3 { margin: 0 0 8px; font-size: 1em; color: var(--muted); }
+.guide-example pre.source { margin: 0; padding: 12px; overflow-x: auto; font-size: 13px; line-height: 1.5;
+  background: var(--tint); border: 1px solid var(--line); border-radius: 6px; }
+.guide-example .preview { padding: 12px 16px; border: 1px solid var(--line); border-radius: 6px; font-size: 16px; }
+.faq h3 { font-size: 1em; margin: 1.4em 0 0.3em; }
+.faq h3 a { color: var(--text); }
+.faq p { margin: 0 0 0.5em; }
+.faq p code { font-size: 0.85em; }
+.faq pre { margin: 0; padding: 8px 12px; overflow-x: auto; font-size: 13px; background: var(--tint);
+  border: 1px solid var(--line); border-radius: 6px; }
+.format .guide-link { font: 13px var(--ui); margin-right: 12px; white-space: nowrap; }
+img.thumb.large { max-width: min(480px, 100%); max-height: 480px; }
 .people-picker { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px;
   border: 1px solid var(--line); border-radius: 6px; background: var(--surface); position: relative; }
 .people-picker .chip { display: inline-flex; gap: 4px; align-items: center; padding: 2px 4px 2px 10px;

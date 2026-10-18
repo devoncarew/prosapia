@@ -282,11 +282,11 @@ class PhotoCard {
   readonly title = element('input', { maxLength: 200 });
   readonly date = element('input', {
     maxLength: 80,
-    placeholder: 'As above',
+    placeholder: 'about 1949',
   });
   readonly place = element('input', {
     maxLength: 200,
-    placeholder: 'As above',
+    placeholder: 'Hartford, CT',
   });
   readonly transcription = element('textarea', { spellcheck: true });
   readonly notes = element('textarea', { spellcheck: true });
@@ -306,8 +306,10 @@ class PhotoCard {
       textContent: 'Remove',
     });
     remove.addEventListener('click', () => page.remove(this));
+    // Each photo starts with the person whose page it was added from.
     const pickerEl = element('div', { className: 'people-picker' });
-    const peopleLabel = element('label', {}, 'Also in this photo');
+    pickerEl.dataset.initial = page.people;
+    const peopleLabel = element('label', {}, 'Who is in it');
     this.people = new PeoplePicker(pickerEl);
 
     const backArea = element('div', { hidden: true });
@@ -452,14 +454,16 @@ class AddPhotos {
   private readonly list: HTMLElement;
   private readonly submit: HTMLButtonElement;
   private readonly message: HTMLElement;
-  private readonly shared: PeoplePicker;
+
+  /** Who each new photo starts with, as JSON for a people picker. */
+  readonly people: string;
 
   constructor(private readonly form: HTMLFormElement) {
     this.help = form.dataset.help === 'true';
     this.list = form.querySelector('.photo-list')!;
     this.submit = form.querySelector('button.primary')!;
     this.message = form.querySelector('.message')!;
-    this.shared = new PeoplePicker(form.querySelector('.people-picker')!);
+    this.people = form.dataset.people ?? '[]';
     const files = form.querySelector<HTMLInputElement>('#files')!;
     files.addEventListener('change', () => {
       for (const file of files.files ?? []) {
@@ -494,10 +498,6 @@ class AddPhotos {
   }
 
   private async add(): Promise<void> {
-    const value = (id: string) =>
-      this.form.querySelector<HTMLInputElement>(`#${id}`)!.value.trim();
-    const date = value('shared_date');
-    const place = value('shared_place');
     this.submit.disabled = true;
     this.message.hidden = true;
     const reply = await post(
@@ -508,11 +508,11 @@ class AddPhotos {
           front: c.front,
           back: c.back,
           title: c.title.value,
-          date: c.date.value.trim() || date,
-          place: c.place.value.trim() || place,
+          date: c.date.value.trim(),
+          place: c.place.value.trim(),
           transcription: c.transcription.value,
           notes: c.notes.value,
-          people: [...new Set([...this.shared.ids, ...c.people.ids])],
+          people: c.people.ids,
         })),
       }),
     );

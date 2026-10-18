@@ -177,6 +177,7 @@ Handler siteHandler(
   );
   router.get('/people', (Request r) => html(render(r).people()));
   router.get('/research', (Request r) => html(render(r).research()));
+  router.get('/help/writing', (Request r) => html(render(r).writingGuide()));
   // The welcome page was folded into the first page.
   router.get('/welcome', (Request r) => Response.seeOther(Uri.parse('/')));
   router.get(
@@ -1053,6 +1054,24 @@ Handler siteHandler(
     Response refuse(String why) =>
         html(render(r).message('Not undone', why), status: 409);
 
+    // Deleted photos come back as they were.
+    if (change.mediaDeleted) {
+      final files = [
+        for (final key in change.media) site.tree.deletedMedia[key],
+      ];
+      if (files.contains(null)) {
+        return refuse('The photo has already been brought back.');
+      }
+      await site.store.deleteMedia(
+        files.nonNulls.toList(),
+        author: member,
+        summary: 'Undo “${change.summary}”',
+        restore: true,
+      );
+      await site.reload();
+      return seeOther('/media/${change.media.first}');
+    }
+
     // Each page goes back to the version before the change, provided no
     // one has changed it since.
     final writes = <PageWrite>[];
@@ -1399,11 +1418,44 @@ Handler siteHandler(
       ),
     ),
   );
-  router.get('/media/<key>', (Request r, String key) {
+  router.get('/media/<key>', (Request r, String key) async {
     final media = site.tree.media[key];
-    return media == null
-        ? missing(r, 'No file has the id $key.')
-        : html(render(r).media(media));
+    if (media != null) return html(render(r).media(media));
+    final deleted = site.tree.deletedMedia[key];
+    if (deleted == null) return missing(r, 'No file has the id $key.');
+    // The change that deleted it, to undo.
+    final undo = (await site.store.recentChanges(
+      limit: 200,
+    )).where((c) => c.mediaDeleted && c.media.contains(key)).firstOrNull;
+    return html(render(r).deletedMedia(deleted, undo: undo));
+  });
+
+  router.get('/media/<key>/delete', (Request r, String key) {
+    if (editor(r) == null) return notAllowed(r);
+    final media = site.tree.media[key];
+    if (media == null || media.isBack) {
+      return missing(r, 'No photo has the id $key.');
+    }
+    return html(render(r).deleteMedia(media));
+  });
+
+  router.post('/media/<key>/delete', (Request r, String key) async {
+    final member = editor(r);
+    if (member == null) return notAllowed(r);
+    final media = site.tree.media[key];
+    if (media == null || media.isBack) {
+      return missing(r, 'No photo has the id $key.');
+    }
+    final back = site.tree.media['${media.id}-back'];
+    await site.store.deleteMedia(
+      [media, ?back],
+      author: member,
+      summary:
+          'Delete the ${media.isDocument ? 'document' : 'photo'} '
+          '“${media.title ?? 'Untitled'}”',
+    );
+    await site.reload();
+    return seeOther('/media/$key');
   });
   router.get('/media/<key>/display', (Request r, String key) async {
     final media = site.tree.media[key];

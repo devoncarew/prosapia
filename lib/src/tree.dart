@@ -14,6 +14,10 @@ class Tree {
   /// of the tree, but their history is kept and they can be brought back.
   final deleted = <String, Person>{};
 
+  /// Photos and documents that were deleted. Their files are kept, so they
+  /// can be brought back.
+  final deletedMedia = <String, Media>{};
+
   /// Records that could not be read, with the reason.
   final problems = <String>[];
 }
