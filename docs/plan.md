@@ -131,6 +131,16 @@ Uses not yet scheduled; the rules every use follows are in
 - Audio recordings.
 - Suggesting where faces are in a photo.
 - Check that embedded text survives email, photo services and messaging apps.
+- Add photos from Google Photos, beside choosing files. Google's Photos Picker API lets
+  a person choose photos in Google Photos: Prosapia creates a picking session, the
+  person picks in a Google Photos tab, and the server lists the chosen items and
+  downloads the originals into staging, so the 32 MB upload limit does not apply and
+  shared albums work. It needs the `photospicker.mediaitems.readonly` scope, asked for
+  on top of sign-in, which sees only what the person picks. Before building, add the
+  scope to the OAuth consent screen and see how the Cloud Console classes it. If it is
+  sensitive, Google must verify the app before the public can use it; until then an app
+  in Testing status works for up to 100 listed test users, whose grants expire after
+  about a week. Android's file chooser already offers Google Photos.
 
 ### Import and export
 
