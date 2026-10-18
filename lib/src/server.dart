@@ -1272,22 +1272,28 @@ Handler siteHandler(
         if (back != null) (back, true),
       ]) {
         final archival = await uploads.archival(file);
-        writes.add(
-          await prepare(
-            archival,
-            Media(
-              id,
-              isBack: isBack,
-              extension: switch (p.extension(archival.path).substring(1)) {
-                'heic' => 'heic',
-                'pdf' => 'pdf',
-                _ => 'jpg',
-              },
-              location: '',
+        final extension = switch (p.extension(archival.path).substring(1)) {
+          'heic' => 'heic',
+          'pdf' => 'pdf',
+          _ => 'jpg',
+        };
+        try {
+          writes.add(
+            await prepare(
+              archival,
+              Media(id, isBack: isBack, extension: extension, location: ''),
+              details,
             ),
-            details,
-          ),
-        );
+          );
+        } on StateError catch (e) {
+          // exiftool refuses a damaged file, most often a PDF from a scanner.
+          stderr.writeln('could not prepare ${archival.path}: $e');
+          return jsonError(
+            '${details.title ?? 'A ${extension == 'pdf' ? 'document' : 'photo'}'} '
+            'could not be added: the file seems to be damaged. Opening it and '
+            'saving it again, or printing it to a new PDF, usually mends it.',
+          );
+        }
       }
     }
     final first = writes.first.media;
