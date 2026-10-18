@@ -834,9 +834,16 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
 
   String _infobox(Person p, {bool actions = false}) {
     final rows = <(String, String)>[];
-    void row(String label, Iterable<String> items) {
+    // An editor can add a relative from a relationship's row, shown even
+    // while it is empty.
+    void row(String label, Iterable<String> items, {String? add}) {
       final html = items.where((x) => x.isNotEmpty).join('<br>');
-      if (html.isNotEmpty) rows.add((label, html));
+      final link = add == null || !actions || !_canEdit
+          ? ''
+          : '<a class="add-relative" href="/people/${p.id}/relative?kind=${add.split(' ').first}">+ ${add.split(' ').skip(1).join(' ')}</a>';
+      if (html.isNotEmpty || link.isNotEmpty) {
+        rows.add((label, [html, link].where((x) => x.isNotEmpty).join('<br>')));
+      }
     }
 
     String event(Event? e) => e == null
@@ -879,11 +886,16 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     row('Christened', [event(p.christened)]);
     row('Died', [event(p.died)]);
     row('Buried', [event(p.buried)]);
-    row('Parents', [
+    final parents = [
       for (final id in index.parentsOf(p.id)) qualified(id, p.parents),
       ...named(p.parents, 'parents'),
-    ]);
-    row('Partners', [
+    ];
+    row(
+      'Parents',
+      parents,
+      add: parents.length < 2 ? 'parents add a parent' : null,
+    );
+    final partners = [
       for (final id in index.partnersOf(p.id))
         personLink(id) +
             switch (marriageOf(p.id, id)?.event.date?.year) {
@@ -898,12 +910,17 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
             from: actions ? p.id : null,
             kind: c.kind.toLowerCase().replaceAll(RegExp(r'\s+'), ' '),
           ),
-    ]);
+    ];
+    row(
+      'Partners',
+      partners,
+      add: partners.isEmpty ? 'partner add a partner' : null,
+    );
     row('Children', [
       for (final id in index.childrenOf(p.id))
         qualified(id, const [], years: true),
       ...named(p.children, 'children'),
-    ]);
+    ], add: 'children add a child');
     // Children named on a parent's page without a page of their own are
     // siblings too.
     final siblingNames = <String>{};
@@ -1365,23 +1382,6 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     <a class="button discard" href="${pathOf(p)}">Discard</a>
     <button class="primary" title="Publish (⌘ Enter)">Publish <kbd>⌘ ⏎</kbd></button>
   </div>
-  <p class="hint">Facts first, one per line, starting with <code>Name:</code>; then a blank line and the story.</p>
-  <details class="legend">
-    <summary>How to write a page</summary>
-    <p>See <a href="/help/writing" target="_blank" rel="noopener">a whole example page, and answers to common questions</a>.</p>
-    <dl>
-      <dt><code>Born: 6 January 1911, "Brooklyn, NY"</code></dt>
-      <dd>A fact: a label, a colon, then its parts separated by commas. A part with a comma of its own goes in quotes; Prosapia adds them when it can tell. Dates can be written as you would say them: <code>about 1925</code>, <code>spring 1925</code>, <code>the 1880s</code>.</dd>
-      <dt><code>Occupation: teacher, 1908 to 1920, place: "Scranton, PA"</code></dt>
-      <dd>A part can say what it is: <code>date:</code>, <code>place:</code> or <code>source:</code>. Otherwise a date is known by its form, and other text is the fact's place or description.</dd>
-      <dt><code>Parents: @</code> then a name</dt>
-      <dd>Type <code>@</code> and part of a name to link a person already in the tree. A plain name means someone without a page.</dd>
-      <dt><code>Married: @…, 1945, "Hartford, CT",</code><br><code>&nbsp;&nbsp;source: "Connecticut marriage records"</code></dt>
-      <dd>Relationships: <code>Parents</code>, <code>Children</code>, <code>Partner</code>, <code>Siblings</code>, <code>Married</code>. A line indented by two spaces carries on the fact above it.</dd>
-      <dt>A blank line</dt>
-      <dd>Ends the facts. Below it, write in <a href="https://commonmark.org/help/" target="_blank" rel="noopener">markdown</a>; <code>[date: …]</code> and <code>[place: …]</code> mark dates and places in the story.</dd>
-    </dl>
-  </details>
 </form>
 ''';
 
@@ -1480,6 +1480,114 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}''');
   <div class="save"><button class="primary">Create the page</button> <a href="/people/${from.id}">Cancel</a></div>
 </form>''');
     return page('A page for $name', sb.toString());
+  }
+
+  /// The form for adding a child, partner or parent to [from]'s page, with
+  /// what was typed in [values]. [similar] are people already in the tree
+  /// whose names are like the one typed, offered before a new page is made.
+  String addRelative(
+    Person from,
+    String kind, {
+    Map<String, String> values = const {},
+    List<Person> similar = const [],
+    Completion? completion,
+    String? error,
+  }) {
+    String v(String name) => esc(values[name] ?? '');
+    String checked(bool on) => on ? ' checked' : '';
+    final title = switch (kind) {
+      'children' => 'Add a child of ${from.name}',
+      'parents' => 'Add a parent of ${from.name}',
+      _ => 'Add a partner of ${from.name}',
+    };
+    final sb = StringBuffer('''
+<h1>${esc(title)}</h1>
+<p class="lead">Someone already in the tree, or someone new, who gets a page of their own. This is saved as ordinary lines on the pages, which you can change later by editing them.</p>
+${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
+<form class="memory add-person" method="post" action="/people/${from.id}/relative">
+  <input type="hidden" name="kind" value="$kind">
+  <input type="hidden" name="based_on" value="${from.revision}">''');
+    if (similar.isNotEmpty) {
+      sb.write(
+        '<h2>Already in the tree?</h2><p>These people have similar names. If one of them is ${v('name')}, choose them.</p><ul class="similar">',
+      );
+      // Someone already related this way is shown, so a duplicate is
+      // noticed, but cannot be added twice.
+      final already = switch (kind) {
+        'children' => index.childrenOf(from.id),
+        'parents' => index.parentsOf(from.id),
+        _ => index.partnersOf(from.id),
+      };
+      final role = switch (kind) {
+        'children' => 'child',
+        'parents' => 'parent',
+        _ => 'partner',
+      };
+      for (final p in similar) {
+        final detail = completion?.detail(p) ?? '';
+        sb.write(
+          '<li>${personLink(p.id)}${detail.isEmpty ? '' : ' <span class="years">${esc(detail)}</span>'} '
+          '${already.contains(p.id) ? '<span class="years">already listed as ${esc(from.name)}\'s $role</span>' : '<button name="target" value="${p.id}">This is them</button>'}</li>',
+        );
+      }
+      sb.write('</ul><h2>Or someone new</h2>');
+    }
+    sb.write(
+      '''
+  <label for="name">Name</label>
+  <input id="name" name="name" value="${v('name')}" required maxlength="120" autofocus>
+  <label for="born">Born, if you know: a date, then a place</label>
+  <input id="born" name="born" value="${v('born')}" maxlength="120" placeholder="about 1925, Hartford, CT">''',
+    );
+    switch (kind) {
+      case 'children':
+        final partners = index.partnersOf(from.id);
+        final chosen =
+            values['other'] ?? (partners.length == 1 ? partners.single : '');
+        sb.write('<fieldset><legend>The other parent</legend>');
+        for (final id in partners) {
+          sb.write(
+            '<label><input type="radio" name="other" value="$id"${checked(chosen == id)}> ${esc(tree.people[id]!.name)}</label>',
+          );
+        }
+        sb.write(
+          '<label><input type="radio" name="other" value=""${checked(chosen.isEmpty)}> Someone else, or not known</label></fieldset>',
+        );
+      case 'parents':
+        final parents = index.parentsOf(from.id);
+        if (parents.length == 1) {
+          final other = tree.people[parents.single]!;
+          final on = values.isEmpty || values['couple'] == other.id;
+          sb.write(
+            '<label><input type="checkbox" name="couple" value="${other.id}"${checked(on)}> A couple with ${esc(other.name)}</label>',
+          );
+        }
+      default:
+        final married = values['married'] != 'no';
+        sb.write(
+          '''
+  <fieldset><legend>Married?</legend>
+    <label><input type="radio" name="married" value="yes"${checked(married)}> Married</label>
+    <label><input type="radio" name="married" value="no"${checked(!married)}> Partners, not married</label>
+  </fieldset>
+  <label for="date">Married when, if you know</label>
+  <input id="date" name="date" value="${v('date')}" maxlength="80" placeholder="June 1945">
+  <label for="place">Where</label>
+  <input id="place" name="place" value="${v('place')}" maxlength="200" placeholder="Hartford, CT">
+  <label for="ended">Did it end?</label>
+  <select id="ended" name="ended">
+    <option value="">No, or not known</option>
+    <option value="divorced"${values['ended'] == 'divorced' ? ' selected' : ''}>Divorced</option>
+    <option value="separated"${values['ended'] == 'separated' ? ' selected' : ''}>Separated</option>
+  </select>
+  <label for="ended_date">When it ended, if you know</label>
+  <input id="ended_date" name="ended_date" value="${v('ended_date')}" maxlength="80" placeholder="1995">''',
+        );
+    }
+    sb.write('''
+  <div class="save">${similar.isEmpty ? '<button class="primary">Add</button>' : '<button class="primary" name="create" value="yes">Add as someone new</button>'} <a href="${pathOf(from)}">Cancel</a></div>
+</form>''');
+    return page(title, sb.toString());
   }
 
   /// [p]'s page as it is written: its facts and story as text.
@@ -2010,6 +2118,7 @@ h2 { font-size: 1.15em; font-weight: 600; margin: 1.8em 0 0.5em; padding-bottom:
 .infobox th { text-align: left; vertical-align: top; padding: 4px 10px 4px 0; color: var(--muted);
               font-weight: 500; white-space: nowrap; }
 .infobox td { padding: 4px 0; }
+.infobox .add-relative { font-size: 13px; }
 .prose { white-space: normal; }
 .prose p { margin: 0 0 1em; }
 .prose a { font-weight: 500; }
@@ -2138,7 +2247,7 @@ img.thumb { display: block; max-width: 240px; max-height: 240px; border-radius: 
 .faq p code { font-size: 0.85em; }
 .faq pre { margin: 0; padding: 8px 12px; overflow-x: auto; font-size: 13px; background: var(--tint);
   border: 1px solid var(--line); border-radius: 6px; }
-.format .guide-link { font: 13px var(--ui); margin-right: 12px; white-space: nowrap; }
+.format .guide-link { font: 13px var(--ui); margin-right: 12px; white-space: nowrap; padding: 3px 8px; }
 img.thumb.large { max-width: min(480px, 100%); max-height: 480px; }
 .people-picker { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px;
   border: 1px solid var(--line); border-radius: 6px; background: var(--surface); position: relative; }
@@ -2250,11 +2359,7 @@ main > article.editing-on > .infobox { display: none; }
 .add-person fieldset label { display: block; margin: 6px 0 0; color: var(--text); font-size: 15px; }
 .add-person fieldset input { width: auto; margin-right: 6px; }
 button.danger { background: #b3261e; border-color: #8c1d18; color: #fff; }
-.legend { margin-top: 12px; font: 14px/1.5 var(--ui); color: var(--muted); }
-.legend summary { cursor: pointer; }
-.legend dt { margin-top: 8px; color: var(--text); }
-.legend dd { margin: 2px 0 0 0; }
-.legend code, label code { font-size: 12px; }
+label code { font-size: 12px; }
 .editor .cm-editor { min-height: 60vh; background: var(--surface); color: var(--text);
   font: 15px/1.6 ui-monospace, Menlo, monospace; border-radius: 0 0 6px 6px; }
 .editor .cm-editor .cm-content { min-height: 60vh; caret-color: var(--text); padding: 12px 4px; }

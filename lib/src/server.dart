@@ -945,6 +945,178 @@ Handler siteHandler(
     }),
   );
 
+  // Adding a child, a partner or a parent from the facts box: a small form
+  // in place of editing the text. The relationship is written as ordinary
+  // fact lines, and a new person gets a page of their own.
+  const relativeKinds = {'children', 'partner', 'parents'};
+
+  router.get(
+    '/people/<id>/relative',
+    (Request r, String id) => editing(r, id, (from, member) async {
+      final kind = r.url.queryParameters['kind'] ?? '';
+      if (!relativeKinds.contains(kind)) return missing(r, 'No such action.');
+      return html(render(r).addRelative(from, kind));
+    }),
+  );
+
+  router.post(
+    '/people/<id>/relative',
+    (Request r, String id) => editing(r, id, (from, member) async {
+      final fields = await formAll(r);
+      String field(String name) => (fields[name]?.firstOrNull ?? '')
+          .trim()
+          .replaceAll(RegExp(r'\s+'), ' ');
+      final kind = field('kind');
+      if (!relativeKinds.contains(kind)) return missing(r, 'No such action.');
+      final values = {for (final k in fields.keys) k: field(k)};
+      final name = field('name');
+      final target = site.tree.people[field('target')];
+      if (target == null && name.isEmpty) {
+        return html(
+          render(
+            r,
+          ).addRelative(from, kind, values: values, error: 'Type a name.'),
+          status: 422,
+        );
+      }
+      // Someone with a similar name may already have a page: ask first.
+      if (target == null && field('create') != 'yes') {
+        final similar = [
+          for (final p in site.completion.similar(name))
+            if (p.id != from.id) p,
+        ];
+        if (similar.isNotEmpty) {
+          return html(
+            render(r).addRelative(
+              from,
+              kind,
+              values: values,
+              similar: similar,
+              completion: site.completion,
+            ),
+          );
+        }
+      }
+
+      final sources = <String, String>{};
+      String current(Person p) => sources[p.id] ?? p.source;
+      void change(Person p, String? source) {
+        if (source != null) sources[p.id] = source;
+      }
+
+      // The person added: someone already in the tree, or a new page.
+      final Person? existing = target;
+      final newId = existing == null ? newPersonId(site.tree) : null;
+      final newDirectory = newId == null ? null : directoryFor(name, newId);
+      final reference = existing?.reference ?? '@$newDirectory';
+      final who = existing?.name ?? name;
+      final newParents = <String>[], newPartners = <String>[];
+      final String summary;
+
+      switch (kind) {
+        case 'children':
+          final other = site.tree.people[field('other')];
+          final parents = [from, ?other];
+          if (existing != null) {
+            final theirs = site.index.parentsOf(existing.id);
+            for (final parent in parents) {
+              if (!theirs.contains(parent.id)) {
+                change(
+                  existing,
+                  addRelation(current(existing), 'parents', parent.reference),
+                );
+              }
+            }
+          } else {
+            newParents.addAll(parents.map((p) => p.reference));
+          }
+          summary = "Add $who as ${from.name}'s child";
+        case 'parents':
+          change(from, addRelation(current(from), 'parents', reference));
+          // With one parent already, they may have been a couple.
+          final couple = site.tree.people[field('couple')];
+          if (couple != null) {
+            if (existing == null) {
+              newPartners.add(couple.reference);
+            } else if (!site.index
+                .partnersOf(existing.id)
+                .contains(couple.id)) {
+              change(
+                existing,
+                addRelation(current(existing), 'partner', couple.reference),
+              );
+            }
+          }
+          summary = "Add $who as ${from.name}'s parent";
+        default:
+          final date = field('date'), place = field('place');
+          final married = field('married') != 'no';
+          final parts = [
+            reference,
+            if (married && date.isNotEmpty) Segment.quote(date),
+            if (married && place.isNotEmpty) 'place: ${Segment.quote(place)}',
+          ];
+          change(
+            from,
+            married
+                ? addFact(current(from), 'Married', parts.join(', '))
+                : addRelation(current(from), 'partner', reference),
+          );
+          final ended = field('ended');
+          if (ended == 'divorced' || ended == 'separated') {
+            final when = field('ended_date');
+            change(
+              from,
+              addFact(
+                current(from),
+                ended == 'divorced' ? 'Divorced' : 'Separated',
+                [
+                  reference,
+                  if (when.isNotEmpty) Segment.quote(when),
+                ].join(', '),
+              ),
+            );
+          }
+          summary = "Add $who as ${from.name}'s partner";
+      }
+
+      final writes = [
+        if (newId != null)
+          PageWrite(
+            Person.fromSource(
+              newId,
+              newDirectory!,
+              formatPage(
+                newPage(
+                  name: name,
+                  born: field('born'),
+                  parents: newParents,
+                  partners: newPartners,
+                ),
+              ),
+            ),
+            basedOn: 0,
+          ),
+        for (final MapEntry(key: pid, value: source) in sources.entries)
+          PageWrite(
+            Person.fromSource(pid, site.tree.people[pid]!.directory, source),
+            basedOn: pid == from.id
+                ? int.tryParse(field('based_on')) ?? from.revision
+                : site.tree.people[pid]!.revision,
+          ),
+      ];
+      if (writes.isEmpty) return seeOther('/people/${from.id}');
+      final result = await site.store.saveChange(
+        writes,
+        author: member,
+        summary: summary,
+      );
+      await site.reload();
+      if (!result.saved) return changedMeanwhile(r, result);
+      return seeOther('/people/${from.id}');
+    }),
+  );
+
   router.post(
     '/people/<id>/link',
     (Request r, String id) => editing(r, id, (from, member) async {
