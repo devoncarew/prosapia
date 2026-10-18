@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
@@ -49,11 +50,19 @@ class Staging {
     return null;
   }
 
-  /// The file as it will be stored: a JPEG, HEIC or PDF as it is, and any
-  /// other scan encoded once as a JPEG.
+  /// The file as it will be stored: a JPEG, HEIC or PDF as it is, a PDF
+  /// that only wraps one scanned JPEG as that JPEG, and any other scan
+  /// encoded once as a JPEG.
   Future<File> archival(File staged) async {
     final ext = p.extension(staged.path).substring(1);
-    if (ext == 'jpg' || ext == 'heic' || ext == 'pdf') return staged;
+    if (ext == 'pdf') {
+      final scan = scanInPdf(staged.readAsBytesSync());
+      if (scan == null) return staged;
+      final out = File(p.setExtension(staged.path, '.archival.jpg'));
+      out.writeAsBytesSync(scan);
+      return out;
+    }
+    if (ext == 'jpg' || ext == 'heic') return staged;
     final out = p.setExtension(staged.path, '.archival.jpg');
     // Quality 92 keeps scans visually lossless at about a third of the
     // size of quality 100; to be checked against a full-resolution scan.
@@ -106,6 +115,56 @@ class Staging {
       }
     }
     return null;
+  }
+
+  /// The JPEG inside [pdf], unchanged, when the PDF is only a wrapper for
+  /// one scan: one page, one image, and no text. Such a PDF adds nothing,
+  /// photo tools read a JPEG better, and scanners often write their PDFs
+  /// with errors that stop details being written into them. Null for any
+  /// other PDF, or one this cannot be sure of.
+  static List<int>? scanInPdf(List<int> pdf) {
+    // Latin-1 keeps one character per byte, so offsets match the bytes.
+    final s = latin1.decode(pdf);
+    // Objects packed into compressed streams cannot be seen here.
+    if (s.contains('/ObjStm') || s.contains('/Font')) return null;
+    if (RegExp(r'/Type\s*/Page(?![A-Za-z])').allMatches(s).length != 1) {
+      return null;
+    }
+    final images = RegExp(r'/Subtype\s*/Image\b').allMatches(s).toList();
+    if (images.length != 1) return null;
+    final at = images.single.start;
+    final objects = RegExp(
+      r'\d+\s+\d+\s+obj\b',
+    ).allMatches(s).where((m) => m.start < at);
+    // Some scanners end lines with a carriage return alone.
+    final stream = RegExp(r'stream(\r\n|\r|\n)').allMatches(s, at).firstOrNull;
+    if (objects.isEmpty || stream == null) return null;
+    final begin = objects.last.start;
+    final dict = s.substring(begin, stream.start);
+    if (!RegExp(r'/Filter\s*(\[\s*)?/DCTDecode\s*\]?').hasMatch(dict) ||
+        dict.contains('FlateDecode')) {
+      return null;
+    }
+    final start = stream.end;
+    // A length given by reference, `/Length 10 0 R`, is found by the end.
+    final length = RegExp(r'/Length\s+(\d+)\s*(?=[/>])').firstMatch(dict);
+    var end = length != null
+        ? start + int.parse(length[1]!)
+        : s.indexOf('endstream', start);
+    if (end < 0 || end > pdf.length) return null;
+    // Without a length, the stream ends before the line break at its end.
+    while (length == null && end > start && '\r\n '.contains(s[end - 1])) {
+      end--;
+    }
+    final jpeg = pdf.sublist(start, end);
+    final whole =
+        jpeg.length > 4 &&
+        jpeg[0] == 0xff &&
+        jpeg[1] == 0xd8 &&
+        jpeg[2] == 0xff &&
+        jpeg[jpeg.length - 2] == 0xff &&
+        jpeg[jpeg.length - 1] == 0xd9;
+    return whole ? jpeg : null;
   }
 
   static Future<void> _vips(List<String> args) async {
