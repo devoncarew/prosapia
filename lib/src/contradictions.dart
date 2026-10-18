@@ -1,9 +1,10 @@
+import 'page_edits.dart' show sameName;
 import 'tree.dart';
 
 /// One page's claim about how two people are related: the [kind] of line on
 /// [page] that names [other]. See page_edits.dart for the kinds.
 class Statement {
-  Statement(this.page, this.kind, this.label, this.other);
+  Statement(this.page, this.kind, this.label, this.other, {this.qualifier});
 
   final String page;
   final String kind;
@@ -11,16 +12,34 @@ class Statement {
   /// The line's label, for showing: `Parents`, `Married`.
   final String label;
   final String other;
+
+  /// The kind of relationship, when stated: `adopted`, `step`.
+  final String? qualifier;
 }
 
 /// Two statements, on the same page or on two, that cannot both be true.
 /// Prosapia never chooses between them; it shows the contradiction, and
 /// resolving it means removing one of the [statements].
 class Contradiction {
-  Contradiction(this.message, this.statements);
+  Contradiction(this.message, this.statements, {this.minor = false, this.link});
 
   final String message;
   final List<Statement> statements;
+
+  /// A small disagreement, such as dates a year apart: worth showing on the
+  /// page, but not worth chasing in the list of items to correct.
+  final bool minor;
+
+  /// A plain [name] in a [kind] line on [page] that should be a link to
+  /// [target]'s page, when that resolves it.
+  final ({String page, String kind, String name, String target})? link;
+
+  /// The same contradiction seen from either page has the same key.
+  String get key => link != null
+      ? 'link ${link!.page} ${link!.kind} ${link!.name}'
+      : ([
+          for (final s in statements) '${s.page} ${s.kind} ${s.other}',
+        ]..sort()).join('; ');
 }
 
 /// Contradictions involving [p], which may be a draft not yet saved. Other
@@ -45,9 +64,17 @@ List<Contradiction> contradictionsOf(Tree tree, Person p) {
       for (final r in refs) {
         if (r.id == null) continue;
         if (own) {
-          add(r.id!, mine, Statement(page.id, kind, label, r.id!));
+          add(
+            r.id!,
+            mine,
+            Statement(page.id, kind, label, r.id!, qualifier: r.qualifier),
+          );
         } else if (r.id == p.id) {
-          add(page.id, theirs, Statement(page.id, kind, label, p.id));
+          add(
+            page.id,
+            theirs,
+            Statement(page.id, kind, label, p.id, qualifier: r.qualifier),
+          );
         }
       }
     }
@@ -89,6 +116,92 @@ List<Contradiction> contradictionsOf(Tree tree, Person p) {
     }
   });
 
+  // More than two parents, from this page and others together, unless
+  // the extra ones are marked as adoptive, step or the like.
+  final parents = <String, List<Statement>>{};
+  relations.forEach((other, list) {
+    for (final (relation, s) in list) {
+      if (relation == 'parent') parents.putIfAbsent(other, () => []).add(s);
+    }
+  });
+  final birthParents = {
+    for (final MapEntry(key: id, value: list) in parents.entries)
+      if (list.every((s) => s.qualifier == null)) id: list,
+  };
+  if (birthParents.length > 2) {
+    final names = [for (final id in birthParents.keys) nameOf(id)];
+    found.add(
+      Contradiction(
+        '${p.name} is listed with ${birthParents.length} parents: '
+        '${names.take(names.length - 1).join(', ')} and ${names.last}.',
+        [for (final list in birthParents.values) ...list],
+      ),
+    );
+  }
+
+  // A name written as plain text where that person's own page already
+  // states the relationship, so the two are not joined up.
+  for (final (refs, kind, label, theirs) in [
+    (p.parents, 'parents', 'Parents', 'child'),
+    (p.children, 'children', 'Children', 'parent'),
+    (p.partners, 'partner', 'Partner', 'partner'),
+    (p.siblings, 'siblings', 'Siblings', 'sibling'),
+  ]) {
+    for (final r in refs) {
+      final name = r.name;
+      if (r.id != null || name == null) continue;
+      for (final other in tree.people.values) {
+        if (other.id == p.id ||
+            ![other.name, ...other.alsoKnownAs].any((n) => sameName(n, name))) {
+          continue;
+        }
+        final states = (relations[other.id] ?? const []).any(
+          (e) => e.$2.page == other.id && e.$1 == _reverse(theirs),
+        );
+        if (!states) continue;
+        found.add(
+          Contradiction(
+            '“$name” in ${p.name}\'s $label line is not linked, but '
+            '${other.name}\'s page already lists ${p.name} as their $theirs.',
+            const [],
+            link: (page: p.id, kind: kind, name: name, target: other.id),
+          ),
+        );
+      }
+    }
+  }
+
+  // Brothers or sisters with known parents, but none in common.
+  Set<String> parentsOf(String id) {
+    final person = tree.people[id];
+    return {
+      for (final r in person?.parents ?? const <PersonRef>[]) ?r.id,
+      for (final other in tree.people.values)
+        if (other.children.any((r) => r.id == id)) other.id,
+    };
+  }
+
+  final mine = parents.keys.toSet();
+  relations.forEach((other, list) {
+    if (other == p.id || !list.any((e) => e.$1 == 'sibling')) return;
+    final theirs = parentsOf(other);
+    if (mine.isEmpty ||
+        theirs.isEmpty ||
+        mine.intersection(theirs).isNotEmpty) {
+      return;
+    }
+    found.add(
+      Contradiction(
+        '${p.name} and ${nameOf(other)} are listed as brothers or sisters, '
+        'but have no parent in common.',
+        [
+          for (final (relation, s) in list)
+            if (relation == 'sibling') s,
+        ],
+      ),
+    );
+  });
+
   // A marriage, or another event of two people, recorded on both pages
   // with different dates or places.
   for (final c in p.couples) {
@@ -110,6 +223,9 @@ List<Contradiction> contradictionsOf(Tree tree, Person p) {
           b.place != null &&
           a.place!.toLowerCase().trim() != b.place!.toLowerCase().trim();
       if (!dates && !places) continue;
+      // Places written differently, or dates a year or two apart, are the
+      // ordinary disagreements of the records.
+      final minor = !dates || (a.date!.year! - b.date!.year!).abs() <= 2;
       final what = dates
           ? '${a.date!.raw} on ${p.name}\'s page, ${b.date!.raw} on ${other.name}\'s'
           : '${a.place} on ${p.name}\'s page, ${b.place} on ${other.name}\'s';
@@ -120,12 +236,21 @@ List<Contradiction> contradictionsOf(Tree tree, Person p) {
             Statement(p.id, kind, c.kind, other.id),
             Statement(other.id, kind, d.kind, p.id),
           ],
+          minor: minor,
         ),
       );
     }
   }
   return found;
 }
+
+/// What a page that states [relation] makes the other person: a page with
+/// a Children line naming [p] makes them [p]'s parent.
+String _reverse(String relation) => switch (relation) {
+  'child' => 'parent',
+  'parent' => 'child',
+  _ => relation,
+};
 
 String _both(List<String> relations) => relations.length == 2
     ? 'both ${relations[0]} and ${relations[1]}'

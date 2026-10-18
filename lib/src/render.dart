@@ -136,6 +136,10 @@ $body
       '<li><a href="/media">Photos and documents</a>.</li>'
       '<li><a href="/research">Research</a>: where to look for more about the family.</li>'
       '${_canEdit ? '<li><a href="/help/writing">How to write a page</a>: an example, and answers to common questions.</li>' : ''}'
+      '${_canEdit ? switch (correctionCount()) {
+              0 => '',
+              final n => '<li><a href="/corrections">${n == 1 ? 'One item' : '$n items'} to correct</a>: pages that disagree, or facts that cannot be right.</li>',
+            } : ''}'
       '${_canEdit ? '<li>Anything can be corrected: choose Edit on a page. Every change is kept, so nothing can be lost.</li>' : ''}'
       '</ul>',
     );
@@ -738,7 +742,7 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
           return [
             if (born != null && pb != null && born - pb < 12)
               '${parent.name} was ${born - pb} when ${p.name} was born.',
-            if (born != null && pb != null && born - pb > 70)
+            if (born != null && pb != null && born - pb > 60)
               '${parent.name} was ${born - pb} when ${p.name} was born.',
             if (born != null && pd != null && born > pd + 1)
               'Born in $born, after ${parent.name} died in $pd.',
@@ -747,6 +751,20 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
       for (final c in p.couples)
         if (born != null && year(c.event) != null && year(c.event)! - born < 14)
           '${c.kind} in ${year(c.event)}, at about ${year(c.event)! - born}.',
+      // A marriage after one of the two had died.
+      for (final c in p.couples)
+        if (c.kind.toLowerCase() == 'married' && year(c.event) != null)
+          ...() {
+            final when = year(c.event)!;
+            final partner = tree.people[c.partner?.id];
+            final theirs = year(partner?.died);
+            return [
+              if (died != null && when > died)
+                'Married in $when, after dying in $died.',
+              if (partner != null && theirs != null && when > theirs)
+                'Married ${partner.name} in $when, after ${partner.name} died in $theirs.',
+            ];
+          }(),
     ];
   }
 
@@ -760,7 +778,18 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     );
     for (final c in found) {
       sb.write('<li>${esc(c.message)}');
-      if (actions) {
+      final link = c.link;
+      if (actions && link != null) {
+        final target = tree.people[link.target];
+        sb.write(
+          '<div class="resolve"><form method="post" action="/people/${link.page}/link">'
+          '<input type="hidden" name="kind" value="${esc(link.kind)}">'
+          '<input type="hidden" name="name" value="${esc(link.name)}">'
+          '<input type="hidden" name="target" value="${link.target}">'
+          '<input type="hidden" name="based_on" value="${(link.page == p.id ? p : tree.people[link.page])?.revision}">'
+          '<button>Link “${esc(link.name)}” to ${esc(target?.name)}\'s page</button></form></div>',
+        );
+      } else if (actions) {
         sb.write('<div class="resolve">');
         for (final s in c.statements) {
           final page = s.page == p.id ? p : tree.people[s.page];
@@ -1823,8 +1852,102 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
     return sb.toString();
   }
 
+  /// Everything in the tree that needs an editor's eye: pages that
+  /// disagree about who is related to whom, facts that cannot be right, and
+  /// lines that cannot be read. Small disagreements about dates are left
+  /// out; they are shown on the pages themselves.
+  ({
+    List<(Person, Contradiction)> disagree,
+    List<(Person, String)> impossible,
+    List<(Person, String)> unreadable,
+  })
+  correctionItems() {
+    final seen = <String>{};
+    final disagree = <(Person, Contradiction)>[];
+    final impossible = <(Person, String)>[];
+    final unreadable = <(Person, String)>[];
+    final people = tree.people.values.toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    for (final p in people) {
+      for (final c in contradictionsOf(tree, p)) {
+        if (!c.minor && seen.add(c.key)) disagree.add((p, c));
+      }
+      for (final check in checksOf(p)) {
+        impossible.add((p, check));
+      }
+      for (final issue in issuesOf(p)) {
+        unreadable.add((p, issue));
+      }
+    }
+    return (disagree: disagree, impossible: impossible, unreadable: unreadable);
+  }
+
+  /// How many items [correctionItems] finds.
+  int correctionCount() {
+    final items = correctionItems();
+    return items.disagree.length +
+        items.impossible.length +
+        items.unreadable.length;
+  }
+
+  /// The list of [correctionItems], each linking to the page to fix it on.
+  String itemsToCorrect() {
+    final items = correctionItems();
+    final sb = StringBuffer('<h1>Items to correct</h1>');
+    final total =
+        items.disagree.length +
+        items.impossible.length +
+        items.unreadable.length;
+    if (total == 0) {
+      sb.write(
+        '<p class="lead">Nothing needs correcting. The pages agree with each other, and every fact can be read.</p>',
+      );
+      return page('Items to correct', sb.toString());
+    }
+    sb.write(
+      '<p class="lead">Places where pages disagree, or a fact cannot be right. '
+      'Each is also shown on the page it concerns, with a way to fix it there. '
+      'Small differences in dates between records are normal, and are not listed.</p>',
+    );
+    void section(String title, String note, List<(Person, String)> rows) {
+      if (rows.isEmpty) return;
+      sb.write(
+        '<h2>$title <span class="count">${rows.length}</span></h2><p class="meta">$note</p><ul class="corrections">',
+      );
+      for (final (p, html) in rows) {
+        sb.write('<li><a href="${pathOf(p)}">${esc(p.name)}</a>: $html</li>');
+      }
+      sb.write('</ul>');
+    }
+
+    section(
+      'Pages that disagree',
+      'Two pages say different things about how people are related. Open the page to see both sides and choose which to keep.',
+      [for (final (p, c) in items.disagree) (p, esc(c.message))],
+    );
+    section(
+      'Facts that cannot be right',
+      'Dates that contradict each other, such as a marriage after a death, or a parent too young or too old.',
+      [for (final (p, text) in items.impossible) (p, esc(text))],
+    );
+    section(
+      'Lines that cannot be read',
+      'Text in the facts that Prosapia does not understand, or a link to a page that no longer exists.',
+      [for (final (p, text) in items.unreadable) (p, esc(text))],
+    );
+    return page('Items to correct', sb.toString());
+  }
+
   String changes(List<Change> changes) {
     final sb = StringBuffer('<h1>Recent changes</h1>');
+    if (_canEdit) {
+      final n = correctionCount();
+      if (n > 0) {
+        sb.write(
+          '<p class="corrections-note"><a href="/corrections">${n == 1 ? 'One item' : '$n items'} to correct</a>: pages that disagree, or facts that cannot be right.</p>',
+        );
+      }
+    }
     if (changes.isEmpty) {
       sb.write('<p class="lead">Nothing has changed yet.</p>');
     } else {
@@ -2119,6 +2242,9 @@ h2 { font-size: 1.15em; font-weight: 600; margin: 1.8em 0 0.5em; padding-bottom:
               font-weight: 500; white-space: nowrap; }
 .infobox td { padding: 4px 0; }
 .infobox .add-relative { font-size: 13px; }
+.corrections li { margin-bottom: 6px; }
+h2 .count { font-size: 0.8em; font-weight: 500; color: var(--muted); }
+.corrections-note { font: 15px var(--ui); }
 .prose { white-space: normal; }
 .prose p { margin: 0 0 1em; }
 .prose a { font-weight: 500; }

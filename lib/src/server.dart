@@ -682,6 +682,12 @@ Handler siteHandler(
     status: error == null ? 200 : 422,
   );
 
+  // Items to correct: pages that disagree, and facts that cannot be right.
+  router.get('/corrections', (Request r) {
+    if (editor(r) == null) return notAllowed(r);
+    return html(render(r).itemsToCorrect());
+  });
+
   router.get('/settings', (Request r) async {
     if (owner(r) == null) return notAllowed(r);
     return settingsPage(r);
