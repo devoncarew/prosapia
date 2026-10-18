@@ -305,7 +305,7 @@ $body
 
     // Grandparents and parents.
     final up = StringBuffer();
-    final parentKeys = <String>[];
+    final parentKeys = <String, String>{};
     for (final parent in h.parents) {
       final grand = [
         for (final g in parent.parents)
@@ -318,7 +318,7 @@ $body
             ? null
             : plural(aunts, 'brother or sister', 'brothers and sisters'),
       );
-      parentKeys.add(c.key);
+      parentKeys[parent.id] = c.key;
       if (grand.isNotEmpty) {
         unions.add({
           'p': [for (final g in grand) g.key],
@@ -332,7 +332,16 @@ $body
         '${c.html}</div>',
       );
     }
-    if (parentKeys.length == 2) couples.add(parentKeys);
+    // Parents side by side who are a couple: the two the line comes down
+    // from, or any others recorded as partners.
+    final shownParents = parentKeys.keys.toList();
+    for (var i = 0; i + 1 < shownParents.length; i++) {
+      final a = shownParents[i], b = shownParents[i + 1];
+      if ((h.descent.contains(a) && h.descent.contains(b)) ||
+          index.partnersOf(a).contains(b)) {
+        couples.add([parentKeys[a]!, parentKeys[b]!]);
+      }
+    }
 
     // The person, their partners, and their brothers and sisters.
     final me = card(p.id, center: true);
@@ -341,16 +350,24 @@ $body
       partnerCards[id] = card(id);
       couples.add([me.key, partnerCards[id]!.key]);
     }
-    final ordered = partnerCards.values.toList();
-    // A second partner sits on the other side, so neither line crosses.
-    final left = [if (ordered.length > 1) ordered[1]];
-    final right = [if (ordered.isNotEmpty) ordered[0], ...ordered.skip(2)];
+    final left = [for (final id in h.leftPartners) partnerCards[id]!];
+    final right = [for (final id in h.rightPartners) partnerCards[id]!];
     final mother = h.parents.isEmpty ? null : h.parents.last.id;
-    final siblingKeys = <String>[];
+    // Brothers and sisters, by the parents shown that they share: those
+    // who share the couple come down from it with the person, and a half
+    // brother or sister from the one parent they share.
+    final siblingKeys = <String, List<String>>{};
     String sibling(String id) {
       final partners = index.partnersOf(id);
       final c = card(id, partner: partners.firstOrNull, hint: childrenHint(id));
-      siblingKeys.add(c.key);
+      final theirs = index.parentsOf(id);
+      final shared = h.descent.every(theirs.contains)
+          ? h.descent
+          : [
+              for (final p in shownParents)
+                if (theirs.contains(p)) p,
+            ];
+      siblingKeys.putIfAbsent(shared.join(' '), () => []).add(c.key);
       return c.html;
     }
 
@@ -368,15 +385,24 @@ $body
       if (youngerShown.length < h.younger.length)
         more(h.younger.length - youngerShown.length, 'younger', mother),
     ];
-    if (parentKeys.isNotEmpty) {
+    if (h.descent.isNotEmpty) {
       unions.add({
-        'p': parentKeys,
-        'c': [me.key, ...siblingKeys],
+        'p': [for (final id in h.descent) parentKeys[id]!],
+        'c': [me.key, ...?siblingKeys.remove(h.descent.join(' '))],
       });
     }
+    siblingKeys.forEach((shared, keys) {
+      if (shared.isEmpty) return;
+      unions.add({
+        'p': [for (final id in shared.split(' ')) parentKeys[id]!],
+        'c': keys,
+      });
+    });
 
-    // Children and grandchildren.
+    // Children and grandchildren. With children by more than one partner,
+    // each family is named under it.
     final down = StringBuffer();
+    final several = h.children.length > 1;
     for (final group in h.children) {
       final childKeys = <String>[];
       down.write('<div class="group">');
@@ -397,6 +423,13 @@ $body
           '${grand.isEmpty ? '' : '<div class="row">${grand.map((g) => g.html).join()}'
                     '${hidden > 0 ? more(hidden, 'more', child.id) : ''}</div>'}'
           '</div>',
+        );
+      }
+      if (several) {
+        final other = tree.people[group.other];
+        final years = other == null ? '' : _coupleYears(p, other);
+        down.write(
+          '<p class="family-of">${other == null ? 'other parent not recorded' : 'with ${esc(other.name)}${years.isEmpty ? '' : ', $years'}'}</p>',
         );
       }
       down.write('</div>');
@@ -512,6 +545,22 @@ ${q('mistake', 'What if I make a mistake?', 'Nothing is lost. Every version of a
 ${q('problems', 'What is the list of problems at the top of a page?', 'Lines Prosapia could not read, such as a date it does not understand or a fact without a label. The page still saves; the list says what to fix.')}
 ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Claude: Draft…</strong> above the editor writes or revises the story from the facts, or works in something new you give it. You see what it changed before anything is saved.')}
 ''');
+  }
+
+  /// The years of [a] and [b]'s marriage, as either page records it:
+  /// `1985–1995`, `married 1985`, `until 1995`, or empty.
+  String _coupleYears(Person a, Person b) {
+    int? year(String kind) => [
+      for (final (x, y) in [(a, b), (b, a)])
+        for (final c in x.couples)
+          if (c.partner?.id == y.id && c.kind.toLowerCase() == kind)
+            c.event.date?.year,
+    ].nonNulls.firstOrNull;
+    final married = year('married'), ended = year('divorced');
+    if (married != null && ended != null) return '$married–$ended';
+    if (married != null) return 'married $married';
+    if (ended != null) return 'until $ended';
+    return '';
   }
 
   static String surnameOf(Person p) {
@@ -2327,7 +2376,10 @@ main:has(> .family-view:not(.embedded)) { max-width: none; }
 .family .row.couple { gap: 20px; }
 .family .anc, .family .desc { display: flex; flex-direction: column; align-items: center; gap: 36px; }
 .family .gen.down { gap: 40px; }
-.family .group { display: flex; gap: 16px; align-items: flex-start; }
+.family .group { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px;
+  align-items: flex-start; }
+.family .family-of { flex-basis: 100%; margin: -6px 0 0; text-align: center; font-size: 12px;
+  color: var(--muted); }
 .family .card { position: relative; z-index: 1; display: flex; gap: 8px; align-items: center; width: 210px;
   padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
   color: var(--text); }

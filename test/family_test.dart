@@ -54,9 +54,10 @@ void main() {
         for (final g in h.children)
           '${g.other}: ${g.children.map((c) => c.id).join(', ')}',
       ],
-      ['p-e5e5e5: p-i9i9i9', 'p-f6f6f6: p-k2k2k2', 'null: p-l3l3l3'],
+      // Left to right as shown: the second partner sits on the left.
+      ['p-f6f6f6: p-k2k2k2', 'null: p-l3l3l3', 'p-e5e5e5: p-i9i9i9'],
     );
-    final kid = h.children.first.children.single;
+    final kid = h.children.last.children.single;
     expect(kid.partners, ['p-j1j1j1']);
     expect(kid.children, ['p-m4m4m4']);
     expect(h.size, 11);
@@ -64,5 +65,51 @@ void main() {
 
   test('the busiest chart is the default', () {
     expect(Hourglass.busiest(tree, index)?.id, me.id);
+  });
+
+  group('two marriages', () {
+    final tree = Tree('test');
+    for (final (dir, source) in [
+      (
+        'carew-mike-a1a1a1',
+        'Name: Mike\nSex: male\nMarried: @madison-beth-b2b2b2, 1985\n'
+            'Divorced: @madison-beth-b2b2b2, 1995\n'
+            'Married: @budesheim-jill-c3c3c3, 2000\n',
+      ),
+      ('madison-beth-b2b2b2', 'Name: Beth\nSex: female\n'),
+      ('budesheim-jill-c3c3c3', 'Name: Jill\nSex: female\n'),
+      ('behler-paul-d4d4d4', 'Name: Paul Behler\nSex: male\n'),
+      (
+        'carew-paul-e5e5e5',
+        'Name: Paul\nBorn: 1983\n'
+            'Parents: @carew-mike-a1a1a1 (adopted), @madison-beth-b2b2b2, '
+            '@behler-paul-d4d4d4\n',
+      ),
+      (
+        'carew-kenin-f6f6f6',
+        'Name: Kenin\nBorn: 2002\n'
+            'Parents: @budesheim-jill-c3c3c3, @carew-mike-a1a1a1\n',
+      ),
+    ]) {
+      final p = Person.fromSource('p-${dir.split('-').last}', dir, source);
+      tree.people[p.id] = p;
+    }
+    final index = Index.build(tree);
+
+    test("each partner's children are on that partner's side", () {
+      final h = Hourglass.of(tree.people['p-a1a1a1']!, tree, index);
+      expect(h.partners, ['p-b2b2b2', 'p-c3c3c3']);
+      expect(h.leftPartners, ['p-c3c3c3']);
+      expect(h.rightPartners, ['p-b2b2b2']);
+      expect([for (final g in h.children) g.other], ['p-c3c3c3', 'p-b2b2b2']);
+    });
+
+    test('with three parents, the birth couple comes first', () {
+      final h = Hourglass.of(tree.people['p-e5e5e5']!, tree, index);
+      expect(h.descent, ['p-d4d4d4', 'p-b2b2b2']);
+      expect(h.parents.map((p) => p.id), ['p-d4d4d4', 'p-b2b2b2', 'p-a1a1a1']);
+      // A half brother still shows, through the parent they share.
+      expect(h.younger, ['p-f6f6f6']);
+    });
   });
 }

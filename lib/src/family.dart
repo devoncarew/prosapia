@@ -13,14 +13,22 @@ class Hourglass {
     final h = Hourglass._(center);
     bool has(String id) => tree.people.containsKey(id);
 
-    for (final parent in _fatherFirst(index.parentsOf(center.id), tree)) {
+    final (parents, descent) = _arrange(center, tree, index);
+    for (final parent in parents) {
       h.parents.add((
         id: parent,
         parents: _fatherFirst(index.parentsOf(parent), tree),
       ));
     }
+    h.descent.addAll(descent);
 
     h.partners.addAll(index.partnersOf(center.id).where(has));
+    // The first partner sits to the right, the second to the left, and any
+    // more to the right after the first, so no partner's line crosses
+    // another's.
+    for (final (i, id) in h.partners.indexed) {
+      (i == 1 ? h.leftPartners : h.rightPartners).add(id);
+    }
 
     // Older brothers and sisters to the left, younger to the right; those
     // with no known birth go to the right, after the rest.
@@ -50,14 +58,62 @@ class Hourglass {
             ),
           );
     }
-    final unknown = groups.remove(null);
-    for (final MapEntry(key: other, value: children) in groups.entries) {
-      if (children.isNotEmpty) {
-        h.children.add((other: other, children: children));
+    // Each partner's children under that partner: the left partner's on
+    // the left, the right partners' on the right, and the rest between.
+    int place(String? other) => h.leftPartners.contains(other)
+        ? 0
+        : h.rightPartners.contains(other)
+        ? 2 + h.rightPartners.indexOf(other!)
+        : 1;
+    final ordered = groups.entries.where((g) => g.value.isNotEmpty).toList()
+      ..sort((a, b) => place(a.key).compareTo(place(b.key)));
+    for (final MapEntry(key: other, value: children) in ordered) {
+      h.children.add((other: other, children: children));
+    }
+    return h;
+  }
+
+  /// [center]'s parents in the order they are shown, and the two the line
+  /// to [center] comes down from. With more than two, such as a birth
+  /// parent and an adoptive one, the two who are partners of each other
+  /// are the couple, preferring those written without a qualifier; another
+  /// parent sits beside their partner.
+  static (List<String>, List<String>) _arrange(
+    Person center,
+    Tree tree,
+    Index index,
+  ) {
+    final ids = _fatherFirst(index.parentsOf(center.id), tree);
+    if (ids.length <= 2) return (ids, ids);
+    // A qualifier, such as "(adopted)" or "(step)", on either page.
+    bool qualified(String id) =>
+        center.parents.any((r) => r.id == id && r.qualifier != null) ||
+        (tree.people[id]?.children.any(
+              (r) => r.id == center.id && r.qualifier != null,
+            ) ??
+            false);
+    bool partners(String a, String b) => index.partnersOf(a).contains(b);
+    final pairs = [
+      for (final (i, a) in ids.indexed)
+        for (final b in ids.skip(i + 1))
+          if (partners(a, b)) [a, b],
+    ];
+    final plain = ids.where((id) => !qualified(id)).toList();
+    final pair =
+        pairs.where((p) => !p.any(qualified)).firstOrNull ??
+        (plain.length == 2 ? plain : null) ??
+        pairs.firstOrNull ??
+        ids.take(2).toList();
+    final couple = _fatherFirst(pair, tree);
+    final ordered = [...couple];
+    for (final extra in ids.where((id) => !pair.contains(id))) {
+      if (partners(extra, couple.first) && !partners(extra, couple.last)) {
+        ordered.insert(0, extra);
+      } else {
+        ordered.add(extra);
       }
     }
-    if (unknown != null) h.children.add((other: null, children: unknown));
-    return h;
+    return (ordered, couple);
   }
 
   final Person center;
@@ -65,8 +121,15 @@ class Hourglass {
   /// Parents, father first, each with their own parents.
   final parents = <({String id, List<String> parents})>[];
 
+  /// The parents the line to [center] comes down from: both, or with more
+  /// than two, the couple among them.
+  final descent = <String>[];
+
   /// Partners, earliest marriage first.
   final partners = <String>[];
+
+  /// [partners] by the side of [center] they are shown on.
+  final leftPartners = <String>[], rightPartners = <String>[];
 
   /// Brothers and sisters born before [center], eldest first.
   final older = <String>[];
