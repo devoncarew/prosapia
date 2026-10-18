@@ -181,4 +181,20 @@ taught school.
       );
     });
   });
+
+  test('a relative is added to a relationship line, or a new one', () {
+    const page = 'Name: A\nParents: @b-b1b1b1\n\nStory.\n';
+    expect(
+      addRelation(page, 'parents', '@c-c2c2c2'),
+      'Name: A\nParents: @b-b1b1b1, @c-c2c2c2\n\nStory.\n',
+    );
+    expect(
+      addRelation(page, 'partner', '@d-d3d3d3'),
+      'Name: A\nParents: @b-b1b1b1\nPartner: @d-d3d3d3\n\nStory.\n',
+    );
+    expect(
+      addFact(page, 'Married', '@d-d3d3d3, 1945'),
+      'Name: A\nParents: @b-b1b1b1\nMarried: @d-d3d3d3, 1945\n\nStory.\n',
+    );
+  });
 }

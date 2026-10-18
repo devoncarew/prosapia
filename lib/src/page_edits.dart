@@ -131,6 +131,16 @@ String? keepRelations(String source, Person deleted, String otherId) {
   return changed ? result : null;
 }
 
+/// Adds [reference] to the first [kind] relationship line, or a new line.
+/// Returns null if the page has no facts block.
+String? addRelation(String source, String kind, String reference) =>
+    _addToRelation(source, kind, reference);
+
+/// Adds a `[label]: [value]` line after the other facts. Returns null if
+/// the page has no facts block.
+String? addFact(String source, String label, String value) =>
+    _addLine(source, label, value);
+
 /// Adds [text] to the first [kind] relationship line, or a new line.
 String? _addToRelation(String source, String kind, String text) {
   var done = false;

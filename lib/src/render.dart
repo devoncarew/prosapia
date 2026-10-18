@@ -834,9 +834,16 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
 
   String _infobox(Person p, {bool actions = false}) {
     final rows = <(String, String)>[];
-    void row(String label, Iterable<String> items) {
+    // An editor can add a relative from a relationship's row, shown even
+    // while it is empty.
+    void row(String label, Iterable<String> items, {String? add}) {
       final html = items.where((x) => x.isNotEmpty).join('<br>');
-      if (html.isNotEmpty) rows.add((label, html));
+      final link = add == null || !actions || !_canEdit
+          ? ''
+          : '<a class="add-relative" href="/people/${p.id}/relative?kind=${add.split(' ').first}">+ ${add.split(' ').skip(1).join(' ')}</a>';
+      if (html.isNotEmpty || link.isNotEmpty) {
+        rows.add((label, [html, link].where((x) => x.isNotEmpty).join('<br>')));
+      }
     }
 
     String event(Event? e) => e == null
@@ -879,11 +886,16 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     row('Christened', [event(p.christened)]);
     row('Died', [event(p.died)]);
     row('Buried', [event(p.buried)]);
-    row('Parents', [
+    final parents = [
       for (final id in index.parentsOf(p.id)) qualified(id, p.parents),
       ...named(p.parents, 'parents'),
-    ]);
-    row('Partners', [
+    ];
+    row(
+      'Parents',
+      parents,
+      add: parents.length < 2 ? 'parents add a parent' : null,
+    );
+    final partners = [
       for (final id in index.partnersOf(p.id))
         personLink(id) +
             switch (marriageOf(p.id, id)?.event.date?.year) {
@@ -898,12 +910,17 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
             from: actions ? p.id : null,
             kind: c.kind.toLowerCase().replaceAll(RegExp(r'\s+'), ' '),
           ),
-    ]);
+    ];
+    row(
+      'Partners',
+      partners,
+      add: partners.isEmpty ? 'partner add a partner' : null,
+    );
     row('Children', [
       for (final id in index.childrenOf(p.id))
         qualified(id, const [], years: true),
       ...named(p.children, 'children'),
-    ]);
+    ], add: 'children add a child');
     // Children named on a parent's page without a page of their own are
     // siblings too.
     final siblingNames = <String>{};
@@ -1465,6 +1482,114 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}''');
     return page('A page for $name', sb.toString());
   }
 
+  /// The form for adding a child, partner or parent to [from]'s page, with
+  /// what was typed in [values]. [similar] are people already in the tree
+  /// whose names are like the one typed, offered before a new page is made.
+  String addRelative(
+    Person from,
+    String kind, {
+    Map<String, String> values = const {},
+    List<Person> similar = const [],
+    Completion? completion,
+    String? error,
+  }) {
+    String v(String name) => esc(values[name] ?? '');
+    String checked(bool on) => on ? ' checked' : '';
+    final title = switch (kind) {
+      'children' => 'Add a child of ${from.name}',
+      'parents' => 'Add a parent of ${from.name}',
+      _ => 'Add a partner of ${from.name}',
+    };
+    final sb = StringBuffer('''
+<h1>${esc(title)}</h1>
+<p class="lead">Someone already in the tree, or someone new, who gets a page of their own. This is saved as ordinary lines on the pages, which you can change later by editing them.</p>
+${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
+<form class="memory add-person" method="post" action="/people/${from.id}/relative">
+  <input type="hidden" name="kind" value="$kind">
+  <input type="hidden" name="based_on" value="${from.revision}">''');
+    if (similar.isNotEmpty) {
+      sb.write(
+        '<h2>Already in the tree?</h2><p>These people have similar names. If one of them is ${v('name')}, choose them.</p><ul class="similar">',
+      );
+      // Someone already related this way is shown, so a duplicate is
+      // noticed, but cannot be added twice.
+      final already = switch (kind) {
+        'children' => index.childrenOf(from.id),
+        'parents' => index.parentsOf(from.id),
+        _ => index.partnersOf(from.id),
+      };
+      final role = switch (kind) {
+        'children' => 'child',
+        'parents' => 'parent',
+        _ => 'partner',
+      };
+      for (final p in similar) {
+        final detail = completion?.detail(p) ?? '';
+        sb.write(
+          '<li>${personLink(p.id)}${detail.isEmpty ? '' : ' <span class="years">${esc(detail)}</span>'} '
+          '${already.contains(p.id) ? '<span class="years">already listed as ${esc(from.name)}\'s $role</span>' : '<button name="target" value="${p.id}">This is them</button>'}</li>',
+        );
+      }
+      sb.write('</ul><h2>Or someone new</h2>');
+    }
+    sb.write(
+      '''
+  <label for="name">Name</label>
+  <input id="name" name="name" value="${v('name')}" required maxlength="120" autofocus>
+  <label for="born">Born, if you know: a date, then a place</label>
+  <input id="born" name="born" value="${v('born')}" maxlength="120" placeholder="about 1925, Hartford, CT">''',
+    );
+    switch (kind) {
+      case 'children':
+        final partners = index.partnersOf(from.id);
+        final chosen =
+            values['other'] ?? (partners.length == 1 ? partners.single : '');
+        sb.write('<fieldset><legend>The other parent</legend>');
+        for (final id in partners) {
+          sb.write(
+            '<label><input type="radio" name="other" value="$id"${checked(chosen == id)}> ${esc(tree.people[id]!.name)}</label>',
+          );
+        }
+        sb.write(
+          '<label><input type="radio" name="other" value=""${checked(chosen.isEmpty)}> Someone else, or not known</label></fieldset>',
+        );
+      case 'parents':
+        final parents = index.parentsOf(from.id);
+        if (parents.length == 1) {
+          final other = tree.people[parents.single]!;
+          final on = values.isEmpty || values['couple'] == other.id;
+          sb.write(
+            '<label><input type="checkbox" name="couple" value="${other.id}"${checked(on)}> A couple with ${esc(other.name)}</label>',
+          );
+        }
+      default:
+        final married = values['married'] != 'no';
+        sb.write(
+          '''
+  <fieldset><legend>Married?</legend>
+    <label><input type="radio" name="married" value="yes"${checked(married)}> Married</label>
+    <label><input type="radio" name="married" value="no"${checked(!married)}> Partners, not married</label>
+  </fieldset>
+  <label for="date">Married when, if you know</label>
+  <input id="date" name="date" value="${v('date')}" maxlength="80" placeholder="June 1945">
+  <label for="place">Where</label>
+  <input id="place" name="place" value="${v('place')}" maxlength="200" placeholder="Hartford, CT">
+  <label for="ended">Did it end?</label>
+  <select id="ended" name="ended">
+    <option value="">No, or not known</option>
+    <option value="divorced"${values['ended'] == 'divorced' ? ' selected' : ''}>Divorced</option>
+    <option value="separated"${values['ended'] == 'separated' ? ' selected' : ''}>Separated</option>
+  </select>
+  <label for="ended_date">When it ended, if you know</label>
+  <input id="ended_date" name="ended_date" value="${v('ended_date')}" maxlength="80" placeholder="1995">''',
+        );
+    }
+    sb.write('''
+  <div class="save">${similar.isEmpty ? '<button class="primary">Add</button>' : '<button class="primary" name="create" value="yes">Add as someone new</button>'} <a href="${pathOf(from)}">Cancel</a></div>
+</form>''');
+    return page(title, sb.toString());
+  }
+
   /// [p]'s page as it is written: its facts and story as text.
   String personText(Person p) => page(
     'Text of ${p.name}',
@@ -1993,6 +2118,7 @@ h2 { font-size: 1.15em; font-weight: 600; margin: 1.8em 0 0.5em; padding-bottom:
 .infobox th { text-align: left; vertical-align: top; padding: 4px 10px 4px 0; color: var(--muted);
               font-weight: 500; white-space: nowrap; }
 .infobox td { padding: 4px 0; }
+.infobox .add-relative { font-size: 13px; }
 .prose { white-space: normal; }
 .prose p { margin: 0 0 1em; }
 .prose a { font-weight: 500; }
