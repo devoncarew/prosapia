@@ -21,10 +21,24 @@ void main() {
           'Married: Someone, 1955',
     });
     final checks = r.checksOf(r.tree.people['p-bbbbbb']!);
-    expect(checks, hasLength(3));
+    expect(checks, hasLength(4));
     expect(checks.join(' '), contains('Died in 1940, before being born'));
     expect(checks.join(' '), contains('after Parent died in 1940'));
     expect(checks.join(' '), contains('at about 5'));
+    expect(checks.join(' '), contains('after dying in 1940'));
+  });
+
+  test('a marriage after a death', () {
+    final r = renderer({
+      'a-aaaaaa': 'Name: A\nBorn: 1900\nDied: 1940\nMarried: @b-bbbbbb, 1950',
+      'b-bbbbbb': 'Name: B\nBorn: 1905\nDied: 1945',
+    });
+    final checks = r.checksOf(r.tree.people['p-aaaaaa']!);
+    expect(checks, [
+      'Married in 1950, after dying in 1940.',
+      'Married B in 1950, after B died in 1945.',
+    ]);
+    expect(r.correctionCount(), greaterThanOrEqualTo(2));
   });
 
   test('ordinary lives raise nothing', () {

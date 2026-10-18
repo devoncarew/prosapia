@@ -173,6 +173,49 @@ taught school.
       expect(found.single.message, contains('1945 on A\'s page, 1946 on C\'s'));
     });
 
+    test('more than two parents, unless marked', () {
+      final t = tree({
+        'a-111111': 'Name: A\nParents: @b-222222, @c-333333\n',
+        'b-222222': 'Name: B\n',
+        'c-333333': 'Name: C\n',
+        'd-444444': 'Name: D\nChildren: @a-111111\n',
+        'e-555555': 'Name: E\nChildren: @a-111111 (step)\n',
+      });
+      final found = contradictionsOf(t, t.people['p-111111']!);
+      expect(found.single.message, 'A is listed with 3 parents: B, C and D.');
+    });
+
+    test('a plain name for someone whose page states it', () {
+      final t = tree({
+        'a-111111': 'Name: A\nChildren: Ruth Price\n',
+        'price-ruth-222222': 'Name: Ruth Price\nParents: @a-111111\n',
+      });
+      final found = contradictionsOf(t, t.people['p-111111']!);
+      expect(found.single.link?.target, 'p-222222');
+      expect(found.single.message, contains('“Ruth Price”'));
+    });
+
+    test('brothers or sisters with no parent in common', () {
+      final t = tree({
+        'a-111111': 'Name: A\nParents: @c-333333\nSiblings: @b-222222\n',
+        'b-222222': 'Name: B\nParents: @d-444444\n',
+        'c-333333': 'Name: C\n',
+        'd-444444': 'Name: D\n',
+      });
+      expect(
+        contradictionsOf(t, t.people['p-111111']!).single.message,
+        'A and B are listed as brothers or sisters, but have no parent in common.',
+      );
+    });
+
+    test('dates a year apart are a minor disagreement', () {
+      final t = tree({
+        'a-111111': 'Name: A\nMarried: @c-333333, 1945\n',
+        'c-333333': 'Name: C\nMarried: @a-111111, 1946\n',
+      });
+      expect(contradictionsOf(t, t.people['p-111111']!).single.minor, isTrue);
+    });
+
     test('listing oneself', () {
       final t = tree({'a-111111': 'Name: A\nSiblings: @a-111111\n'});
       expect(
