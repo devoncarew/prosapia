@@ -26,16 +26,17 @@ exchange between programs, not for people typing.
 | Question | Recommendation | Effort |
 | --- | --- | --- |
 | Fact order | Adopt a fixed order for the first lines, and notes last; Format applies it | Small |
-| Citing sources | `[source: …]` in the story and `source:` in facts; the value is text, or a `#` reference to a source record | Medium, with milestone 26 |
+| Citing sources | `[source: …]` in the story and `source:` in facts; the value is text, or a `#` reference to a source record or a document | Medium, with milestone 26 |
+| `#` references | `#` refers to anything that is not a person: a source, a photo, a document | Small |
 | Comments | Do not add them; blank fields and `Note:` cover the need | None |
 | Blank fields on new pages | Adopt: `Sex:`, `Born:`, `Died:`, `Parents:`; empty facts are never problems | Small |
-| Where relationships are written | Adopt a default home for each kind; keep reading both sides | Small |
+| Where relationships are written | Read every form; promote siblings to parents when known; flag disagreements | Small |
 | Several values for one fact | Adopt GEDCOM's: repeat the line, first is preferred, others shown as "also recorded" | Small |
-| Names | Keep whole names; add a rarely needed `Family name:` and a kind on `Also known as:` | Small |
+| Names | Keep whole names; add a rarely needed `Family name:` and a kind on `Also known as:`, in parentheses | Small |
 | Places | Keep free text; document smallest-to-largest; places as records stay future work | None now |
 | Other ids (FamilySearch, WikiTree) | Adopt: a fact per system, shown as a link | Small |
 | Dates | Keep; also read `1861 or 1862` | Small |
-| Sex | Keep as typed; read the common spellings | Small |
+| Sex | Format writes recognised spellings as male, female, intersex or unknown; anything else is kept | Small |
 | Families, shared events, associations | Keep person-to-person lines; shared events stay future work | None now |
 
 ## Fact order
@@ -51,15 +52,15 @@ changing what they say:
 1. `Name`, `Nickname`, `Also known as`, `Family name`, `Sex`
 2. `Born`, `Christened`, `Died`, `Buried`
 3. `Parents`, `Siblings`
-4. `Partner`, `Married`, `Divorced` and other couple events, in date order
+4. `Partner`, `Married`, `Divorced` and other couple events, in the order written
 5. `Children`
 6. `Photo`
 7. Every other fact, in the order written
 8. `Note` last
 
-Sources and other ids (below) sit with the other facts. Lines with the same label keep
-their order. The value is that the first few lines are predictable and notes come last;
-the middle matters less, so other facts are not sorted.
+Sources and other ids (below) sit with the other facts. Lines with the same label, and
+the couple lines, keep the order they were written in; nothing is sorted by date. The
+value is that the first few lines are predictable and notes come last.
 
 ## Citing sources
 
@@ -77,21 +78,44 @@ simple and grow:
 - **Text.** `source: 1920 census, Hartford` in a fact, `[source: 1920 census, Hartford]`
   in the story, the same mark as `[date: …]` and `[place: …]`. It shows as a small
   "source" mark, and the story's sources are listed at the end of the page.
-- **A source record** (milestone 26), referred to with `#`, as GitHub refers to issues:
-  `source: #census-1920-hartford-k3m9qa`, followed by the detail of this citation:
-  `[source: #census-1920-hartford-k3m9qa, sheet 4B, line 37]`. `@` stays for people
-  only. Typing `#` offers completion from the tree's sources, as `@` does for people.
-  The source's page lists every citation of it.
-- **Scans.** A source record names the photos and documents that show it, such as a
-  certificate already uploaded, so a citation leads to the image.
+- **A document.** Often the source is a document already in the tree, such as a
+  certificate. It is cited directly with a `#` reference (below): `source: #m-gdcade`.
+  Joseph Carew's page already names that certificate this way, as plain text.
+- **A source record** (milestone 26), for a source with no scan, or one used in many
+  places, such as a census: `source: #census-1920-hartford-k3m9qa`, followed by the
+  detail of this citation: `[source: #census-1920-hartford-k3m9qa, sheet 4B, line 37]`.
+  The source's page lists every citation of it, and names the photos and documents that
+  show it.
+
+A source record is a record of its own, not a kind of photo: many sources (a census, a
+book, a conversation) have no image, and one source may have several scans. A document
+that is its own source needs no record; it is cited directly.
 
 Not recommended: markdown footnotes (`[^1]` with definitions at the end). They are
 standard, but unfamiliar to most editors, and a page-local definition list adds a third
 way to cite without solving anything source records do not. Not recommended for now:
 GEDCOM's quality rating, which few people fill in consistently.
 
-One question to settle: the `#` id needs its own prefix, since `s-` is already used for
-photo sets.
+## `#` references
+
+**Problem.** A photo or document can only be named where Prosapia expects one, as in
+`Photo: m-qymrdd`. A story cannot link to a letter, and a fact cannot cite a document
+except as text.
+
+**Recommendation.** `#` refers to anything in the tree that is not a person, as GitHub
+uses `#` for issues and pull requests and `@` for people: a source record, a photo or a
+document. As with people, the reference may be readable, and only the id at its end is
+relied on: `#census-1920-hartford-k3m9qa`, or `#m-qymrdd` for a photo. Ids are unique
+across photos, documents and sources, so the end alone says what is meant.
+
+- In the story, `#m-gdcade` shows as a link with the item's title.
+- In a fact, `source: #…` cites it, and `Photo: #m-qymrdd` is read as well as today's
+  `Photo: m-qymrdd`.
+- Typing `#` offers completion from the tree's photos, documents and sources, as `@`
+  does for people.
+
+`#` followed by a space, at the start of a line, is still a markdown heading; a
+reference has no space.
 
 ## Comments ([#53](https://github.com/devoncarew/prosapia/issues/53))
 
@@ -140,14 +164,18 @@ the family record avoids duplication.
 **Recommendation.** Keep person-to-person lines, read from either side, as GEDCOM X
 does, but give each kind a default home that the actions and the guide use:
 
-- **Parent and child:** on the child's page, `Parents:` naming both parents. This is
-  where the "+ add" actions already write, and it says which couple a child belongs to,
-  which the family tree chart needs. `Children:` on a parent's page is still read, and
-  must agree.
-- **A couple:** `Married:` (or `Partner:`) on one page, whichever it was entered from;
-  both pages show it. If both pages state it, they must agree.
-- **Siblings:** only while their parents are unknown. Once parents are recorded, the
-  sibling line says nothing more and can be removed.
+Every form is read, wherever it is written, and a page never fails because of where a
+relationship is. Beyond that, the kinds differ:
+
+- **Where one form is preferred, Prosapia promotes it when it can.** Siblings are best
+  expressed through their parents: `Siblings:` is read while the parents are unknown,
+  and once they are recorded, Prosapia offers to replace the sibling line with the
+  parents. Likewise a child is best recorded with `Parents:` on the child's page, which
+  says which couple they belong to; this is where the "+ add" actions write.
+- **Where no form is preferred, either page will do, and disagreement is shown.**
+  `Children:`, `Married:`, `Partner:` and other couple events may be written on either
+  page or both. Where two pages disagree, the pages and Items to correct say so, and the
+  editor decides.
 
 Pages are not rewritten to move existing lines.
 
@@ -176,9 +204,10 @@ has fields for given name, prefix, suffix and nickname, and a type for each name
 married, also known as.
 
 **Recommendation.** Keep the name whole, as written. Add `Family name:` for the rare
-name the guess gets wrong, and let `Also known as:` say what kind of name it is:
-`Also known as: Margaret Price, married name`. Slashes and separate name fields would
-fix rare cases at the cost of every page.
+name the guess gets wrong; the writing guide says it is optional and seldom needed. Let
+`Also known as:` say what kind of name it is, in parentheses as relationships are
+qualified: `Also known as: Margaret Price (married name)`. Slashes and separate name
+fields would fix rare cases at the cost of every page.
 
 ## Places
 
@@ -221,13 +250,20 @@ Other calendars are not needed for this family.
 
 **Others.** GEDCOM has M, F, X and U (unknown).
 
-**Recommendation.** Keep it as typed, and read the common spellings alike, so the family
-tree chart and anything else that uses it are not thrown by the spelling.
+**Recommendation.** Use four values: `male`, `female`, `intersex` and `unknown`. Format
+writes recognised spellings as one of them (`M` and `Male` as `male`, `F` as `female`,
+`U` or `?` as `unknown`, `X` as `intersex`). Anything else is kept as written, read as
+unknown, and not reported as a problem.
 
 ## Families, shared events and associations
 
-GEDCOM's family records, events shared by several people, and associations such as
-godparent or witness have no counterpart here. Families are covered above. Shared events
-are the "events and memories" item in Known future work, and need their own decision
-when it is scheduled. Associations can be a fact naming the person (`Godparent: @…`)
-until there is a need for more.
+Families are covered above. In GEDCOM 7 an event belongs to one person or to one family
+record: a marriage is the family's, a birth the person's, and anyone else present is
+linked to it as an association with a role, such as witness or godparent. A census that
+lists a household is recorded once per person. GEDCOM X adds events as records of their
+own, with each person given a role in them, so one event can be shared.
+
+Shared events are the "events and memories" item in Known future work, and need their
+own decision when it is scheduled; GEDCOM X's event with roles is the model to start
+from. Until then a fact can name the others involved (`Godparent: @…`), as facts already
+may.
