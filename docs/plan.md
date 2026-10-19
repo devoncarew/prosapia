@@ -29,39 +29,71 @@ links to, not here.
 
 ## Milestones
 
-### Milestone 21: video
+### Milestone 24: page format decisions
 
-Short clips stored, long videos linked, as proposed in [media.md](media.md). The family
-has videos to add (Frances's is now on YouTube, to link), and the loader skips video
-today.
+Before changing the page format again, decide each open question about it, on purpose
+and with the pros and cons weighed, and record the decisions and their reasons in
+[content-model.md](content-model.md). Prosapia values ease of editing and resilience to
+messy data; GEDCOM 7 and other genealogy models carry some legacy but long experience,
+so where Prosapia differs it should be by choice.
 
-- Upload a short clip from Photos or a person's page, stored like a photo up to a size
-  limit (working figure 50 MB), with a poster frame for the gallery and playback in the
-  page.
-- Files over Cloud Run's 32 MB request limit go straight to storage with a signed upload
-  address; the same path serves large TIFF scans.
-- Add a long video as a link (YouTube, a shared drive) with a title, date, place and the
-  people in it, shown in the gallery and on those people's pages like any other media.
-- Since video files cannot reliably carry embedded text, the database record is the
-  authority; settle how such media is exported.
+- **Comparison with other models.** Review GEDCOM 7 (and GEDCOM X, as FamilySearch uses)
+  area by area: names in parts (given, family, suffix, type); marriages and other couple
+  events; several values for one fact when the evidence disagrees; places as a
+  hierarchy; sources and citations. For each, keep ours, adopt theirs, or adapt, and say
+  why.
+- **Keeping pages in sync.** A relationship can be written on either page, or both, and
+  the two can disagree. Decide where each kind is written by default (parents on the
+  child's page; a marriage on one page or both), what the actions and Format write, and
+  what Items to correct asks of the rest.
+- **Comments** ([#53](https://github.com/devoncarew/prosapia/issues/53)). Lines the page
+  does not show and Prosapia does not read. For: notes to other editors and prompts on a
+  new page. Against: unfamiliar to most editors, and words hidden from readers may hold
+  things that belong on the page. Decide whether to have them, and if so their syntax
+  and where they may go, or whether blank fields and `Note:` lines cover the need.
+- **Blank fields on new pages.** A new page could start with the usual labels left
+  empty, as prompts: `Born:`, `Died:`, `Parents:`, `Children:`. Decide which, that an
+  empty fact is not a problem, and whether Format keeps or removes empty ones.
+- **Fact order.** Decide a normal order for the facts (name and other names, sex, life
+  events, relationships, marriages in date order, other facts by date, notes) and
+  whether Format applies it, moving whole facts but never changing what they say.
+- **Citing sources.** A fact's `source:` part works today. Decide how the story cites:
+  markdown footnotes (`[^1]` with a list at the end) are standard but foreign to most
+  editors; a `[source: 1920 census]` mark, like the `[date: …]` and `[place: …]` marks
+  editors already use, could be gathered into a list at the end of the page. Decide too
+  what a citation holds once source records exist (milestone 26).
 
-Done when: a short phone clip and a linked long video each appear on the right people's
-pages, and the 50 MB limit is confirmed or changed.
+Done when content-model.md records a decision, with its reasons, for each point above.
 
-### Milestone 15: events and memories
+### Milestone 25: page format changes
 
-Journeys 1 and 7.
+Make the changes milestone 24 decides, so the pages and the editor follow them.
 
-- Add an event to someone's life: a kind (moved, married, served, emigrated, graduated,
-  or anything else), a forgiving date and place, the other people involved, and
-  optionally some words and a photo.
-- An event involving several people appears on each of their timelines. Settle the
-  shared-events question in [content-model.md](content-model.md), and how an event is
-  written in the page syntax, to do this.
-- Memories gain an optional date, place and people, and show on the timeline when dated.
+- New pages, from the actions and from "give them a page", start with the agreed blank
+  fields.
+- Format applies the normal fact order, and the agreed treatment of empty facts and of
+  comments.
+- Sources cited in the story are read, shown with a small mark, and listed at the end of
+  the page; the writing guide shows how.
+- The relationship actions, and any other writes, put relationships where the decisions
+  say; Items to correct covers what remains out of step.
+- Existing pages are brought to the new form as one logged change, after a dry run.
 
-Done when: an event with two people involved, entered from one person's page, appears on
-both people's timelines.
+Done when a new page, an edited page and a converted page all follow content-model.md,
+and the writing guide explains citing a source.
+
+### Milestone 26: source records and citations
+
+- A source is a record of its own: a title, who holds it or where it was found, a link,
+  and the scans or photos of it.
+- Cite a source from a fact or from the story, by reference, as people are linked today,
+  with the detail of the citation (page, entry, line).
+- A source's page lists what cites it; a person's page lists their sources.
+- Claims with no source can be marked, and listed for anyone who wants to find a source
+  for them.
+
+Done when a fact and a sentence of a story each cite the same source record, and the
+source's page lists both.
 
 ## Known future work
 
@@ -69,14 +101,6 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 
 ### People and relationships
 
-- A review of the content model against GEDCOM 7 and other genealogy models, so that
-  where Prosapia differs it does so on purpose, with the pros and cons weighed. Those
-  formats carry some legacy, but also long experience. Prosapia values ease of editing
-  and resilience to messy data, but should adopt clear improvements. Areas to look at
-  first: source records and citations; names in parts (given, family, suffix, type);
-  marriages stated in one place rather than on both pages; several values for one fact
-  when the evidence disagrees; and places as a hierarchy. Record each decision in
-  [content-model.md](content-model.md).
 - Merge two records that turn out to be the same person.
 - Bring back a deleted page when the pages around it have changed since, by working out
   what to take back, instead of restoring only the page as now.
@@ -90,6 +114,13 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 
 ### Editing
 
+- Events and memories (was milestone 15; journeys 1 and 7): add an event to someone's
+  life (moved, served, emigrated, graduated, or anything else) with a forgiving date and
+  place, the other people involved, and optionally words and a photo; an event with
+  several people shows on each of their timelines, once the shared-events question in
+  [content-model.md](content-model.md) is settled; memories gain an optional date, place
+  and people, and show on the timeline when dated.
+
 - Watchlist: follow a person and hear about changes.
 - Blame: for any sentence or fact, who added it and when.
 - Optional review of edits, for families that want it.
@@ -99,8 +130,6 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 
 ### Sources and research
 
-- Source records and citations: create a source, cite it from a fact or from prose, and
-  mark uncited claims.
 - Capture a record from a research site as a draft source.
 
 ### Language-model assistance
@@ -136,6 +165,12 @@ Uses not yet scheduled; the rules every use follows are in
 - A design pass over the photo pages.
 - Multi-page scanned PDFs, such as the two baby books: keep as one document, or store as
   a set of page images.
+- Video (was milestone 21): store short clips like photos, up to a size limit (working
+  figure 50 MB), with a poster frame and playback, and add long videos as links
+  (YouTube, a shared drive) with their date, place and people, as proposed in
+  [media.md](media.md). Files over Cloud Run's 32 MB request limit, including large TIFF
+  scans, go straight to storage with a signed upload address. The database record is the
+  authority for video, so settle how it is exported.
 - Audio recordings.
 - Suggesting where faces are in a photo.
 - Check that embedded text survives email, photo services and messaging apps.
