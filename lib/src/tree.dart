@@ -236,6 +236,12 @@ class Person {
               asDate.understood &&
               (place.isEmpty || asDate.year != null)) {
             date = asDate;
+          } else if (date == null && TreeDate.looksLike(segment.value)) {
+            // Something meant as a date is never read as part of the place.
+            date = asDate;
+            issues.add(
+              'In "${line.label}:", "${segment.value}" is not a date Prosapia can read.',
+            );
           } else {
             place.add(segment.value);
           }
@@ -274,6 +280,11 @@ class Person {
           final asDate = TreeDate.parse(segment.value);
           if (date == null && asDate.understood) {
             date = asDate;
+          } else if (date == null && TreeDate.looksLike(segment.value)) {
+            date = asDate;
+            issues.add(
+              'In "${line.label}:", "${segment.value}" is not a date Prosapia can read.',
+            );
           } else {
             description.add(segment.value);
           }

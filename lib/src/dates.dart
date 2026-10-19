@@ -78,10 +78,50 @@ class TreeDate {
     return null;
   }
 
+  /// Whether [text] looks like an attempt at a date, read or not: a year,
+  /// with nothing else but date words, numbers and punctuation. Such text is
+  /// never taken for a place, as "1861 or 1862" or "c1861" might otherwise
+  /// be. "1861 Main Street" is not a date.
+  static bool looksLike(String text) {
+    final t = text.toLowerCase();
+    if (!RegExp(r'\d{3,4}').hasMatch(t)) return false;
+    final words = RegExp(r'[a-z]+').allMatches(t).map((m) => m[0]!);
+    return words.every(
+      (w) =>
+          _dateWords.contains(w) ||
+          monthNumber(w) != null ||
+          RegExp(r'^(st|nd|rd|th|s)$').hasMatch(w),
+    );
+  }
+
+  static const _dateWords = {
+    'about', 'abt', 'approx', 'approximately', 'around', 'c', 'ca', 'circa', //
+    'est', 'estimated', 'cal', 'before', 'bef', 'after', 'aft', 'between',
+    'bet', 'and', 'or', 'from', 'to', 'until', 'the', 'of', 'spring', 'summer',
+    'autumn', 'fall', 'winter', 'early', 'late', 'mid', 'bapt', 'baptized',
+    'baptised', 'chr', 'probably', 'perhaps',
+  };
+
   static TreeDate _parse(String raw) {
     var text = raw.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
     text = text.replaceFirst(RegExp(r'^the '), '');
     if (text.isEmpty) return TreeDate._(raw);
+
+    // A question mark after a date, "1861?" or "1861 (?)", marks it as
+    // uncertain: read as "about".
+    if (text.endsWith('?') || text.endsWith('?)')) {
+      final rest = text.replaceFirst(RegExp(r'\s*\(?\?\)?$'), '');
+      if (rest.isEmpty) return TreeDate._(raw);
+      final inner = _parse(rest);
+      if (!inner.understood) return TreeDate._(raw);
+      return TreeDate._(
+        raw,
+        start: inner.start,
+        end: inner.end,
+        qualifier: inner.qualifier ?? 'about',
+        ambiguous: inner.ambiguous,
+      );
+    }
 
     // Qualifiers in front.
     const prefixes = {

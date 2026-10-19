@@ -68,6 +68,17 @@ void main() {
     expect(nameParts('Cher').surname, isNull);
   });
 
+  test('a date that cannot be read is reported, not taken for a place', () {
+    final q = Person.fromSource(
+      'p-0',
+      'x-0',
+      'Name: Q\nBorn: "New York, NY", 1861 or 1862\n',
+    );
+    expect(q.born?.place, 'New York, NY');
+    expect(q.born?.date?.raw, '1861 or 1862');
+    expect(q.issues.single, contains('not a date Prosapia can read'));
+  });
+
   test('a date may follow the place', () {
     final q = Person.fromSource(
       'p-0',
