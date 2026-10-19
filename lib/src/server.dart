@@ -1384,7 +1384,7 @@ Handler siteHandler(
         {
           'ref': '#${m.key}',
           'title': m.title ?? 'Untitled',
-          'detail': [m.isDocument ? 'document' : 'photo', ?m.date].join(', '),
+          'detail': [m.kind, ?m.date].join(', '),
         },
     ]);
   });

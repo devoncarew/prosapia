@@ -668,8 +668,11 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
       }
     }
 
+    final storySources = <String>[];
     if (p.body.isNotEmpty) {
-      sb.write('<div class="prose">${markdown(p.body)}</div>');
+      sb.write(
+        '<div class="prose">${markdown(p.body, cited: storySources)}</div>',
+      );
     } else {
       sb.write(
         '<p class="empty">Nothing has been written about ${esc(p.name)} yet.</p>',
@@ -691,6 +694,7 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
       }
       sb.write('</ul>');
     }
+    sb.write(_sourcesSection(p, storySources));
 
     final media = preview
         ? const <Media>[]
@@ -897,6 +901,58 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
           ' <span class="cite" title="${esc(title)}" tabindex="0">source</span>',
       },
   ].join();
+
+  /// Every citation on [p]'s page: where it is (a fact's label, or the
+  /// story) and the source as written.
+  List<({String where, String source})> citationsOn(Person p) => [
+    for (final (label, e) in [
+      ('Born', p.born),
+      ('Christened', p.christened),
+      ('Died', p.died),
+      ('Buried', p.buried),
+    ])
+      for (final event in [?e, ...p.alternativesTo(e)])
+        for (final s in event.sources) (where: label, source: s),
+    for (final c in p.couples)
+      for (final s in c.event.sources) (where: c.kind, source: s),
+    for (final f in p.facts)
+      for (final s in f.event.sources) (where: f.label, source: s),
+    for (final m in proseSource.allMatches(p.body))
+      (where: 'Story', source: m[1]!.trim()),
+  ];
+
+  /// The sources of [p]'s page in one place: those cited in the story,
+  /// numbered as they are there, then those cited by the facts.
+  String _sourcesSection(Person p, List<String> story) {
+    String show(String s) => switch (_source(s)) {
+      (final href?, final title) => '<a href="$href">${esc(title)}</a>',
+      (null, final title) => esc(title),
+    };
+    final facts = [
+      for (final c in citationsOn(p))
+        if (c.where != 'Story') c,
+    ];
+    if (story.isEmpty && facts.isEmpty) return '';
+    final sb = StringBuffer('<section class="sources"><h2>Sources</h2>');
+    if (story.isNotEmpty) {
+      sb.write('<ol>');
+      for (final (i, s) in story.indexed) {
+        sb.write('<li id="source-${i + 1}">${show(s)}</li>');
+      }
+      sb.write('</ol>');
+    }
+    if (facts.isNotEmpty) {
+      sb.write('<ul class="fact-sources">');
+      for (final c in facts) {
+        sb.write(
+          '<li><span class="kind">${esc(c.where)}</span> ${show(c.source)}</li>',
+        );
+      }
+      sb.write('</ul>');
+    }
+    sb.write('</section>');
+    return sb.toString();
+  }
 
   /// Where a source leads, and how it reads: a `#` reference to a photo or
   /// document gives that item's page and title, followed by any detail
@@ -1173,14 +1229,15 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
 
   /// Renders page prose: `@` references become links to people, and
   /// `[date: …]` and `[place: …]` are marked for display.
-  String markdown(String source) {
-    // Sources cited in the story are numbered in order, the same source
-    // keeping its number, and listed after it.
-    final sources = <String>[];
+  /// The story [source] as HTML. Sources cited in it are numbered in order,
+  /// the same source keeping its number, and listed after it; or, given
+  /// [cited], added to that list for the caller to show.
+  String markdown(String source, {List<String>? cited}) {
+    final sources = cited ?? <String>[];
     // A mark sits against the word before it, as a footnote number does.
-    final cited = RegExp('[ \t]*${proseSource.pattern}', caseSensitive: false);
+    final marks = RegExp('[ \t]*${proseSource.pattern}', caseSensitive: false);
     final marked = source
-        .replaceAllMapped(cited, (m) {
+        .replaceAllMapped(marks, (m) {
           final text = m[1]!.trim();
           if (text.isEmpty) return '';
           var n = sources.indexOf(text) + 1;
@@ -1207,7 +1264,7 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
           if (m[1]!.toLowerCase() == 'date') return date(TreeDate.parse(m[2]!));
           return '<span class="place-ref">${esc(m[2])}</span>';
         });
-    final list = sources.isEmpty
+    final list = sources.isEmpty || cited != null
         ? ''
         : '<section class="sources"><h2>Sources</h2><ol>${[for (final (i, s) in sources.indexed) '<li id="source-${i + 1}">${switch (_source(s)) {
               (final href?, final title) => '<a href="$href">${esc(title)}</a>',
@@ -1412,6 +1469,36 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
       if (set.isNotEmpty) {
         sb.write('<h2>Added with it</h2>${strip(set)}');
       }
+    }
+    // Every page that cites this item, or mentions it in its story.
+    final citing = <Person, Set<String>>{};
+    bool isThis(String reference) =>
+        reference.trim().startsWith('#') &&
+        itemIdOf(reference.trim().split(',').first) == itemIdOf(front.id);
+    for (final p in tree.people.values) {
+      for (final c in citationsOn(p)) {
+        if (isThis(c.source)) {
+          citing
+              .putIfAbsent(p, () => {})
+              .add(c.where == 'Story' ? 'cited in the story' : c.where);
+        }
+      }
+      // A mention outside a [source: …] mark.
+      final story = p.body.replaceAll(proseSource, '');
+      if (proseItemRef.allMatches(story).any((m) => isThis(m[0]!))) {
+        citing.putIfAbsent(p, () => {}).add('mentioned in the story');
+      }
+    }
+    if (citing.isNotEmpty) {
+      final people = citing.keys.toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+      sb.write('<h2>Cited by</h2><ul class="shown">');
+      for (final p in people) {
+        sb.write(
+          '<li>${personLink(p.id)} <span class="years">${esc(citing[p]!.join(', '))}</span></li>',
+        );
+      }
+      sb.write('</ul>');
     }
     sb.write(attach);
     if (front.hasFile) {
@@ -2478,7 +2565,9 @@ h2 { font-size: 1.15em; font-weight: 600; margin: 1.8em 0 0.5em; padding-bottom:
 .infobox .also { font-size: 13px; color: var(--muted); }
 .cite-ref { font: 600 11px var(--ui); margin-left: 1px; }
 .cite-ref a { text-decoration: none; }
-.sources ol { font: 15px/1.5 var(--ui); color: var(--muted); padding-left: 1.4em; }
+.sources ol, .sources ul { font: 15px/1.5 var(--ui); color: var(--muted); padding-left: 1.4em; }
+.sources .fact-sources { list-style: none; padding-left: 0; }
+.sources .kind { font-variant: small-caps; margin-right: 4px; }
 a.cite { text-decoration: none; }
 .corrections li { margin-bottom: 6px; }
 h2 .count { font-size: 0.8em; font-weight: 500; color: var(--muted); }
