@@ -29,25 +29,6 @@ links to, not here.
 
 ## Milestones
 
-### Milestone 25: page format changes
-
-Make the changes decided in milestone 24 (see
-[content-model.md](content-model.md#decided-in-milestone-24)), so the pages and the
-editor follow them.
-
-- New pages, from the actions and from "give them a page", start with the agreed blank
-  fields.
-- Format applies the normal fact order, and the agreed treatment of empty facts and of
-  comments.
-- Sources cited in the story are read, shown with a small mark, and listed at the end of
-  the page; the writing guide shows how.
-- The relationship actions, and any other writes, put relationships where the decisions
-  say; Items to correct covers what remains out of step.
-- Existing pages are brought to the new form as one logged change, after a dry run.
-
-Done when a new page, an edited page and a converted page all follow content-model.md,
-and the writing guide explains citing a source.
-
 ### Milestone 26: source records and citations
 
 - A source is a record of its own: a title, who holds it or where it was found, a link,
@@ -226,6 +207,15 @@ this is needed until a wider preview is chosen. It should be done before then.
 
 Newest first.
 
+- **Milestone 25, page format changes.** The decisions of milestone 24 are in practice:
+  empty facts are prompts, not problems, and new pages start with them; a fact repeated
+  when records disagree shows the others as "also recorded"; `Family name:`, kinds of
+  name and four values for sex are read; Format puts facts in the normal order with
+  notes last; `#` references link photos and documents, `[source: …]` cites from the
+  story with a list at the end, and FamilySearch, WikiTree and Find a Grave ids link
+  out; a `Siblings:` line is offered to be recorded through parents; and the writing
+  guide explains them. The 46 live pages that differed were brought to the new form as
+  one logged change.
 - **Milestone 24, page format decisions.** Each open question about the page format was
   decided, weighed against GEDCOM 7 and GEDCOM X on the problems people hit, ease of
   editing and resilience, and recorded in [content-model.md](content-model.md): a normal
