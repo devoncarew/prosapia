@@ -59,4 +59,20 @@ void main() {
     expect(page.facts, isEmpty);
     expect(r.issuesOf(page), ['Nothing in the tree matches #m-nothin.']);
   });
+
+  test('an item lists what cites it', () {
+    final html = r.media(tree.media['m-gdcade']!);
+    expect(html, contains('<h2>Cited by</h2>'));
+    expect(
+      html,
+      contains('Married, cited in the story, mentioned in the story'),
+    );
+  });
+
+  test("a page's sources are gathered in one place", () {
+    final html = r.personArticle(page);
+    expect(html, contains('<section class="sources"><h2>Sources</h2><ol>'));
+    expect(html, contains('<span class="kind">Married</span>'));
+    expect(RegExp('<h2>Sources</h2>').allMatches(html), hasLength(1));
+  });
 }
