@@ -140,7 +140,9 @@ Uses not yet scheduled; the rules every use follows are in
   scope to the OAuth consent screen and see how the Cloud Console classes it. If it is
   sensitive, Google must verify the app before the public can use it; until then an app
   in Testing status works for up to 100 listed test users, whose grants expire after
-  about a week. Android's file chooser already offers Google Photos.
+  about a week. Android's file chooser already offers Google Photos. Asked for once so
+  far (October 2026): look at the scope and verification when we build it, or when a few
+  more people ask.
 
 ### Import and export
 
