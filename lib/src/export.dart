@@ -144,7 +144,13 @@ class Exporter {
   Future<int> _copyMissingMedia(String checkout, Tree tree) async {
     var copied = 0;
     for (final media in tree.media.values) {
-      final dest = File(p.join(checkout, 'media', media.fileName));
+      final dest = File(
+        p.join(
+          checkout,
+          'media',
+          media.hasFile ? media.fileName : '${media.key}.json',
+        ),
+      );
       if (dest.existsSync()) continue;
       if (await _copyMedia(checkout, media)) copied++;
     }
@@ -152,6 +158,15 @@ class Exporter {
   }
 
   Future<bool> _copyMedia(String checkout, Media media) async {
+    // An item without a file is written as its details.
+    if (!media.hasFile) {
+      final dest = File(p.join(checkout, 'media', '${media.key}.json'));
+      dest.parent.createSync(recursive: true);
+      dest.writeAsStringSync(
+        '${const JsonEncoder.withIndent('  ').convert(media.toMap()..remove('location'))}\n',
+      );
+      return true;
+    }
     if ((media.size ?? 0) > maxFileBytes) {
       log('Not copied, too large: ${media.fileName}');
       return false;

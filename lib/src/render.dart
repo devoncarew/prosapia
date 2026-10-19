@@ -552,6 +552,7 @@ ${q('marks', 'What are [date: …] and [place: …]?', 'Marks for a date or a pl
 ${q('long', 'A fact is too long for one line.', 'Carry it on to the next line, indented by two spaces. Format does this for you.', 'Married: Walter Price, 12 June 1910, place: "St. Luke\'s Church, Scranton, PA",\n  source: Pennsylvania marriage records')}
 ${q('format', 'What does the Format button do?', 'It tidies the text the way Publish will save it: single spaces, quotes and labels where they make the meaning clear, and long lines wrapped. It puts the facts in the usual order (names, birth and death, parents, partners, children, other facts, notes last) and writes sex as male, female, intersex or unknown. It never changes what the page says; a line it cannot be sure of is left as you wrote it.')}
 ${q('photos', 'How do I add photos?', 'Not in the text: choose <strong>Add photos</strong> on the person\'s page, or go to Photos. A photo names the people in it, and shows on each of their pages. To choose the one at the top of a page, open the photo and choose “Use as … main photo”.')}
+${q('obituary', 'How do I add an obituary or other page from the web?', 'Choose <strong>Add a source</strong> on the person\'s page, or in Photos. Give it a title, paste its address and its text, and say who it names. If you want its look kept too, add a screenshot or a PDF of it afterwards, from the source\'s page. Then cite it with <code>#</code> wherever you use what it says.')}
 ${q('mistake', 'What if I make a mistake?', 'Nothing is lost. Every version of a page is kept: choose ⋯ then <strong>View changes</strong> on the page to see them, and restore any one. A deleted page can be brought back from its address.')}
 ${q('problems', 'What is the list of problems at the top of a page?', 'Lines Prosapia could not read, such as a date it does not understand or a fact without a label. The page still saves; the list says what to fix.')}
 ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Claude: Draft…</strong> above the editor writes or revises the story from the facts, or works in something new you give it. You see what it changed before anything is saved.')}
@@ -698,12 +699,13 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
               if (!tree.media[key]!.isBack) tree.media[key]!,
           ];
     final adding = actions
-        ? '<a class="button add-photos" href="/media/add?person=${p.id}">Add photos</a>'
+        ? '<span class="add-buttons"><a class="button add-photos" href="/media/add?person=${p.id}">Add photos</a>'
+              '<a class="button" href="/media/new?person=${p.id}">Add a source</a></span>'
         : '';
     if (media.isNotEmpty || adding.isNotEmpty) {
       sb.write(
-        '<h2 class="with-action"><span>Photos and documents${media.isEmpty ? '' : ' <span class="years">(${media.length})</span>'}</span>$adding</h2>'
-        '${media.isEmpty ? '<p class="empty">No photos or documents name ${esc(p.name)} yet.</p>' : strip(media)}',
+        '<h2 class="with-action"><span>Photos, documents and sources${media.isEmpty ? '' : ' <span class="years">(${media.length})</span>'}</span>$adding</h2>'
+        '${media.isEmpty ? '<p class="empty">Nothing names ${esc(p.name)} yet.</p>' : strip(media)}',
       );
     }
     sb.write('</div></article>');
@@ -1249,6 +1251,16 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
 
   String _thumbnail(Media m) {
     final caption = esc(m.title ?? 'Untitled');
+    if (!m.hasFile) {
+      final text = (m.transcription ?? m.notes ?? '').replaceAll(
+        RegExp(r'\s+'),
+        ' ',
+      );
+      return '<a href="/media/${m.key}" title="$caption">'
+          '<span class="source-card"><span class="badge">Source</span>'
+          '<span class="excerpt">${esc(text.length > 140 ? '${text.substring(0, 137)}…' : text)}</span></span>'
+          '<span class="caption">$caption</span></a>';
+    }
     return '<a href="/media/${m.key}" title="$caption">'
         '${m.isImage
             ? '<img loading="lazy" src="/media/${m.key}/display?w=240" alt="$caption">'
@@ -1274,9 +1286,9 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     final shown = fronts.skip((n - 1) * photosPerPage).take(photosPerPage);
     return page(
       n == 1 ? 'Photos' : 'Photos, page $n',
-      '<h1>Photos and documents</h1>'
-      '${_canEdit ? '<p class="actions"><a href="/media/add">Add photos</a></p>' : ''}'
-      '<p class="lead">${fronts.length} files. Titles and names are read from each file\'s embedded metadata.</p>'
+      '<h1>Photos, documents and sources</h1>'
+      '${_canEdit ? '<p class="actions"><a href="/media/add">Add photos</a> · <a href="/media/new">Add a source</a></p>' : ''}'
+      '<p class="lead">${fronts.length} items. A source has no file: an obituary on the web, a census entry, a book.</p>'
       '${gallery(shown)}${_pager(n, pages, (i) => i == 1 ? '/media' : '/media?page=$i')}',
     );
   }
@@ -1322,7 +1334,9 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     final sb = StringBuffer('<article class="media">');
     if (_canEdit && !front.isBack) {
       sb.write(
-        '<p class="actions"><a href="/media/${front.key}/edit">Edit details</a> · <a href="/media/${front.key}/delete">Delete</a></p>',
+        '<p class="actions"><a href="/media/${front.key}/edit">Edit details</a> · '
+        '${front.hasFile ? '' : '<a href="#attach">Add a file</a> · '}'
+        '<a href="/media/${front.key}/delete">Delete</a></p>',
       );
     }
     sb.write('<h1>${esc(front.title ?? 'Untitled')}</h1>');
@@ -1332,15 +1346,32 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
         '<span class="place-ref">${esc(front.place)}</span>',
     ];
     if (facts.isNotEmpty) sb.write('<p class="lead">${facts.join(' · ')}</p>');
+    if (front.link != null || front.found != null) {
+      sb.write(
+        '<p class="item-link">${front.link == null ? '' : '<a href="${esc(front.link)}" rel="noopener" target="_blank">${esc(_shortLink(front.link!))}</a>'}'
+        '${front.link != null && front.found != null ? ' · ' : ''}'
+        '${front.found == null ? '' : '<span class="years">found ${esc(front.found)}</span>'}</p>',
+      );
+    }
     String image(Media x, String label) => x.isImage
         ? '<figure><a href="/media/${x.key}/file"><img src="/media/${x.key}/display?w=1920" alt="${esc(front.title ?? '')}, $label"></a>${back == null ? '' : '<figcaption>$label</figcaption>'}</figure>'
         : x.isDocument
         ? '<figure class="document"><a href="/media/${x.key}/file"><img src="/media/${x.key}/display?w=960" alt="${esc(front.title ?? '')}, first page"></a>'
               '<figcaption><a class="button primary" href="/media/${x.key}/file">Open the ${x.extension.toUpperCase()}</a>${x.size == null ? '' : ' <span class="years">${_megabytes(x.size!)}</span>'}</figcaption></figure>'
         : '<p><a class="file" href="/media/${x.key}/file">Open the ${x.extension.toUpperCase()} file</a></p>';
-    sb.write(
-      '<div class="sides${back == null ? '' : ' two'}">${image(front, 'Front')}${back == null ? '' : image(back, 'Back')}</div>',
-    );
+    if (front.hasFile) {
+      sb.write(
+        '<div class="sides${back == null ? '' : ' two'}">${image(front, 'Front')}${back == null ? '' : image(back, 'Back')}</div>',
+      );
+    }
+    final attach = _canEdit && !front.hasFile
+        ? '<section id="attach"><h2>Add a file</h2>'
+              '<p class="meta">A screenshot or PDF of it, or a scan. Its details are written into the file.</p>'
+              '<form class="attach-file" data-key="${front.key}">'
+              '<input type="file" accept="image/jpeg,image/heic,image/png,image/tiff,application/pdf,.heic,.tif,.tiff,.pdf">'
+              '<p class="status meta"></p></form></section>'
+              '<script type="module" src="/assets/photos.js"></script>'
+        : '';
     final writing = front.transcription ?? back?.transcription;
     if (writing != null) {
       sb.write('<h2>${_writtenOn(front, back)}</h2>${_longText(writing)}');
@@ -1355,7 +1386,7 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     }
     if (front.people.isNotEmpty) {
       sb.write(
-        '<h2>${front.isDocument ? 'People named' : 'People shown'}</h2><ul class="shown">',
+        '<h2>${front.isImage ? 'People shown' : 'People named'}</h2><ul class="shown">',
       );
       for (final id in front.people) {
         final person = tree.people[id];
@@ -1382,9 +1413,12 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
         sb.write('<h2>Added with it</h2>${strip(set)}');
       }
     }
-    sb.write(
-      '<p class="meta">${front.key}.${front.extension}${front.width == null ? '' : ' · ${front.width} × ${front.height}'} · <a href="/media/${front.key}/file">original file</a>${back == null ? '' : ' · <a href="/media/${back.key}/file">back</a>'}</p>',
-    );
+    sb.write(attach);
+    if (front.hasFile) {
+      sb.write(
+        '<p class="meta">${front.key}.${front.extension}${front.width == null ? '' : ' · ${front.width} × ${front.height}'} · <a href="/media/${front.key}/file">original file</a>${back == null ? '' : ' · <a href="/media/${back.key}/file">back</a>'}</p>',
+      );
+    }
     sb.write('</article>');
     return page(front.title ?? 'Untitled', sb.toString());
   }
@@ -1393,9 +1427,18 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
   /// photo that has one, or on the photo or document itself.
   static String _writtenOn(Media m, Media? back) => back != null
       ? 'Written on the back'
+      : !m.hasFile
+      ? 'Its text'
       : m.isDocument
       ? 'Transcription'
       : 'Written on it';
+
+  /// A web address as people say it: its site and path, without
+  /// `https://www.`.
+  static String _shortLink(String link) {
+    final short = link.replaceFirst(RegExp(r'^https?://(www\.)?'), '');
+    return short.length > 60 ? '${short.substring(0, 57)}…' : short;
+  }
 
   /// Text as written, with its line breaks. A long text shows its start,
   /// with the rest a click away.
@@ -1411,6 +1454,56 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     return '<p class="description">${esc(lines.take(cut).join('\n'))}</p>'
         '<details class="rest"><summary>Show the rest</summary>'
         '<p class="description">${esc(lines.skip(cut).join('\n'))}</p></details>';
+  }
+
+  /// When and where, side by side.
+  static String _whenWhere(String? date, String? place) =>
+      '''
+<div class="pair">
+  <div><label for="date">When</label>
+  <input id="date" name="date" value="${esc(date ?? '')}" maxlength="80" placeholder="about 1949"></div>
+  <div><label for="place">Where</label>
+  <input id="place" name="place" value="${esc(place ?? '')}" maxlength="200" placeholder="Hartford, CT"></div>
+</div>''';
+
+  /// A link, and when it was found, side by side.
+  static String _linkFound(String? link, String? found) =>
+      '''
+<div class="pair">
+  <div><label for="link">Link, if it is online</label>
+  <input id="link" name="link" type="url" value="${esc(link ?? '')}" maxlength="500" placeholder="https://…"></div>
+  <div><label for="found">When you found it</label>
+  <input id="found" name="found" value="${esc(found ?? '')}" maxlength="80"></div>
+</div>''';
+
+  /// The form for a source without a file: an obituary on the web, a census
+  /// entry, a book. From [person]'s page when given, who it then names.
+  String addItem(Person? person, {String? error}) {
+    final people = [
+      if (person != null) {'id': person.id, 'name': person.name},
+    ];
+    final now = DateTime.now();
+    final today = '${now.day} ${TreeDate.months[now.month - 1]} ${now.year}';
+    return page('Add a source', '''
+<h1>Add a source${person == null ? '' : ' about ${esc(person.name)}'}</h1>
+<p class="lead">Something without a file: an obituary on a web site, a census entry, a book, a conversation. Paste its text if you have it. A screenshot or PDF can be added to it afterwards; for a scan or photo, use <a href="/media/add${person == null ? '' : '?person=${person.id}'}">Add photos</a> instead.</p>
+${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
+<form class="memory edit-photo" method="post" action="/media/new">
+  <input type="hidden" name="person" value="${person?.id ?? ''}">
+  <label for="title">Caption / Title</label>
+  <input id="title" name="title" required maxlength="200" placeholder="Obituary of Ann Price, The Hartford Courant">
+  ${_linkFound(null, today)}
+  ${_whenWhere(null, null)}
+  <label>People it names</label>
+  <div class="people-picker" data-name="people" data-initial="${esc(jsonEncode(people))}"></div>
+  <label for="transcription">Its text</label>
+  <textarea id="transcription" name="transcription" class="tall" spellcheck="true" placeholder="Paste the text here"></textarea>
+  <label for="notes">Notes</label>
+  <p class="hint">What is known about it, rather than in it: who has the original, who found it.</p>
+  <textarea id="notes" name="notes" class="short" spellcheck="true"></textarea>
+  <div class="save"><button class="primary">Add the source</button> <a href="${person == null ? '/media' : pathOf(person)}">Cancel</a></div>
+</form>
+<script type="module" src="/assets/photos.js"></script>''');
   }
 
   /// The form for adding photos, from [person]'s page when given. The
@@ -1439,24 +1532,22 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     ];
     return page('Edit ${m.title ?? 'a photo'}', '''
 <h1>Edit: ${esc(m.title ?? 'Untitled')}</h1>
-<p class="lead">These details are written into the photo file itself, so a copy that leaves Prosapia still carries them.</p>
+<p class="lead">${m.hasFile ? 'These details are written into the file itself, so a copy that leaves Prosapia still carries them.' : 'What this source is, and where it can be found.'}</p>
 <form class="memory edit-photo" method="post" action="/media/${m.key}/edit" data-help="$help">
   ${m.isImage || m.isDocument ? '<img class="thumb large" src="/media/${m.key}/display?w=960" alt="">' : ''}
-  <label for="title">Caption</label>
+  <label for="title">Caption / Title</label>
   <input id="title" name="title" value="${esc(m.title ?? '')}" maxlength="200">
-  <label for="date">When</label>
-  <input id="date" name="date" value="${esc(m.date ?? '')}" maxlength="80" placeholder="about 1949">
-  <label for="place">Where</label>
-  <input id="place" name="place" value="${esc(m.place ?? '')}" maxlength="200">
-  <label>${m.isDocument ? 'People it names' : 'Who is in it'}</label>
+  ${_whenWhere(m.date, m.place)}
+  ${m.hasFile ? '' : _linkFound(m.link, m.found)}
+  <label>${m.hasFile && !m.isDocument ? 'Who is in it' : 'People it names'}</label>
   <div class="people-picker" data-name="people" data-initial="${esc(jsonEncode(people))}"></div>
   <label for="transcription">${_writtenOn(m, back)}</label>
   ${back != null && back.isImage ? '<img class="thumb large" src="/media/${back.key}/display?w=960" alt="The back">' : ''}
-  <textarea id="transcription" name="transcription" spellcheck="true"${m.isDocument ? ' class="tall"' : ''}>${esc(back?.transcription ?? m.transcription ?? '')}</textarea>
+  <textarea id="transcription" name="transcription" spellcheck="true"${m.isDocument || !m.hasFile ? ' class="tall"' : ''}>${esc(back?.transcription ?? m.transcription ?? '')}</textarea>
   ${help && (m.isImage || m.isDocument) ? '<div class="help tidy" data-key="${(back ?? m).key}"><button type="button" class="transcribe">Claude: Transcribe</button></div>' : ''}
   <label for="notes">Notes</label>
-  <p class="hint">What is known about it, rather than written on it: who has the original, who scanned it, who identified the people.</p>
-  <textarea id="notes" name="notes" spellcheck="true">${esc(m.notes ?? '')}</textarea>
+  <p class="hint">What is known about it, rather than ${m.hasFile ? 'written on it' : 'in it'}: who has the original, who found or scanned it, who identified the people.</p>
+  <textarea id="notes" name="notes" class="short" spellcheck="true">${esc(m.notes ?? '')}</textarea>
   <div class="save"><button class="primary">Save</button> <a href="/media/${m.key}">Cancel</a></div>
 </form>
 <script type="module" src="/assets/photos.js"></script>''');
@@ -2542,7 +2633,18 @@ img.thumb.large { max-width: min(480px, 100%); max-height: 480px; }
 .photo-card img { width: 160px; max-height: 200px; object-fit: contain; border-radius: 4px; background: var(--bg); }
 .photo-card .status { font: 13px var(--ui); color: var(--muted); }
 .photo-card label { margin-top: 8px; }
-.memory .photo-card textarea, .edit-photo textarea { height: 7em; }
+.memory .photo-card textarea, .edit-photo textarea { height: 5.5em; }
+.memory .photo-card textarea.short, .edit-photo textarea.short { height: 3.5em; }
+.edit-photo .pair, .photo-card .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+@media (max-width: 560px) { .edit-photo .pair, .photo-card .pair { grid-template-columns: 1fr; } }
+.source-card { display: flex; flex-direction: column; gap: 6px; aspect-ratio: 1; padding: 10px;
+  border: 1px solid var(--line); border-radius: 4px; background: var(--surface); overflow: hidden;
+  font: 12px/1.4 var(--ui); color: var(--muted); }
+.source-card .badge { align-self: flex-start; padding: 1px 6px; border-radius: 3px; background: var(--tint);
+  border: 1px solid var(--line); color: var(--text); font-weight: 600; }
+.source-card .excerpt { overflow: hidden; }
+.item-link { font: 15px var(--ui); margin-top: -0.6em; }
+.with-action .add-buttons { display: flex; gap: 8px; }
 .memory .photo-card textarea.tall, .edit-photo textarea.tall { height: 18em; }
 .edit-photo .hint, .photo-card .hint { margin: 0 0 4px; }
 details.rest > summary { cursor: pointer; color: var(--link); font: 15px var(--ui); margin: -0.4em 0 0.6em; }

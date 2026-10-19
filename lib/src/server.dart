@@ -1461,7 +1461,9 @@ Handler siteHandler(
     var pages = 1;
     var what = body['back'] == true ? 'the back of a photo' : 'a photo';
     final staged = uploads.file('${body['token']}');
-    final stored = site.tree.media['${body['key']}'];
+    final stored = [
+      site.tree.media['${body['key']}'],
+    ].where((m) => m != null && m.hasFile).firstOrNull;
     final file =
         staged ?? (stored == null ? null : await site.store.localFile(stored));
     if (file != null && file.path.toLowerCase().endsWith('.pdf')) {
@@ -1509,6 +1511,18 @@ Handler siteHandler(
       ..clear()
       ..addAll([if (!media.isBack) ...details.people.map((p) => p.id)]);
     return MediaWrite(media, file);
+  }
+
+  /// An item without a file, with [details].
+  Media itemWith(String id, PhotoDetails details) {
+    final item = Media(id, isBack: false, extension: '', location: '')
+      ..title = details.title
+      ..date = details.date
+      ..place = details.place
+      ..transcription = details.transcription
+      ..notes = details.notes;
+    item.people.addAll(details.people.map((p) => p.id));
+    return item;
   }
 
   String? text(Object? value) {
@@ -1597,6 +1611,109 @@ Handler siteHandler(
     );
   });
 
+  // A source without a file: a census entry, a book, a web obituary with
+  // its text pasted in.
+  router.get('/media/new', (Request r) {
+    if (editor(r) == null) return notAllowed(r);
+    final person = site.tree.people[r.url.queryParameters['person'] ?? ''];
+    return html(render(r).addItem(person));
+  });
+
+  router.post('/media/new', (Request r) async {
+    final member = editor(r);
+    if (member == null) return notAllowed(r);
+    final fields = await formAll(r);
+    String? field(String name) => text(fields[name]?.firstOrNull);
+    final title = field('title');
+    final person = site.tree.people[field('person') ?? ''];
+    if (title == null) {
+      return html(
+        render(r).addItem(person, error: 'The source needs a title.'),
+        status: 422,
+      );
+    }
+    final id = newId('m', (id) => site.tree.media.containsKey(id));
+    final item =
+        itemWith(
+            id,
+            PhotoDetails(
+              title: title,
+              date: field('date'),
+              place: field('place'),
+              transcription: field('transcription'),
+              notes: field('notes'),
+              people: shown(fields['people'] ?? const []),
+            ),
+          )
+          ..link = field('link')
+          ..found = field('found');
+    await site.store.saveMedia(
+      [MediaWrite(item, null)],
+      author: member,
+      summary: 'Add a source: $title',
+    );
+    await site.reload();
+    return seeOther('/media/$id');
+  });
+
+  // A file for an item that had none: a screenshot or PDF of a web page,
+  // or a scan found later. Its details are written into the file.
+  router.post('/media/<key>/attach', (Request r, String key) async {
+    final member = editor(r);
+    if (member == null) return notAllowed(r);
+    final media = site.tree.media[key];
+    if (media == null || media.hasFile) {
+      return jsonError('There is no such source.', status: 404);
+    }
+    final body = (jsonDecode(await r.readAsString()) as Map)
+        .cast<String, Object?>();
+    final staged = uploads.file('${body['token']}');
+    if (staged == null) {
+      return jsonError('The file was not uploaded. Please choose it again.');
+    }
+    final archival = await uploads.archival(staged);
+    final extension = switch (p.extension(archival.path).substring(1)) {
+      'heic' => 'heic',
+      'pdf' => 'pdf',
+      _ => 'jpg',
+    };
+    final MediaWrite write;
+    try {
+      write = await prepare(
+        archival,
+        Media(media.id, isBack: false, extension: extension, location: ''),
+        PhotoDetails(
+          title: media.title,
+          date: media.date,
+          place: media.place,
+          transcription: media.transcription,
+          notes: media.notes,
+          people: shown(media.people),
+          set: media.set,
+          setIndex: media.setIndex,
+        ),
+      );
+    } on StateError {
+      return jsonError(
+        'The file seems to be damaged. Opening it and saving it again, or '
+        'printing it to a new PDF, usually mends it.',
+      );
+    }
+    write.media
+      ..link = media.link
+      ..found = media.found;
+    await site.store.saveMedia(
+      [write],
+      author: member,
+      summary: 'Add a file to ${media.title ?? 'a source'}',
+    );
+    await site.reload();
+    return Response.ok(
+      jsonEncode({'location': '/media/$key'}),
+      headers: {'content-type': 'application/json'},
+    );
+  });
+
   router.get('/media/<key>/edit', (Request r, String key) async {
     if (editor(r) == null) return notAllowed(r);
     final media = site.tree.media[key];
@@ -1630,17 +1747,26 @@ Handler siteHandler(
     );
     final writes = [
       for (final m in [media, ?back])
-        await prepare(
-          await site.store.localFile(m),
-          Media(
-            m.id,
-            isBack: m.isBack,
-            extension: m.extension,
-            location: m.location,
-          ),
-          details,
-        ),
+        m.hasFile
+            ? await prepare(
+                await site.store.localFile(m),
+                Media(
+                  m.id,
+                  isBack: m.isBack,
+                  extension: m.extension,
+                  location: m.location,
+                ),
+                details,
+              )
+            : MediaWrite(itemWith(m.id, details), null),
     ];
+    // The link and when it was found are kept in the database only; a form
+    // without those fields leaves them as they were.
+    for (final w in writes) {
+      w.media
+        ..link = fields.containsKey('link') ? field('link') : media.link
+        ..found = fields.containsKey('found') ? field('found') : media.found;
+    }
     await site.store.saveMedia(
       writes,
       author: member,
@@ -1745,7 +1871,9 @@ Handler siteHandler(
   });
   router.get('/media/<key>/file', (Request r, String key) async {
     final Media? media = site.tree.media[key];
-    if (media == null) return Response.notFound('no such file');
+    if (media == null || !media.hasFile) {
+      return Response.notFound('no such file');
+    }
     final file = await site.store.localFile(media);
     return Response.ok(
       file.openRead(),

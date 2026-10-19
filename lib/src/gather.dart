@@ -107,12 +107,7 @@ List<Excerpt> elsewhere(
       if (m.notes case final notes?) 'Notes: ${_clip(notes)}',
     ];
     if (text.isEmpty) continue;
-    add(
-      Excerpt(
-        'the ${m.isDocument ? 'document' : 'photo'} “${m.title ?? 'Untitled'}”',
-        text.join('\n'),
-      ),
-    );
+    add(Excerpt('the ${m.kind} “${m.title ?? 'Untitled'}”', text.join('\n')));
   }
   return found;
 }

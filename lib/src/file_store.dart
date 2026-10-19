@@ -95,6 +95,15 @@ class FileStore extends TreeStore {
     for (final file in files) {
       final m = Media.namePattern.firstMatch(p.basename(file.path));
       if (m == null) continue;
+      // An item without a file is exported as its details, in JSON.
+      if (m[3]!.toLowerCase() == 'json') {
+        final item = Media.fromMap(
+          (jsonDecode(file.readAsStringSync()) as Map).cast<String, Object?>()
+            ..['location'] = '',
+        );
+        tree.media[item.key] = item;
+        continue;
+      }
       final item = Media(
         m[1]!,
         isBack: m[2] != null,
