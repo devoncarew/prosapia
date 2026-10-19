@@ -69,6 +69,14 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 
 ### People and relationships
 
+- A review of the content model against GEDCOM 7 and other genealogy models, so that
+  where Prosapia differs it does so on purpose, with the pros and cons weighed. Those
+  formats carry some legacy, but also long experience. Prosapia values ease of editing
+  and resilience to messy data, but should adopt clear improvements. Areas to look at
+  first: source records and citations; names in parts (given, family, suffix, type);
+  marriages stated in one place rather than on both pages; several values for one fact
+  when the evidence disagrees; and places as a hierarchy. Record each decision in
+  [content-model.md](content-model.md).
 - Merge two records that turn out to be the same person.
 - Bring back a deleted page when the pages around it have changed since, by working out
   what to take back, instead of restoring only the page as now.
@@ -156,9 +164,17 @@ GEDCOM import in the app (was milestone 7). The spike in
   import of the same file changes nothing.
 - Read GEDCOM 7.0 as well as 5.5.1, and verify the tags listed in
   [content-model.md](content-model.md) against the specification.
-- GEDCOM export.
-- Data export: download the whole tree (pages, photos, documents and their details) as
-  an archive a family can keep or take elsewhere, from Settings.
+- Data export, mainly for preservation: download the whole tree from Settings as one
+  archive that keeps everything, at full fidelity, and says what it holds:
+  - the pages as written and the original photos and documents, unchanged, with their
+    details embedded, as the nightly export already lays them out;
+  - `tree.json`, the same information as structured data (people, relationships and
+    their qualifiers, events with dates, places and sources, and each file's details),
+    with ids matching the file names, so another system can read it back completely;
+  - a README describing each file and field, the fact syntax and the date grammar;
+  - a copy of the site as plain HTML that works offline, for reading.
+- GEDCOM export, for moving into other genealogy software, as a GEDZIP (`.gdz`) file:
+  GEDCOM 7 with the media in one zip. Not needed soon.
 
 ### Views
 
@@ -174,7 +190,9 @@ GEDCOM import in the app (was milestone 7). The spike in
 - Every page readable on a phone (left open from milestone 18). Viewing works; check
   each page on a real phone and fix what does not.
 - A "needs source" report.
-- Printing: family books and wall charts.
+- Printing: family books and wall charts. Make PDFs for a person or a branch as PDF/A,
+  the archival form; PDF/A-3 can also carry the original photos and the data inside the
+  file, which makes a book a way to preserve the data as well as to read it.
 
 ### Sharing and privacy
 
