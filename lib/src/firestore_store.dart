@@ -256,8 +256,14 @@ class FirestoreStore extends TreeStore {
     final storage = app.storage().bucket(bucketName).storage;
     final batch = _db.batch();
     for (final w in files) {
+      final file = w.file;
+      if (file == null) {
+        // An item without a file is its details alone.
+        batch.set(_tree.collection('media').doc(w.media.key), w.media.toMap());
+        continue;
+      }
       final object = 'trees/$treeId/media/${w.media.fileName}';
-      final bytes = w.file.readAsBytesSync();
+      final bytes = file.readAsBytesSync();
       await storage.uploadObject(
         bucketName,
         object,

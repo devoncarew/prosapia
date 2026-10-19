@@ -174,8 +174,9 @@ class MediaWrite {
 
   final Media media;
 
-  /// The file as it should be stored, with its metadata already written.
-  final File file;
+  /// The file as it should be stored, with its metadata already written;
+  /// null for an item without a file.
+  final File? file;
 }
 
 /// The outcome of a save: the new revision number, or the page and revision

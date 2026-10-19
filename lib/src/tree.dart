@@ -444,6 +444,8 @@ class Media {
         ..place = map['place'] as String?
         ..set = map['set'] as String?
         ..setIndex = map['setIndex'] as int?
+        ..link = map['link'] as String?
+        ..found = map['found'] as String?
         ..people.addAll(((map['people'] as List?) ?? const []).cast<String>());
 
   /// Ids written into a file's metadata carry this prefix, so they can be
@@ -461,6 +463,13 @@ class Media {
   /// Cloud Storage. Only the store interprets it.
   final String location;
   String? title;
+
+  /// Where it can be found online, such as a web obituary's address.
+  String? link;
+
+  /// When it was found, as typed: useful for a page online, which may
+  /// change or vanish.
+  String? found;
 
   /// The words written or printed on it, as written: for a photo with a
   /// back, the writing on the back. It is kept in both files, so the words
@@ -489,6 +498,17 @@ class Media {
   String get fileName => '$key.$extension';
   bool get isImage => const {'jpg', 'jpeg', 'heic', 'png'}.contains(extension);
 
+  /// Whether the item has a file. One without, such as a census entry or a
+  /// web obituary, is known by its details alone.
+  bool get hasFile => extension.isNotEmpty;
+
+  /// What the item is, in a word: `photo`, `document` or `source`.
+  String get kind => !hasFile
+      ? 'source'
+      : isDocument
+      ? 'document'
+      : 'photo';
+
   /// A document whose first page can be shown as a picture.
   bool get isDocument => extension == 'pdf';
 
@@ -509,6 +529,8 @@ class Media {
     if (place != null) 'place': place,
     if (set != null) 'set': set,
     if (setIndex != null) 'setIndex': setIndex,
+    if (link != null) 'link': link,
+    if (found != null) 'found': found,
     'people': people,
   };
 }

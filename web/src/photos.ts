@@ -289,7 +289,10 @@ class PhotoCard {
     placeholder: 'Hartford, CT',
   });
   readonly transcription = element('textarea', { spellcheck: true });
-  readonly notes = element('textarea', { spellcheck: true });
+  readonly notes = element('textarea', {
+    spellcheck: true,
+    className: 'short',
+  });
   readonly people: PeoplePicker;
 
   constructor(
@@ -390,9 +393,14 @@ class PhotoCard {
       element(
         'div',
         {},
-        ...field('Caption', this.title),
-        ...field('When', this.date),
-        ...field('Where', this.place),
+        ...field('Caption / Title', this.title),
+        // When and where side by side.
+        element(
+          'div',
+          { className: 'pair' },
+          element('div', {}, ...field('When', this.date)),
+          element('div', {}, ...field('Where', this.place)),
+        ),
         peopleLabel,
         pickerEl,
         element('p', { className: 'card-links' }, ...textLinks, addBack),
@@ -547,6 +555,43 @@ function editPhoto(form: HTMLFormElement): void {
   });
 }
 
+// ------------------------------------------------------------ add a file
+
+/** A file for a source that had none: uploaded, then attached to it. */
+function attachFile(form: HTMLFormElement): void {
+  const input = form.querySelector<HTMLInputElement>('input[type=file]')!;
+  const status = form.querySelector<HTMLElement>('.status')!;
+  input.addEventListener('change', () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    void (async () => {
+      input.disabled = true;
+      const bar = element('progress', { max: 1, value: 0 });
+      status.replaceChildren(`Uploading ${file.name}… `, bar);
+      const staged = await sendFile(file, (sent) => {
+        bar.value = sent;
+        if (sent >= 1) {
+          status.replaceChildren(spinner(), `Adding ${file.name}…`);
+        }
+      });
+      const reply = staged.token
+        ? await post(
+            `/media/${form.dataset.key}/attach`,
+            JSON.stringify({ token: staged.token }),
+          )
+        : staged;
+      if (reply.location) {
+        location.href = reply.location;
+        return;
+      }
+      status.textContent = reply.error ?? 'The file was not added.';
+      input.disabled = false;
+    })();
+  });
+}
+
+const attachForm = document.querySelector<HTMLFormElement>('form.attach-file');
+if (attachForm) attachFile(attachForm);
 const addForm = document.querySelector<HTMLFormElement>('form.add-photos');
 if (addForm) new AddPhotos(addForm);
 const editForm = document.querySelector<HTMLFormElement>('form.edit-photo');
