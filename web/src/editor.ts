@@ -104,7 +104,9 @@ function decorate(view: EditorView): DecorationSet {
           marks.ref,
         ]);
       }
-      for (const m of line.text.matchAll(/\[\s*(?:date|place)\s*:[^\]]*\]/gi)) {
+      for (const m of line.text.matchAll(
+        /\[\s*(?:date|place|source)\s*:[^\]]*\]/gi,
+      )) {
         found.push([
           line.from + m.index,
           line.from + m.index + m[0].length,
@@ -385,6 +387,9 @@ function format(view: EditorView, kind: string): void {
       wrap('[place: ', ']', '');
       startCompletion(view);
       return;
+    case 'source':
+      // Where the words before it came from: text, or # and an item.
+      return wrap('[source: ', ']', 'where this came from');
   }
 }
 

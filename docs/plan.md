@@ -29,33 +29,7 @@ links to, not here.
 
 ## Milestones
 
-### Milestone 26: items and citations
-
-The tree holds **items**. An item has details (a title, a date and place, the people it
-names, a transcription, notes, a link, where it was found or is held) and may have a
-file. Photos and documents are items with a file; a census entry, a book, a conversation
-or a web obituary can be an item without one. Any item is referred to with `#`, and any
-item can be cited as a source. There is no separate kind of "source record".
-
-- Add an item without a file, from Photos and from a person's page: a title, a link,
-  when it was found, and pasted text as its transcription, such as an obituary's.
-  Optionally attach a screenshot or PDF of it later, or add one at the start.
-- Photos becomes "Photos, documents and sources", listing every item; an item without a
-  file shows as a card with its title and kind.
-- Cite an item from a fact or the story (`source: #…`, `[source: #…, page 2]`), with the
-  detail of this citation after it; the item's page lists every page and fact that cites
-  it, and a person's page lists the items cited on it.
-- When a PDF already has text, as one printed from a browser does, its transcription is
-  filled in from that text when it is added, with no call to the model.
-- "Where did this come from?" in the editor and the "+ add" forms offers text, an item
-  in the tree, or a new item, without the word "record".
-- Claims with no source can be marked, and listed for anyone who wants to find one.
-- Upload formats stay as they are (JPEG, HEIC, PNG, TIFF, PDF): text is pasted into an
-  item, and other documents are printed to PDF.
-
-Done when a fact and a sentence of a story each cite the same item without a file (a web
-obituary, with its text and link), the item's page lists both, and a PDF printed from a
-web page arrives with its text already transcribed.
+None scheduled. The next is chosen from Known future work.
 
 ## Known future work
 
@@ -222,6 +196,14 @@ this is needed until a wider preview is chosen. It should be done before then.
 
 Newest first.
 
+- **Milestone 26, items and citations.** The tree holds items: photos and documents with
+  a file, and sources without one, such as a web obituary with its link and pasted text,
+  added from Photos or a person's page, with a file attachable later. Any item is
+  referred to with `#` and cited from a fact or the story; its page lists what cites it,
+  and a person's page gathers its sources in one section. A PDF with text offers it as
+  the transcription when asked rather than filling it in, since a long document would
+  surprise. The editor has a Source button, the "+ add" forms ask where it came from,
+  and `source: needed` marks a claim for the Sources wanted list.
 - **Milestone 25, page format changes.** The decisions of milestone 24 are in practice:
   empty facts are prompts, not problems, and new pages start with them; a fact repeated
   when records disagree shows the others as "also recorded"; `Family name:`, kinds of

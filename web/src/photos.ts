@@ -135,6 +135,7 @@ interface Reply {
   date?: string;
   text?: string;
   pages?: number;
+  words?: number;
   location?: string;
   error?: string;
 }
@@ -259,6 +260,44 @@ function transcribeButton(
       });
       if (!error) status.replaceChildren(' Check what Claude read. ', undo);
       else status.append(' ', undo);
+    })();
+  });
+  return element('div', { className: 'help tidy' }, button, status);
+}
+
+/**
+ * Offers the text already in a PDF as its transcription. Nothing is filled
+ * in until it is asked for, since a long document has a lot of text.
+ */
+function pdfTextButton(
+  text: HTMLTextAreaElement,
+  request: Record<string, string>,
+  words: number,
+): HTMLElement {
+  const button = element('button', {
+    type: 'button',
+    textContent: `Use the PDF's text (about ${words.toLocaleString()} words)`,
+  });
+  const status = element('span', { className: 'status' });
+  button.addEventListener('click', () => {
+    void (async () => {
+      const before = text.value;
+      button.disabled = true;
+      const reply = await post('/media/pdf-text', JSON.stringify(request));
+      button.disabled = false;
+      if (reply.error || reply.text === undefined) {
+        status.textContent = ` ${reply.error ?? 'Something went wrong.'}`;
+        return;
+      }
+      text.value = reply.text;
+      text.classList.add('helped');
+      const undo = element('button', { type: 'button', textContent: 'Undo' });
+      undo.addEventListener('click', () => {
+        text.value = before;
+        text.classList.remove('helped');
+        status.textContent = '';
+      });
+      status.replaceChildren(' ', undo);
     })();
   });
   return element('div', { className: 'help tidy' }, button, status);
@@ -422,6 +461,15 @@ class PhotoCard {
         openText();
         if (reply.title && !this.title.value) this.title.value = reply.title;
         if (reply.date && !this.date.value) this.date.value = reply.date;
+        if (reply.words && reply.token) {
+          writtenInput.after(
+            pdfTextButton(
+              this.transcription,
+              { token: reply.token },
+              reply.words,
+            ),
+          );
+        }
       }
     });
   }
@@ -543,6 +591,16 @@ function editPhoto(form: HTMLFormElement): void {
   if (help && text) {
     help.replaceWith(
       transcribeButton(text, () => ({ key: help.dataset.key! })),
+    );
+  }
+  const slot = form.querySelector<HTMLElement>('.pdf-text-slot');
+  if (slot && text) {
+    slot.replaceWith(
+      pdfTextButton(
+        text,
+        { key: slot.dataset.key! },
+        Number(slot.dataset.words),
+      ),
     );
   }
   // Enter in the name box picks a person rather than saving the form.
