@@ -240,21 +240,27 @@ puts them into practice.
   recognised spellings as one of them (`M` as `male`, `X` as `intersex`); anything else
   is kept as written, read as unknown, and not reported.
 - **`#` refers to anything that is not a person,** as GitHub uses `#` for issues and `@`
-  for people: a photo, a document or a source record. Like a person's, the reference may
-  be readable, and only the id at its end is relied on: `#m-qymrdd`,
-  `#census-1920-hartford-k3m9qa`. Ids are unique across photos, documents and sources.
-  In the story a reference shows as a link with the item's title; in a fact,
+  for people: an item, such as a photo, a document or a source without a file (see
+  Items, below). Like a person's, the reference may be readable, and only the id at its
+  end is relied on: `#m-qymrdd`, `#census-1920-hartford-k3m9qa`. Ids are unique across
+  items. In the story a reference shows as a link with the item's title; in a fact,
   `source: #…` cites it, and `Photo: #m-qymrdd` is read as well as `Photo: m-qymrdd`.
   Typing `#` offers completion. `#` and a space at the start of a line is still a
   heading.
 - **Citing sources.** A fact cites with a `source:` part, and the story with a
   `[source: …]` mark, like `[date: …]` and `[place: …]`; the story's sources are listed
-  at the end of the page. The value is text (`1920 census, Hartford`), a document
-  (`#m-gdcade`), or a source record with the detail of this citation
-  (`#census-1920-hartford-k3m9qa, sheet 4B, line 37`). A source record is separate from
-  any photo: many sources have no image, and one may have several; a document that is
-  its own source needs no record. Markdown footnotes are not used: they are unfamiliar
-  to most editors. GEDCOM's quality rating is not used for now.
+  at the end of the page. The value is text (`1920 census, Hartford`), or an item with
+  the detail of this citation (`#m-gdcade`, `#census-1920-hartford-k3m9qa, sheet 4B`).
+  Markdown footnotes are not used: they are unfamiliar to most editors. GEDCOM's quality
+  rating is not used for now.
+- **Items.** The tree holds items: each has details (title, date, place, people named,
+  transcription, notes, a link, where it was found or is held) and may have a file.
+  Photos and documents are items with a file; a census entry, a book, a conversation or
+  a web obituary can be an item without one. Every item can be referred to with `#` and
+  cited as a source; there is no separate kind of source record, so people learn one
+  thing. Prosapia asks "where did this come from?" rather than using the word "record".
+  Upload formats stay JPEG, HEIC, PNG, TIFF and PDF: text is pasted into an item, and
+  other documents are printed to PDF. Decided after milestone 25.
 - **Ids in other systems are facts:** `FamilySearch: LZ5X-QRT`, `WikiTree: Carew-123`,
   `Find a Grave: 12345678`, each shown as a link to the record, like GEDCOM 7's `EXID`.
 - **Dates** stay forgiving and as typed; `1861 or 1862` is also read, as between the
@@ -356,8 +362,9 @@ links the others, and their pages list it under a derived "appears in" heading.
 
 ## Sources and citations
 
-Proposed: a source is a first-class record, and any claim on a page can point at one. A
-source record describes the evidence once; pages cite it by id.
+Decided: a source is an item, with or without a file (see Items, under Page syntax), and
+any claim on a page can point at one. The sketch below, of a source as a file of its
+own, predates that decision; an item's details hold the same information.
 
 ```markdown
 ---
@@ -382,10 +389,10 @@ Sheet 4B, line 62. Lists Margaret, age 13, in the household of Thomas Hughes.
 ### Proposed
 
 - **Two ways to cite.** A structured fact names its source in the fact; the story uses a
-  `[source: …]` mark rather than a markdown footnote, and a source record is referred to
-  with `#`. Decided in milestone 24; see Page syntax.
-- **The evidence image is ordinary media**, stored and tagged like any photo, and linked
-  from the source record.
+  `[source: …]` mark rather than a markdown footnote, and an item is referred to with
+  `#`. Decided in milestone 24; see Page syntax.
+- **The evidence image is ordinary media**, stored and tagged like any photo; it is the
+  item itself, or attached to it.
 - **A source records where and when it was found**: the site, the URL and the access
   date. Online records move and vanish.
 - **Uncited claims are allowed but visible.** Pages can show a "needs source" marker, as
