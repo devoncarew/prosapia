@@ -152,7 +152,9 @@ class TreeDate {
       r'^(?:from )?(.+?) (?:to|until|-|–|—) (.+)$',
     ).firstMatch(text);
     final dash = RegExp(r'^(\d{4}) ?[-–—] ?(\d{4})$').firstMatch(text);
-    final pair = between ?? from ?? dash;
+    // "1861 or 1862": one or the other, so between them.
+    final either = RegExp(r'^(.+) or (.+)$').firstMatch(text);
+    final pair = between ?? either ?? from ?? dash;
     if (pair != null) {
       final b = _single(pair[2]!);
       var a = _single(pair[1]!);
@@ -166,7 +168,7 @@ class TreeDate {
           raw,
           start: a.$1,
           end: b.$1,
-          qualifier: between != null ? 'between' : 'from',
+          qualifier: between != null || either != null ? 'between' : 'from',
           ambiguous: a.$2 || b.$2,
         );
       }

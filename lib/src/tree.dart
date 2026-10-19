@@ -114,13 +114,24 @@ class Person {
 
   void _read(FactLine line) {
     final key = line.key;
+    // An empty fact, such as a new page's blank `Born:`, is a prompt to fill
+    // in: it says nothing, and is not a problem.
+    if (key != 'name' && line.value.trim().isEmpty) return;
     switch (key) {
       case 'name':
         name = line.value;
       case 'nickname':
         nicknames.addAll(line.segments.map((s) => s.value));
       case 'also known as':
-        alsoKnownAs.addAll(line.segments.map((s) => s.value));
+        // `Margaret Price (married name)`: the name, and what kind it is.
+        for (final s in line.segments) {
+          final m = _namedWithQualifier.firstMatch(s.value);
+          final name = m == null ? s.value : m[1]!;
+          alsoKnownAs.add(name);
+          if (m != null) nameKinds[name] = m[2]!.trim();
+        }
+      case 'family name':
+        familyName = line.value;
       case 'sex':
         sex = line.value;
       case 'photo':
@@ -129,15 +140,16 @@ class Person {
         notes.add(line.value);
       case _ when lifeEvents.contains(key):
         final event = _event(line, line.segments, placeUnmarked: true);
-        switch (key) {
-          case 'born':
-            born = event;
-          case 'died':
-            died = event;
-          case 'buried':
-            buried = event;
-          default:
-            christened = event;
+        // When the records disagree the event is written again: the first
+        // is the one used, and the others are also recorded.
+        final first = switch (key) {
+          'born' => born ??= event,
+          'died' => died ??= event,
+          'buried' => buried ??= event,
+          _ => christened ??= event,
+        };
+        if (!identical(first, event)) {
+          alsoRecorded.putIfAbsent(first, () => []).add(event);
         }
       case _ when coupleEvents.contains(key):
         // The partner is the `@` reference, wherever it is in the line;
@@ -313,6 +325,28 @@ class Person {
 
   String name = '(no name)';
   String? sex;
+
+  /// [sex] as one of `male`, `female`, `intersex` or `unknown`.
+  String get sexValue => normalSex(sex ?? '') ?? 'unknown';
+
+  /// The family name, when written because the guess from [name] is wrong.
+  String? familyName;
+
+  /// The family name: [familyName] if written, or else the guess from the
+  /// words of [name], which skips endings such as "Jr.".
+  String? get surname => familyName ?? nameParts(name).surname;
+
+  /// What kind of name each of [alsoKnownAs] is, when written:
+  /// `married name`.
+  final nameKinds = <String, String>{};
+
+  /// For a life event written more than once, the other versions, keyed by
+  /// the one that is used.
+  final alsoRecorded = <Event, List<Event>>{};
+
+  /// The other versions of [e], when the records disagree.
+  List<Event> alternativesTo(Event? e) =>
+      e == null ? const [] : alsoRecorded[e] ?? const [];
   String? photo;
   Event? born, christened, died, buried;
 
@@ -476,3 +510,13 @@ final _suffixes = RegExp(
   r'^(jr|sr|ii|iii|iv|v|vi|\d+(st|nd|rd|th)|esq|phd|md)\.?,?$',
   caseSensitive: false,
 );
+
+/// [text] as one of the sexes Prosapia uses (`male`, `female`, `intersex`,
+/// `unknown`), or null if it is not a spelling of one.
+String? normalSex(String text) => switch (text.trim().toLowerCase()) {
+  'm' || 'male' || 'man' || 'boy' => 'male',
+  'f' || 'female' || 'woman' || 'girl' => 'female',
+  'x' || 'intersex' => 'intersex',
+  'u' || 'unknown' || '?' || 'not known' => 'unknown',
+  _ => null,
+};

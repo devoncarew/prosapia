@@ -185,10 +185,10 @@ Settled at the start of milestone 13:
   Allan “Scotty” MacLean Davidson. `Also known as:` holds other full names: a maiden or
   married name, a changed or anglicised name, another spelling. `Name:` is the name at
   birth, or the one they were best known by. All of them are searched.
-- **The vocabulary:** `Name`, `Nickname`, `Also known as`, `Sex`; `Born`, `Christened`,
-  `Died`, `Buried`, `Married`, `Divorced`; `Parents`, `Children`, `Partner`, `Siblings`;
-  `Occupation`, `Education`, `Residence`, `Degree`, `Graduated`, `Title`, `Note`. Any
-  other label is kept as a fact of that kind and shown as written.
+- **The vocabulary:** `Name`, `Nickname`, `Also known as`, `Family name`, `Sex`; `Born`,
+  `Christened`, `Died`, `Buried`, `Married`, `Divorced`; `Parents`, `Children`,
+  `Partner`, `Siblings`; `Occupation`, `Education`, `Residence`, `Degree`, `Graduated`,
+  `Title`, `Note`. Any other label is kept as a fact of that kind and shown as written.
 - **What was typed is what is kept.** A page is stored as typed, after a light
   formatting pass that never changes what it says or how it renders: single spaces in
   fact lines, one blank line between blocks, and paragraphs and list items wrapped at 88
