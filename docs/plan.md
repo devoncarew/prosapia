@@ -29,45 +29,11 @@ links to, not here.
 
 ## Milestones
 
-### Milestone 24: page format decisions
-
-Before changing the page format again, decide each open question about it, on purpose
-and with the pros and cons weighed, and record the decisions and their reasons in
-[content-model.md](content-model.md). Prosapia values ease of editing and resilience to
-messy data; GEDCOM 7 and other genealogy models carry some legacy but long experience,
-so where Prosapia differs it should be by choice.
-
-- **Comparison with other models.** Review GEDCOM 7 (and GEDCOM X, as FamilySearch uses)
-  area by area: names in parts (given, family, suffix, type); marriages and other couple
-  events; several values for one fact when the evidence disagrees; places as a
-  hierarchy; sources and citations. For each, keep ours, adopt theirs, or adapt, and say
-  why.
-- **Keeping pages in sync.** A relationship can be written on either page, or both, and
-  the two can disagree. Decide where each kind is written by default (parents on the
-  child's page; a marriage on one page or both), what the actions and Format write, and
-  what Items to correct asks of the rest.
-- **Comments** ([#53](https://github.com/devoncarew/prosapia/issues/53)). Lines the page
-  does not show and Prosapia does not read. For: notes to other editors and prompts on a
-  new page. Against: unfamiliar to most editors, and words hidden from readers may hold
-  things that belong on the page. Decide whether to have them, and if so their syntax
-  and where they may go, or whether blank fields and `Note:` lines cover the need.
-- **Blank fields on new pages.** A new page could start with the usual labels left
-  empty, as prompts: `Born:`, `Died:`, `Parents:`, `Children:`. Decide which, that an
-  empty fact is not a problem, and whether Format keeps or removes empty ones.
-- **Fact order.** Decide a normal order for the facts (name and other names, sex, life
-  events, relationships, marriages in date order, other facts by date, notes) and
-  whether Format applies it, moving whole facts but never changing what they say.
-- **Citing sources.** A fact's `source:` part works today. Decide how the story cites:
-  markdown footnotes (`[^1]` with a list at the end) are standard but foreign to most
-  editors; a `[source: 1920 census]` mark, like the `[date: …]` and `[place: …]` marks
-  editors already use, could be gathered into a list at the end of the page. Decide too
-  what a citation holds once source records exist (milestone 26).
-
-Done when content-model.md records a decision, with its reasons, for each point above.
-
 ### Milestone 25: page format changes
 
-Make the changes milestone 24 decides, so the pages and the editor follow them.
+Make the changes decided in milestone 24 (see
+[content-model.md](content-model.md#decided-in-milestone-24)), so the pages and the
+editor follow them.
 
 - New pages, from the actions and from "give them a page", start with the agreed blank
   fields.
@@ -260,6 +226,13 @@ this is needed until a wider preview is chosen. It should be done before then.
 
 Newest first.
 
+- **Milestone 24, page format decisions.** Each open question about the page format was
+  decided, weighed against GEDCOM 7 and GEDCOM X on the problems people hit, ease of
+  editing and resilience, and recorded in [content-model.md](content-model.md): a normal
+  fact order with notes last, no comments, blank fields on new pages, where
+  relationships are written, repeated facts when records disagree, names, sex, `#`
+  references to anything that is not a person, and citing sources from facts and the
+  story.
 - **Milestone 23, a family tree view.** **Family tree** in the header, on each person's
   page and on the home page shows an hourglass chart: grandparents and parents above,
   brothers and sisters either side, partners beside, and children and grandchildren

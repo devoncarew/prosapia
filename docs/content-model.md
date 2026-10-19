@@ -167,7 +167,8 @@ Settled at the start of milestone 13:
   any part is quoted, the parts are kept as written rather than joined. `[date: …]` and
   `[place: …]` are still read in fact lines, and become labels on save.
 - **Sources** are text for now, shown on the page as a small "source" mark with the
-  title on hover. When source records exist, `source:` will also take a link to one.
+  title on hover. See Decided in milestone 24 for citing from the story, and for
+  documents and source records.
 - **A marriage is its own line**, read like `Born:`, with the partner as well. It
   implies the partnership, so a `Partner:` line is needed only for couples with no
   recorded marriage. `Divorced:` and similar two-person events take the same shape.
@@ -195,6 +196,75 @@ Settled at the start of milestone 13:
   columns, with links and `[date: …]` and `[place: …]` marks kept on one line. Code,
   quotes, tables and HTML are left alone. Prosapia reads structure from the page each
   time, and shows how it understood a date rather than rewriting it.
+
+### Decided in milestone 24
+
+Each decision was weighed on the problems people hit, ease of editing, and resilience to
+records that are incomplete or disagree, against GEDCOM 7 and GEDCOM X. Milestone 25
+puts them into practice.
+
+- **Fact order.** Format puts the facts in a normal order, moving whole lines and never
+  changing what they say: `Name`, `Nickname`, `Also known as`, `Family name`, `Sex`;
+  `Born`, `Christened`, `Died`, `Buried`; `Parents`, `Siblings`; `Partner`, `Married`,
+  `Divorced` and other couple events; `Children`; `Photo`; every other fact; `Note`
+  last. Lines with the same label, and the couple lines, keep the order they were
+  written in; nothing is sorted by date. The value is that the first lines are
+  predictable and notes come last.
+- **No comments.** Hidden lines are unfamiliar, invisible to readers by design, and tend
+  to collect facts that belong on the page. Blank fields are the prompts, and a `Note:`
+  line, which readers see, holds a remark
+  ([#53](https://github.com/devoncarew/prosapia/issues/53)).
+- **New pages start with blank fields:** `Sex:`, `Born:`, `Died:` and `Parents:`, empty
+  unless something is known. An empty fact is never a problem, never shown, and has no
+  value. Format keeps empty facts, so the prompts stay until filled in or deleted.
+- **Where relationships are written.** Every form is read, wherever it is written, and a
+  page never fails because of where a relationship is. Where one form is preferred,
+  Prosapia promotes it when it can: siblings are best said through their parents, so
+  once both have parents recorded Prosapia offers to replace the `Siblings:` line; a
+  child is best recorded with `Parents:` on the child's own page, where the actions
+  write. Where no form is preferred (`Children:`, `Married:`, `Partner:` and other
+  couple events), either page will do, and where two pages disagree the pages and Items
+  to correct say so. This follows GEDCOM X, which records each couple and each parent
+  and child as a relationship of its own, rather than GEDCOM's family records: it copes
+  better with single parents, unknown partners and blended families.
+- **Several values for one fact.** A life event may be repeated when the records
+  disagree, as GEDCOM allows. The first is used for the infobox, the timeline and
+  sorting; the others are shown beside it as "also recorded", with their sources. It is
+  not a problem to correct; an editor removes a line once the question is settled.
+- **Names are kept whole.** `Family name:` is an optional fact for the rare name the
+  guess from its words gets wrong, such as "Maria de la Cruz García"; most pages never
+  need it. `Also known as:` may say what kind of name it is, in parentheses as
+  relationships are qualified: `Also known as: Margaret Price (married name)`. GEDCOM's
+  slashes and name parts would fix rare cases at the cost of every page.
+- **Sex** has four values: `male`, `female`, `intersex` and `unknown`. Format writes
+  recognised spellings as one of them (`M` as `male`, `X` as `intersex`); anything else
+  is kept as written, read as unknown, and not reported.
+- **`#` refers to anything that is not a person,** as GitHub uses `#` for issues and `@`
+  for people: a photo, a document or a source record. Like a person's, the reference may
+  be readable, and only the id at its end is relied on: `#m-qymrdd`,
+  `#census-1920-hartford-k3m9qa`. Ids are unique across photos, documents and sources.
+  In the story a reference shows as a link with the item's title; in a fact,
+  `source: #…` cites it, and `Photo: #m-qymrdd` is read as well as `Photo: m-qymrdd`.
+  Typing `#` offers completion. `#` and a space at the start of a line is still a
+  heading.
+- **Citing sources.** A fact cites with a `source:` part, and the story with a
+  `[source: …]` mark, like `[date: …]` and `[place: …]`; the story's sources are listed
+  at the end of the page. The value is text (`1920 census, Hartford`), a document
+  (`#m-gdcade`), or a source record with the detail of this citation
+  (`#census-1920-hartford-k3m9qa, sheet 4B, line 37`). A source record is separate from
+  any photo: many sources have no image, and one may have several; a document that is
+  its own source needs no record. Markdown footnotes are not used: they are unfamiliar
+  to most editors. GEDCOM's quality rating is not used for now.
+- **Ids in other systems are facts:** `FamilySearch: LZ5X-QRT`, `WikiTree: Carew-123`,
+  `Find a Grave: 12345678`, each shown as a link to the record, like GEDCOM 7's `EXID`.
+- **Dates** stay forgiving and as typed; `1861 or 1862` is also read, as between the
+  two.
+- **Places stay free text,** written smallest to largest, with completion steering
+  toward forms already in the tree. Places as records stay future work.
+- **Shared events,** when scheduled, start from GEDCOM X's model: an event as a record
+  of its own, with each person given a role in it. GEDCOM 7 instead puts an event on one
+  person or one family, with others linked as associations. Until then a fact can name
+  the others involved, such as `Godparent: @…`.
 
 ### Proposed
 
@@ -232,10 +302,7 @@ Settled at the start of milestone 13:
 
 - Do events shared by several people (a wedding, a reunion) get their own page, or live
   on one person's page and get linked from the others?
-- Are places first-class records with coordinates and historical names, or do they stay
-  text?
 - Does a couple or household get its own page, as Wikipedia would give a notable family?
-- How are conflicting claims shown, for example two sources with different birth years?
 
 ### What the sample import showed
 
@@ -314,8 +381,9 @@ Sheet 4B, line 62. Lists Margaret, age 13, in the household of Thomas Hughes.
 
 ### Proposed
 
-- **Two ways to cite.** A structured fact names its source in the fact
-  (`source: s-1900-census`). Prose uses a markdown footnote (`[^s-1900-census]`).
+- **Two ways to cite.** A structured fact names its source in the fact; the story uses a
+  `[source: …]` mark rather than a markdown footnote, and a source record is referred to
+  with `#`. Decided in milestone 24; see Page syntax.
 - **The evidence image is ordinary media**, stored and tagged like any photo, and linked
   from the source record.
 - **A source records where and when it was found**: the site, the URL and the access
@@ -339,8 +407,6 @@ belongs in the research spike.
 
 ### Open
 
-- How formal should citations be? Genealogists have detailed citation conventions; most
-  relatives will paste a link.
 - Does Prosapia record the reasoning behind a conclusion (why two records are the same
   person), or only the conclusion and its sources?
 - Copyright and site terms for saved record images, especially once a page is shared
