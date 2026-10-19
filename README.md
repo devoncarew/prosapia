@@ -10,34 +10,69 @@ exportable as plain files that need no special software to read.
 
 _Prosapia_ is Latin for lineage, or family line.
 
-## Status
+Prosapia is in a private preview with one family's tree and a few invited relatives.
 
-Early development. Prosapia is not yet ready for a family to use: it runs on a
-developer's machine, against Firebase's local emulators, with a sample tree. Putting it
-on the internet is the next milestone; see [the plan](docs/plan.md).
+![A person's page: their story on the left, the facts beside it, and a timeline below](docs/images/person.png)
 
-Working today:
+## What it does
 
-- Person pages with an infobox of facts, a timeline, photos and full-text search.
-- Sign-in with Google, limited to a tree's invited members, with owner, editor and
-  viewer roles.
-- Editing a page as lightly marked text, with a live preview, people and place
-  completion, and every save kept, with page history, comparison and restore.
-- "Add a memory": a quick way to add a dated story to someone's page.
-- Loading an existing tree exported from other genealogy software (GEDCOM), with its
-  photos, using command-line tools.
+**A page for everyone in the family.** Each page is a story first: who they were, where
+they lived, what people remember. Beside it, the facts (born, died, parents, partners,
+children) with dates and places, and below it a timeline drawn from the facts and from
+the dates in the story. Pages link to each other as you would expect.
+
+**A family tree.** A chart of anyone's family: grandparents and parents above, brothers
+and sisters beside, partners, children and grandchildren below. Choose anyone to move
+the tree onto them. The home page opens on your own family.
+
+![The family tree, centred on Thomas Hughes](docs/images/family.png)
+
+**Editing as plain text.** A page is written as a few lines of facts and then ordinary
+prose, so a relative can add a story without filling in a form. The editor completes
+names and places as you type, shows a preview, and has a guide with a worked example.
+Quick actions add a child, partner or parent from a person's page, and check first for
+someone similar already in the tree.
+
+![Editing a page: facts at the top, then the story](docs/images/edit.png)
+
+**Photos and documents.** Add photos, scanned letters and certificates, or sources with
+no file at all, such as an obituary's link and text. Say who is in a photo, when and
+where it was taken, and what is written on the back. That information is written into
+the photo file itself, so it stays with the photo wherever the file goes.
+
+**Sources.** Any fact or sentence can cite where it came from: a document in the tree,
+or a note such as "1880 census". A person's page gathers its sources in one place, a
+document's page lists everything that cites it, and a claim can be marked as needing a
+source.
+
+**Help from Claude, when you ask.** An owner can switch on help from Claude, an AI
+model. It can draft a first biography from what the tree already says, tidy a memory
+someone wrote quickly, transcribe handwriting on a photo or a document a page at a time,
+and suggest records worth looking for. Nothing it writes is saved until a person reads
+it and publishes.
+
+**Every change kept.** Each edit is recorded with who made it and why, can be compared
+with the version before, and can be undone. Contradictions between pages (two different
+marriage dates, say) are gathered on one page to sort out.
+
+**Private.** Only invited relatives can sign in, with a Google account, as owners,
+editors or viewers.
+
+**Yours to keep.** The tree is copied every night to plain files (text and photos) that
+any computer can open without Prosapia. Trees from other genealogy software can be
+brought in through GEDCOM, the common exchange format.
+
+_The screenshots show an invented family._
 
 ## Principles
 
-- **A family's history outlives the software.** The whole tree is exported as plain
-  markdown files and photos that need no Prosapia to read. (The export is not built
-  yet.)
-- **Prose first, structure where it pays.** A relative can add a story without filling
-  in a form.
-- **Information travels with its artifact.** What is known about a photo, including who
-  is in it and what is written on the back, is stored inside the photo file.
+- **A family's history outlives the software.** Everything is kept as plain text and
+  ordinary photo files.
+- **Prose first, structure where it pays.**
+- **Information travels with its artifact.** What is known about a photo is stored
+  inside the photo.
 - **Every change is attributed, logged and reversible.**
-- **Private by default.** Only invited members can sign in.
+- **Private by default.**
 - **Every claim can cite its source.**
 - **Standards at the edges.** GEDCOM for exchanging trees with other software; XMP and
   IPTC for photo metadata.
