@@ -163,8 +163,9 @@ Settled at the start of milestone 13:
   question mark, `1861?`, marks a date as uncertain. When a page is saved, its normal
   form quotes and labels the parts where that reads exactly the same, so
   `Born: 6 January 1911, "Brooklyn, NY"` is what is stored, and people learn the form
-  from their own pages. A line that would read differently is left as written.
-  `[date: …]` and `[place: …]` are still read in fact lines, and become labels on save.
+  from their own pages. A line that would read differently is left as written, and once
+  any part is quoted, the parts are kept as written rather than joined. `[date: …]` and
+  `[place: …]` are still read in fact lines, and become labels on save.
 - **Sources** are text for now, shown on the page as a small "source" mark with the
   title on hover. When source records exist, `source:` will also take a link to one.
 - **A marriage is its own line**, read like `Born:`, with the partner as well. It
