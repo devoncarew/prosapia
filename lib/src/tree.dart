@@ -107,6 +107,26 @@ class Person {
     'buried',
   };
   static const coupleEvents = {'married', 'divorced', 'separated', 'engaged'};
+
+  /// Labels that give a person's id in another system, by that system's
+  /// name as shown.
+  static const externalSites = {
+    'familysearch': 'FamilySearch',
+    'wikitree': 'WikiTree',
+    'find a grave': 'Find a Grave',
+    'findagrave': 'Find a Grave',
+  };
+
+  /// The address of the record [id] in [site], one of [externalSites].
+  static String externalLink(String site, String id) {
+    final q = Uri.encodeComponent(id.trim());
+    return switch (site) {
+      'FamilySearch' => 'https://www.familysearch.org/tree/person/details/$q',
+      'WikiTree' => 'https://www.wikitree.com/wiki/$q',
+      _ => 'https://www.findagrave.com/memorial/$q',
+    };
+  }
+
   static const relationships = {
     'parents', 'parent', 'children', 'child', 'siblings', 'sibling', //
     'partner', 'partners', 'spouse',
@@ -135,7 +155,10 @@ class Person {
       case 'sex':
         sex = line.value;
       case 'photo':
-        photo = line.value;
+        // `Photo: #m-qymrdd` and `Photo: m-qymrdd` are the same.
+        photo = line.value.replaceFirst(RegExp(r'^#'), '');
+      case _ when externalSites.containsKey(key):
+        externalIds[externalSites[key]!] = line.value;
       case 'note':
         notes.add(line.value);
       case _ when lifeEvents.contains(key):
@@ -336,6 +359,9 @@ class Person {
   /// words of [name], which skips endings such as "Jr.".
   String? get surname => familyName ?? nameParts(name).surname;
 
+  /// The person's ids in other systems, by system: `FamilySearch`.
+  final externalIds = <String, String>{};
+
   /// What kind of name each of [alsoKnownAs] is, when written:
   /// `married name`.
   final nameKinds = <String, String>{};
@@ -520,3 +546,8 @@ String? normalSex(String text) => switch (text.trim().toLowerCase()) {
   'u' || 'unknown' || '?' || 'not known' => 'unknown',
   _ => null,
 };
+
+/// The photo or document a `#` [reference] names, such as `#m-gdcade`, or
+/// null. Only the id at its end is relied on.
+Media? itemOf(Tree tree, String reference) =>
+    tree.media['m-${itemIdOf(reference)}'];

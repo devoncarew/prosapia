@@ -1305,6 +1305,33 @@ Handler siteHandler(
     (Request r) =>
         json(site.completion.people(r.url.queryParameters['q'] ?? '')),
   );
+  // Photos and documents for `#` completion: those whose title has every
+  // word typed, most recent first.
+  router.get('/api/items', (Request r) {
+    final words = (r.url.queryParameters['q'] ?? '')
+        .toLowerCase()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .toList();
+    if (words.isEmpty) return json(const []);
+    final found = [
+      for (final m in site.tree.media.values)
+        if (!m.isBack &&
+            words.every(
+              (w) =>
+                  (m.title ?? '').toLowerCase().contains(w) || m.id.contains(w),
+            ))
+          m,
+    ]..sort((a, b) => (b.date ?? '').compareTo(a.date ?? ''));
+    return json([
+      for (final m in found.take(8))
+        {
+          'ref': '#${m.key}',
+          'title': m.title ?? 'Untitled',
+          'detail': [m.isDocument ? 'document' : 'photo', ?m.date].join(', '),
+        },
+    ]);
+  });
   router.get(
     '/api/places',
     (Request r) =>

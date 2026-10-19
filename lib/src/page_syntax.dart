@@ -244,6 +244,22 @@ class TextSegment extends Segment {
 /// so email addresses are left alone.
 final proseRef = RegExp(r'(?<![\w@.])@([a-z0-9]+(?:-[a-z0-9]+)*)');
 
+/// Finds `#` references in prose: a photo, a document or a source, such as
+/// `#m-gdcade` or `#census-1920-hartford-k3m9qa`. A `#` counts only at the
+/// start of a word, so a heading (`# Title`), a link to part of a page
+/// (`(#top)`) and an address with a fragment are left alone.
+final proseItemRef = RegExp(r'(?<![\w#&/(\]"=])#([a-z0-9]+(?:-[a-z0-9]+)*)');
+
+/// The id a `#` reference relies on: the six characters at its end.
+String itemIdOf(String reference) =>
+    reference.replaceFirst('#', '').split('-').last;
+
+/// Finds `[source: …]` in prose.
+final proseSource = RegExp(
+  r'\[\s*source\s*:\s*([^\]]*?)\s*\]',
+  caseSensitive: false,
+);
+
 /// Finds `[date: …]` and `[place: …]` in prose.
 final proseMarked = RegExp(
   r'\[\s*(date|place)\s*:\s*([^\]]*?)\s*\]',
