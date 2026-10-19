@@ -1123,6 +1123,62 @@ Handler siteHandler(
     }),
   );
 
+  // Saying a brother or sister through their parents, from the suggestion
+  // on the page: see _siblingSuggestions in render.dart.
+  router.post(
+    '/people/<id>/siblings',
+    (Request r, String id) => editing(r, id, (from, member) async {
+      final fields = await form(r);
+      final other = site.tree.people[fields['other'] ?? ''];
+      if (other == null) return missing(r, 'There is no such person.');
+      final mine = site.index.parentsOf(from.id);
+      final theirs = site.index.parentsOf(other.id);
+      var source = removeRelation(from.source, 'siblings', other.id);
+      if (source == null) {
+        return missing(r, "${from.name}'s page no longer names ${other.name}.");
+      }
+      String? otherSource;
+      switch (fields['action']) {
+        case 'adopt':
+          for (final id in theirs.where((id) => !mine.contains(id))) {
+            source = addRelation(
+              source!,
+              'parents',
+              site.tree.people[id]!.reference,
+            );
+          }
+        case 'give':
+          otherSource = other.source;
+          for (final id in mine.where((id) => !theirs.contains(id))) {
+            otherSource = addRelation(
+              otherSource!,
+              'parents',
+              site.tree.people[id]!.reference,
+            );
+          }
+      }
+      final result = await site.store.saveChange(
+        [
+          PageWrite(
+            Person.fromSource(from.id, from.directory, source!),
+            basedOn: int.tryParse(fields['based_on'] ?? '') ?? from.revision,
+          ),
+          if (otherSource != null)
+            PageWrite(
+              Person.fromSource(other.id, other.directory, otherSource),
+              basedOn: other.revision,
+            ),
+        ],
+        author: member,
+        summary:
+            'Record ${from.name} and ${other.name} as siblings through their parents',
+      );
+      await site.reload();
+      if (!result.saved) return changedMeanwhile(r, result);
+      return seeOther('/people/${from.id}');
+    }),
+  );
+
   router.post(
     '/people/<id>/link',
     (Request r, String id) => editing(r, id, (from, member) async {

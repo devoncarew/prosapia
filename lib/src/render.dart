@@ -490,7 +490,7 @@ $body
   /// have no pages, so their names show as written.
   static const examplePage = '''Name: Margaret Ellen Hughes
 Nickname: Peggy
-Also known as: Margaret Ellen Price
+Also known as: Margaret Ellen Price (married name)
 Sex: female
 Born: 14 March 1887, "Scranton, PA"
 Died: about 1961, "Hartford, CT"
@@ -528,14 +528,18 @@ work with an insurance company. *Peggy* never liked the winters there.
   <div><h3>How it looks</h3><div class="preview">${personArticle(example, preview: true)}</div></div>
 </div>
 <h2>Questions</h2>
-${q('child', 'How do I add a child?', 'Add a <code>Children:</code> line, or add to the one there, with names separated by commas. Type <code>@</code> and part of a name to link someone who already has a page. A plain name is someone without a page yet; on the page it gets a button to give them one, which fills in what is known, such as both parents.', 'Children: @hughes-margaret-ellen-x2k9ab, Ruth Price')}
-${q('parents', 'How do I add parents, or brothers and sisters?', 'The same way, with <code>Parents:</code> or <code>Siblings:</code>. A relationship only needs writing on one of the two pages; both show it.', 'Parents: Thomas Hughes, Ann Price\nSiblings: Owen Hughes')}
+${q('add', 'What is the quickest way to add a child, a partner or a parent?', 'On the person\'s page, choose <strong>+ add a child</strong>, <strong>+ add a partner</strong> or <strong>+ add a parent</strong> beside their family. A short form asks who, and offers anyone already in the tree with that name. It writes the lines for you, and gives someone new a page of their own.')}
+${q('child', 'How do I add a child by editing?', 'Add a <code>Children:</code> line, or add to the one there, with names separated by commas. Type <code>@</code> and part of a name to link someone who already has a page. A plain name is someone without a page yet; on the page it gets a button to give them one, which fills in what is known, such as both parents.', 'Children: @hughes-margaret-ellen-x2k9ab, Ruth Price')}
+${q('parents', 'How do I add parents, or brothers and sisters?', 'The same way, with <code>Parents:</code> or <code>Siblings:</code>. A relationship only needs writing on one of the two pages; both show it. Brothers and sisters are best recorded through their parents: use <code>Siblings:</code> while the parents are not known, and once they are, the page offers to record the parents instead.', 'Parents: Thomas Hughes, Ann Price\nSiblings: Owen Hughes')}
+${q('blank', 'What are the empty lines on a new page?', 'Prompts: <code>Sex:</code>, <code>Born:</code>, <code>Died:</code> and <code>Parents:</code> start empty so you can see what to fill in. An empty line shows nothing and is never a problem; fill it in when you know, or delete it.', 'Sex:\nBorn:\nDied:\nParents:')}
+${q('disagree', 'What if two records disagree?', 'Keep both. Write the fact again, each line with its own source. The first is the one the page uses; the others show beside it as “also recorded”. When the question is settled, delete the line you no longer believe.', 'Born: 1911, source: 1920 census\nBorn: 1912, source: birth certificate')}
 ${q('marriage', 'How do I record a marriage, or a partner?', 'A <code>Married:</code> line gives the partner, the date and the place. For a couple with no marriage recorded, use <code>Partner:</code>. <code>Divorced:</code>, <code>Separated:</code> and <code>Engaged:</code> work like <code>Married:</code>.', 'Married: Walter Price, 12 June 1910, "Scranton, PA"\nPartner: Walter Price')}
 ${q('dates', 'What if I only roughly know when?', 'Write it as you would say it. These all work: <code>about 1925</code>, <code>spring 1925</code>, <code>June 1949</code>, <code>the 1880s</code>, <code>before 1900</code>, <code>between 1880 and 1885</code>, <code>14 March 1887</code>, <code>March 14, 1887</code>, and <code>1861?</code> for a year you are unsure of. A date the page cannot read is listed at the top of the page, so you can fix it.')}
 ${q('places', 'How do I write a place with a comma in it?', 'Put it in quotes, as in <code>"Hartford, CT"</code>. If you forget, Format and Publish add them when it is clear what you meant.', 'Born: 14 March 1887, "Scranton, PA"')}
 ${q('labels', 'How do I say which part is which?', 'Most of the time Prosapia can tell: a date reads as a date, and for <code>Born:</code>, <code>Died:</code> and the like the rest is the place. When it might be unclear, say what a part is with <code>date:</code>, <code>place:</code> or <code>source:</code>; then the parts can come in any order.', 'Occupation: teacher, 1905 to 1910, place: "Scranton, PA"')}
 ${q('source', 'How do I say where a fact came from?', 'Add a <code>source:</code> part: a record, a book, a letter, or who told you. It shows on the page as a small “source” mark.', 'Residence: 1930, place: "Hartford, CT", source: 1930 census')}
-${q('names', 'How do I add a nickname, a maiden name or another spelling?', '<code>Nickname:</code> is what the family called them; it shows in quotes in their name. <code>Also known as:</code> is any other full name: a maiden or married name, a changed name, another spelling.', 'Nickname: Peggy\nAlso known as: Margaret Ellen Price')}
+${q('names', 'How do I add a nickname, a maiden name or another spelling?', '<code>Nickname:</code> is what the family called them; it shows in quotes in their name. <code>Also known as:</code> is any other full name: a maiden or married name, a changed name, another spelling. Say what kind of name it is in parentheses, if you like.', 'Nickname: Peggy\nAlso known as: Margaret Ellen Price (married name)')}
+${q('family-name', 'Do I need a Family name line?', 'Almost never. Prosapia takes the family name from the last word of the name, skipping endings such as Jr. or 3rd. Add <code>Family name:</code> only when that is wrong, as for some Spanish and Dutch names; it decides how the person is grouped in the People list.', 'Name: Maria de la Cruz García\nFamily name: de la Cruz')}
 ${q('adopted', 'What about adopted, step or foster relations?', 'Put the kind in parentheses after the name.', 'Children: John Price (adopted)\nParents: @hughes-thomas-3f8d1a (step)')}
 ${q('facts', 'Where do jobs, schools, military service or homes go?', 'Any label works, one fact per line: <code>Occupation:</code>, <code>Education:</code>, <code>Military:</code>, <code>Residence:</code>, <code>Religion:</code>, or whatever fits. Repeat a label for more than one. Each shows in the timeline when it has a date.', 'Occupation: teacher, 1905 to 1910\nEducation: "Scranton High School", 1904')}
 ${q('note', 'Where does something go that is not a fact?', 'A <code>Note:</code> line holds a short remark as written. Anything longer belongs in the story, below the facts.', "Note: Her mother's family came from Wales.")}
@@ -546,7 +550,7 @@ ${q('items', 'How do I mention a photo or document in the story?', 'Type <code>#
 ${q('elsewhere', 'How do I link to their record on FamilySearch, WikiTree or Find a Grave?', 'Add a fact with the site as its label and their id there as the value. It shows as a link on the page.', 'FamilySearch: LZ5X-QRT\nWikiTree: Hughes-123\nFind a Grave: 12345678')}
 ${q('marks', 'What are [date: …] and [place: …]?', 'Marks for a date or a place in the story, so Prosapia reads them reliably. They show as ordinary text. The Date and Place buttons add them.', 'In [date: spring 1923] the family moved to [place: Hartford, CT].')}
 ${q('long', 'A fact is too long for one line.', 'Carry it on to the next line, indented by two spaces. Format does this for you.', 'Married: Walter Price, 12 June 1910, place: "St. Luke\'s Church, Scranton, PA",\n  source: Pennsylvania marriage records')}
-${q('format', 'What does the Format button do?', 'It tidies the text the way Publish will save it: single spaces, quotes and labels where they make the meaning clear, and long lines wrapped. It never changes what the page says; a line it cannot be sure of is left as you wrote it.')}
+${q('format', 'What does the Format button do?', 'It tidies the text the way Publish will save it: single spaces, quotes and labels where they make the meaning clear, and long lines wrapped. It puts the facts in the usual order (names, birth and death, parents, partners, children, other facts, notes last) and writes sex as male, female, intersex or unknown. It never changes what the page says; a line it cannot be sure of is left as you wrote it.')}
 ${q('photos', 'How do I add photos?', 'Not in the text: choose <strong>Add photos</strong> on the person\'s page, or go to Photos. A photo names the people in it, and shows on each of their pages. To choose the one at the top of a page, open the photo and choose “Use as … main photo”.')}
 ${q('mistake', 'What if I make a mistake?', 'Nothing is lost. Every version of a page is kept: choose ⋯ then <strong>View changes</strong> on the page to see them, and restore any one. A deleted page can be brought back from its address.')}
 ${q('problems', 'What is the list of problems at the top of a page?', 'Lines Prosapia could not read, such as a date it does not understand or a fact without a label. The page still saves; the list says what to fix.')}
@@ -647,6 +651,7 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     sb.write('<div class="person-body">');
     if (_canEdit || !requiresViewer) {
       sb.write(_contradictions(p, actions: actions));
+      if (actions) sb.write(_siblingSuggestions(p));
       for (final (items, what) in [
         (issuesOf(p), 'could not be read'),
         (checksOf(p), 'may be worth checking'),
@@ -783,6 +788,56 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
             ];
           }(),
     ];
+  }
+
+  /// What [p]'s `Siblings:` line could say through parents instead, which
+  /// says more: the line is not needed once the two share a parent, and
+  /// when only one of them has parents recorded, they can be given to the
+  /// other. Each comes with a button to do it.
+  String _siblingSuggestions(Person p) {
+    final mine = index.parentsOf(p.id);
+    final items = <String>[];
+    for (final r in p.siblings) {
+      final other = tree.people[r.id];
+      if (other == null || other.id == p.id) continue;
+      final theirs = index.parentsOf(other.id);
+      String names(List<String> ids) {
+        final n = [for (final id in ids) tree.people[id]!.name];
+        return n.length == 1
+            ? n.single
+            : '${n.take(n.length - 1).join(', ')} and ${n.last}';
+      }
+
+      final (text, action, label) = mine.any(theirs.contains)
+          ? (
+              '${other.name} shares a parent with ${p.name}, so the Siblings line says nothing more.',
+              'remove',
+              'Remove ${other.name} from the Siblings line',
+            )
+          : mine.isEmpty && theirs.isNotEmpty
+          ? (
+              '${other.name}\'s parents are recorded: ${names(theirs)}.',
+              'adopt',
+              'Record ${names(theirs)} as ${p.name}\'s parents instead',
+            )
+          : theirs.isEmpty && mine.isNotEmpty
+          ? (
+              '${p.name}\'s parents are recorded, but ${other.name}\'s are not.',
+              'give',
+              'Record ${names(mine)} as ${other.name}\'s parents instead',
+            )
+          : (null, null, null);
+      if (text == null) continue;
+      items.add(
+        '<li>${esc(text)}<div class="resolve"><form method="post" action="/people/${p.id}/siblings">'
+        '<input type="hidden" name="other" value="${other.id}">'
+        '<input type="hidden" name="action" value="$action">'
+        '<input type="hidden" name="based_on" value="${p.revision}">'
+        '<button>${esc(label)}</button></form></div></li>',
+      );
+    }
+    if (items.isEmpty) return '';
+    return '<details class="issues suggestions" open><summary>Brothers and sisters can be recorded through their parents</summary><ul>${items.join()}</ul></details>';
   }
 
   /// Contradictions between [p]'s page and others, each with a way to

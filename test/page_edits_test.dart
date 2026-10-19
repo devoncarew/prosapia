@@ -113,7 +113,8 @@ taught school.
         born: 'about 1890',
         parents: ['@hughes-thomas-3f8d1a'],
       ),
-      'Name: Mary Hughes\nBorn: about 1890\nParents: @hughes-thomas-3f8d1a\n',
+      'Name: Mary Hughes\nSex:\nBorn: about 1890\nDied:\n'
+      'Parents: @hughes-thomas-3f8d1a\n',
     );
     expect(
       directoryFor('Mary Ellen Hughes', 'p-x2k9ab'),

@@ -186,8 +186,8 @@ String? setFact(String source, String label, String value) {
   return changed ?? _addLine(source, label, value);
 }
 
-/// The text of a new page: its name, and what is known from where it was
-/// made.
+/// The text of a new page: its name, what is known from where it was made,
+/// and the facts most often filled in left blank, as prompts.
 String newPage({
   required String name,
   String born = '',
@@ -195,8 +195,10 @@ String newPage({
   List<String> partners = const [],
 }) => [
   'Name: ${name.trim()}',
-  if (born.trim().isNotEmpty) 'Born: ${born.trim()}',
-  if (parents.isNotEmpty) 'Parents: ${parents.join(', ')}',
+  'Sex:',
+  'Born:${born.trim().isEmpty ? '' : ' ${born.trim()}'}',
+  'Died:',
+  'Parents:${parents.isEmpty ? '' : ' ${parents.join(', ')}'}',
   if (partners.isNotEmpty) 'Partner: ${partners.join(', ')}',
   '',
 ].join('\n');

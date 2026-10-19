@@ -1,5 +1,6 @@
 import 'package:prosapia/src/index.dart';
 import 'package:prosapia/src/render.dart';
+import 'package:prosapia/src/store.dart';
 import 'package:prosapia/src/tree.dart';
 import 'package:test/test.dart';
 
@@ -56,5 +57,28 @@ void main() {
     });
     expect(r.index.parentsOf('p-bbbbbb'), ['p-aaaaaa']);
     expect(r.index.childrenOf('p-aaaaaa'), ['p-bbbbbb']);
+  });
+
+  test('siblings are offered to be recorded through their parents', () {
+    final tree = Tree('test');
+    for (final (dir, source) in [
+      ('a-aaaaaa', 'Name: A\nSiblings: @b-bbbbbb, @c-cccccc, @d-dddddd\n'),
+      ('b-bbbbbb', 'Name: B\nParents: @p-pppppp\n'),
+      ('c-cccccc', 'Name: C\n'),
+      ('d-dddddd', 'Name: D\nParents: @p-pppppp\n'),
+      ('p-pppppp', 'Name: P\n'),
+    ]) {
+      final id = 'p-${dir.split('-').last}';
+      tree.people[id] = Person.fromSource(id, dir, source);
+    }
+    final r = Renderer(
+      tree,
+      Index.build(tree),
+      viewer: Member('a@example.com', Role.editor),
+      editable: true,
+    );
+    final html = r.personArticle(tree.people['p-aaaaaa']!);
+    expect(html, contains('Record P as A&#39;s parents instead'));
+    expect(html, isNot(contains('as C&#39;s parents')));
   });
 }
