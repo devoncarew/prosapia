@@ -12,14 +12,14 @@ _Prosapia_ is Latin for lineage, or family line.
 
 Prosapia is in a private preview with one family's tree and a few invited relatives.
 
-![A person's page: their story on the left, the facts beside it, and a timeline below](docs/images/person.png)
-
 ## What it does
 
 **A page for everyone in the family.** Each page is a story first: who they were, where
 they lived, what people remember. Beside it, the facts (born, died, parents, partners,
 children) with dates and places, and below it a timeline drawn from the facts and from
 the dates in the story. Pages link to each other as you would expect.
+
+![A person's page: their story on the left, the facts beside it, and a timeline below](docs/images/person.png)
 
 **A family tree.** A chart of anyone's family: grandparents and parents above, brothers
 and sisters beside, partners, children and grandchildren below. Choose anyone to move
