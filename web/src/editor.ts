@@ -168,6 +168,37 @@ async function people(
   };
 }
 
+interface ItemSuggestion {
+  ref: string;
+  title: string;
+  detail: string;
+}
+
+async function items(
+  context: CompletionContext,
+): Promise<CompletionResult | null> {
+  // "#" at the start of a word, followed by part of a photo's or
+  // document's title. "# " at the start of a line is a heading, not this.
+  const word = context.matchBefore(
+    /(?:^|[\s([,:])#[\p{L}\p{N}-]+(?: [\p{L}\p{N}]*)?/u,
+  );
+  if (!word) return null;
+  const hash = word.text.indexOf('#');
+  const query = word.text.slice(hash + 1);
+  const response = await fetch(`/api/items?q=${encodeURIComponent(query)}`);
+  if (!response.ok) return null;
+  const found = (await response.json()) as ItemSuggestion[];
+  return {
+    from: word.from + hash,
+    filter: false,
+    options: found.map((m): Completion => ({
+      label: m.title,
+      detail: m.detail,
+      apply: m.ref,
+    })),
+  };
+}
+
 async function places(
   context: CompletionContext,
 ): Promise<CompletionResult | null> {
@@ -627,7 +658,7 @@ export function mount(form: HTMLFormElement): Mounted {
         helpedField,
         editable.of(EditorView.editable.of(true)),
         autocompletion({
-          override: [people, places, labels],
+          override: [people, items, places, labels],
           activateOnTyping: true,
         }),
         EditorView.updateListener.of((update) => {

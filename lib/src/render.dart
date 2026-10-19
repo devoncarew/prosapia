@@ -541,6 +541,9 @@ ${q('facts', 'Where do jobs, schools, military service or homes go?', 'Any label
 ${q('note', 'Where does something go that is not a fact?', 'A <code>Note:</code> line holds a short remark as written. Anything longer belongs in the story, below the facts.', "Note: Her mother's family came from Wales.")}
 ${q('story', 'How do I write the story?', 'Below the facts, after a blank line, write as you would anywhere: paragraphs separated by blank lines. Start a line with <code>##</code> for a section heading. <code>*Italics*</code>, <code>**bold**</code> and lists work too; the buttons above the editor add them.', '## 1923: The move to Hartford')}
 ${q('link', 'How do I mention a person in the story?', 'Type <code>@</code> and part of their name, and choose them. The page shows their name as a link.', 'She married @price-walter-7k2m9x in 1910.')}
+${q('cite', 'How do I say where something in the story came from?', 'Add a <code>[source: …]</code> mark after it, as you would a footnote. It shows as a small number, and the page lists its sources at the end. Write the source as text, or type <code>#</code> and part of a photo or document\'s title to point to it, with any detail after a comma.', 'They married in 1910 [source: #m-gdcade, page 2] and were\nin Hartford by 1920 [source: 1920 census, Hartford].')}
+${q('items', 'How do I mention a photo or document in the story?', 'Type <code>#</code> and part of its title, and choose it. The page shows its title as a link. In a fact, <code>source: #…</code> cites it.', 'The certificate is #m-gdcade.')}
+${q('elsewhere', 'How do I link to their record on FamilySearch, WikiTree or Find a Grave?', 'Add a fact with the site as its label and their id there as the value. It shows as a link on the page.', 'FamilySearch: LZ5X-QRT\nWikiTree: Hughes-123\nFind a Grave: 12345678')}
 ${q('marks', 'What are [date: …] and [place: …]?', 'Marks for a date or a place in the story, so Prosapia reads them reliably. They show as ordinary text. The Date and Place buttons add them.', 'In [date: spring 1923] the family moved to [place: Hartford, CT].')}
 ${q('long', 'A fact is too long for one line.', 'Carry it on to the next line, indented by two spaces. Format does this for you.', 'Married: Walter Price, 12 June 1910, place: "St. Luke\'s Church, Scranton, PA",\n  source: Pennsylvania marriage records')}
 ${q('format', 'What does the Format button do?', 'It tidies the text the way Publish will save it: single spaces, quotes and labels where they make the meaning clear, and long lines wrapped. It never changes what the page says; a line it cannot be sure of is left as you wrote it.')}
@@ -719,6 +722,20 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     for (final m in proseRef.allMatches(p.body))
       if (!tree.people.containsKey('p-${m[1]!.split('-').last}'))
         'No one in the tree matches @${m[1]}.',
+    // A `#` reference in a fact's source, or the photo, that matches nothing.
+    for (final source in [
+      for (final e in [p.born, p.christened, p.died, p.buried]) ...?e?.sources,
+      for (final c in p.couples) ...c.event.sources,
+      for (final f in p.facts) ...f.event.sources,
+      for (final m in proseSource.allMatches(p.body)) m[1]!,
+    ])
+      if (source.trim().startsWith('#') &&
+          itemOf(tree, source.trim().split(',').first) == null)
+        'Nothing in the tree matches ${source.trim().split(',').first}.',
+    if (p.photo != null &&
+        tree.media[p.photo] == null &&
+        tree.deletedMedia[p.photo] == null)
+      'No photo has the id ${p.photo}.',
   ];
 
   /// Dates that look unlikely. These are questions, never errors: real
@@ -816,8 +833,28 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
   /// Where [e] comes from, as small marks with the source on hover.
   String cite(Event e) => [
     for (final source in e.sources)
-      ' <span class="cite" title="${esc(source)}" tabindex="0">source</span>',
+      switch (_source(source)) {
+        (final href?, final title) =>
+          ' <a class="cite" href="$href" title="${esc(title)}">source</a>',
+        (null, final title) =>
+          ' <span class="cite" title="${esc(title)}" tabindex="0">source</span>',
+      },
   ].join();
+
+  /// Where a source leads, and how it reads: a `#` reference to a photo or
+  /// document gives that item's page and title, followed by any detail
+  /// written after it (`#m-gdcade, page 2`); other text is as written.
+  (String?, String) _source(String source) {
+    final text = source.trim();
+    if (!text.startsWith('#')) return (null, text);
+    final comma = text.indexOf(',');
+    final reference = comma < 0 ? text : text.substring(0, comma);
+    final detail = comma < 0 ? '' : text.substring(comma + 1).trim();
+    final item = itemOf(tree, reference);
+    if (item == null) return (null, text);
+    final title = item.title ?? 'Untitled';
+    return ('/media/${item.key}', detail.isEmpty ? title : '$title, $detail');
+  }
 
   /// A date as typed, with how it was read shown on hover.
   String date(TreeDate d) => d.understood
@@ -978,6 +1015,16 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
             ...named([r], 'children', from: parent),
     ]);
 
+    // The person's records in other systems, as links.
+    if (p.externalIds.isNotEmpty) {
+      rows.add((
+        'Elsewhere',
+        [
+          for (final MapEntry(key: site, value: id) in p.externalIds.entries)
+            '<a href="${esc(Person.externalLink(site, id))}" rel="noopener" target="_blank">${esc(site)}</a>',
+        ].join('<br>'),
+      ));
+    }
     final photo = p.photo == null ? null : tree.media[p.photo];
     if (rows.isEmpty && photo == null) return '';
     final sb = StringBuffer('<aside class="infobox">');
@@ -1070,7 +1117,28 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
   /// Renders page prose: `@` references become links to people, and
   /// `[date: …]` and `[place: …]` are marked for display.
   String markdown(String source) {
+    // Sources cited in the story are numbered in order, the same source
+    // keeping its number, and listed after it.
+    final sources = <String>[];
+    // A mark sits against the word before it, as a footnote number does.
+    final cited = RegExp('[ \t]*${proseSource.pattern}', caseSensitive: false);
     final marked = source
+        .replaceAllMapped(cited, (m) {
+          final text = m[1]!.trim();
+          if (text.isEmpty) return '';
+          var n = sources.indexOf(text) + 1;
+          if (n == 0) {
+            sources.add(text);
+            n = sources.length;
+          }
+          return '<sup class="cite-ref"><a href="#source-$n" title="${esc(_source(text).$2)}">$n</a></sup>';
+        })
+        .replaceAllMapped(proseItemRef, (m) {
+          final item = itemOf(tree, m[0]!);
+          return item == null
+              ? m[0]!
+              : '<a href="/media/${item.key}">${esc(item.title ?? 'Untitled')}</a>';
+        })
         .replaceAllMapped(proseRef, (m) {
           final id = 'p-${m[1]!.split('-').last}';
           final person = tree.people[id];
@@ -1082,10 +1150,15 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
           if (m[1]!.toLowerCase() == 'date') return date(TreeDate.parse(m[2]!));
           return '<span class="place-ref">${esc(m[2])}</span>';
         });
-    final html = md.markdownToHtml(
-      marked,
-      extensionSet: md.ExtensionSet.gitHubWeb,
-    );
+    final list = sources.isEmpty
+        ? ''
+        : '<section class="sources"><h2>Sources</h2><ol>${[for (final (i, s) in sources.indexed) '<li id="source-${i + 1}">${switch (_source(s)) {
+              (final href?, final title) => '<a href="$href">${esc(title)}</a>',
+              (null, final title) => esc(title),
+            }}</li>'].join()}</ol></section>';
+    final html =
+        md.markdownToHtml(marked, extensionSet: md.ExtensionSet.gitHubWeb) +
+        list;
     // Links written as relative file paths in older pages still work.
     return html
         .replaceAllMapped(
@@ -2257,6 +2330,10 @@ h2 { font-size: 1.15em; font-weight: 600; margin: 1.8em 0 0.5em; padding-bottom:
 .infobox td { padding: 4px 0; }
 .infobox .add-relative { font-size: 13px; }
 .infobox .also { font-size: 13px; color: var(--muted); }
+.cite-ref { font: 600 11px var(--ui); margin-left: 1px; }
+.cite-ref a { text-decoration: none; }
+.sources ol { font: 15px/1.5 var(--ui); color: var(--muted); padding-left: 1.4em; }
+a.cite { text-decoration: none; }
 .corrections li { margin-bottom: 6px; }
 h2 .count { font-size: 0.8em; font-weight: 500; color: var(--muted); }
 .corrections-note { font: 15px var(--ui); }
