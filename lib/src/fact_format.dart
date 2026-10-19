@@ -63,12 +63,15 @@ List<String> _parts(FactLine line) {
     if (s is PlaceSegment) placed = true;
     if (s is! TextSegment || identical(s, partner)) continue;
     final asDate = TreeDate.parse(s.value);
-    // As in reading: after the place, a date needs a year.
-    final isDate = (life || couple)
-        ? date == null &&
-              asDate.understood &&
-              ((!placed && joined.isEmpty) || asDate.year != null)
-        : date == null && asDate.understood;
+    // As in reading: after the place, a date needs a year, and something
+    // meant as a date is never part of the place.
+    final isDate =
+        ((life || couple)
+            ? date == null &&
+                  asDate.understood &&
+                  ((!placed && joined.isEmpty) || asDate.year != null)
+            : date == null && asDate.understood) ||
+        (date == null && TreeDate.looksLike(s.value));
     if (isDate) {
       date = asDate;
       dated = s;
@@ -77,6 +80,9 @@ List<String> _parts(FactLine line) {
       if (life || couple) placed = true;
     }
   }
+  // Parts written apart, by someone who quoted any of them, stay apart:
+  // only a line written without quotes has its parts joined into one.
+  final apart = segments.any((s) => s is TextSegment && s.quoted);
   final value = joined.map((s) => s.value).join(', ');
   // Beside a named partner, a plain part would read as the partner, so the
   // place is said to be one.
@@ -86,7 +92,11 @@ List<String> _parts(FactLine line) {
   var wroteJoined = false;
   for (final s in segments) {
     if (s is TextSegment && joined.contains(s) && !identical(s, partner)) {
-      if (!wroteJoined) out.add('$label${Segment.quote(value)}');
+      if (apart) {
+        out.add('$label${Segment.quote(_spaces(s.value))}');
+      } else if (!wroteJoined) {
+        out.add('$label${Segment.quote(value)}');
+      }
       wroteJoined = true;
     } else if (identical(s, dated)) {
       out.add(Segment.quote(s.value));

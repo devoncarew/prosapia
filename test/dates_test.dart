@@ -72,4 +72,22 @@ void main() {
       'November 1987',
     ]);
   });
+
+  test('a question mark makes a date uncertain', () {
+    for (final text in ['1861 ?', '1861?', '1861 (?)', 'March 1861?']) {
+      final d = TreeDate.parse(text);
+      expect(d.understood, isTrue, reason: text);
+      expect(d.qualifier, 'about', reason: text);
+      expect(d.raw, text);
+    }
+    expect(TreeDate.parse('?').understood, isFalse);
+  });
+
+  test('what looks like a date', () {
+    expect(TreeDate.looksLike('1861 or 1862'), isTrue);
+    expect(TreeDate.looksLike('c1861'), isTrue);
+    expect(TreeDate.looksLike('early 1860s'), isTrue);
+    expect(TreeDate.looksLike('1861 Main Street'), isFalse);
+    expect(TreeDate.looksLike('New York'), isFalse);
+  });
 }

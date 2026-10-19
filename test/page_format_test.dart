@@ -99,6 +99,33 @@ void main() {
       );
     });
 
+    test('quoted parts stay apart, and a doubtful date is a date', () {
+      expect(
+        facts('Born: "New York, NY", 1861 ?'),
+        'Name: A\nBorn: "New York, NY", 1861 ?\n',
+      );
+      expect(
+        facts('Born: 1861 ?, "New York, NY"'),
+        'Name: A\nBorn: 1861 ?, "New York, NY"\n',
+      );
+      expect(
+        facts('Buried: River View Cemetery, "Portland, Oregon"'),
+        'Name: A\nBuried: River View Cemetery, "Portland, Oregon"\n',
+      );
+      // Without quotes, the forgiving reading still joins the place.
+      expect(
+        facts('Born: 1911, Brooklyn, NY'),
+        'Name: A\nBorn: 1911, "Brooklyn, NY"\n',
+      );
+    });
+
+    test('something meant as a date is never part of the place', () {
+      expect(
+        facts('Born: "New York, NY", 1861 or 1862'),
+        'Name: A\nBorn: "New York, NY", 1861 or 1862\n',
+      );
+    });
+
     test('a date after the place stays the date', () {
       expect(
         facts('Born: "Portland, Oregon", "18 March 1914"'),
