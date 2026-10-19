@@ -177,6 +177,7 @@ Handler siteHandler(
   );
   router.get('/people', (Request r) => html(render(r).people()));
   router.get('/research', (Request r) => html(render(r).research()));
+  router.get('/sources-wanted', (Request r) => html(render(r).sourcesWanted()));
   router.get('/help/writing', (Request r) => html(render(r).writingGuide()));
   // The welcome page was folded into the first page.
   router.get('/welcome', (Request r) => Response.seeOther(Uri.parse('/')));
@@ -1006,6 +1007,10 @@ Handler siteHandler(
 
       final sources = <String, String>{};
       String current(Person p) => sources[p.id] ?? p.source;
+      // Where it came from, as a part for the lines that take one.
+      final cited = field('source').isEmpty
+          ? null
+          : 'source: ${Segment.quote(field('source'))}';
       void change(Person p, String? source) {
         if (source != null) sources[p.id] = source;
       }
@@ -1061,6 +1066,7 @@ Handler siteHandler(
             reference,
             if (married && date.isNotEmpty) Segment.quote(date),
             if (married && place.isNotEmpty) 'place: ${Segment.quote(place)}',
+            ?cited,
           ];
           change(
             from,
@@ -1079,6 +1085,7 @@ Handler siteHandler(
                 [
                   reference,
                   if (when.isNotEmpty) Segment.quote(when),
+                  ?cited,
                 ].join(', '),
               ),
             );
@@ -1095,7 +1102,10 @@ Handler siteHandler(
               formatPage(
                 newPage(
                   name: name,
-                  born: field('born'),
+                  born: [
+                    if (field('born').isNotEmpty) field('born'),
+                    if (field('born').isNotEmpty) ?cited,
+                  ].join(', '),
                   parents: newParents,
                   partners: newPartners,
                 ),
@@ -1426,13 +1436,38 @@ Handler siteHandler(
     final embedded = saved.kind == 'pdf'
         ? await embeddedDetails(uploads.file(saved.token)!)
         : (title: null, date: null);
+    // A PDF with text of its own offers it as the transcription.
+    final text = saved.kind == 'pdf'
+        ? await pdfText(uploads.file(saved.token)!)
+        : null;
     return Response.ok(
       jsonEncode({
         'token': saved.token,
         'kind': saved.kind,
         'title': ?embedded.title,
         'date': ?embedded.date,
+        'words': ?text?.words,
       }),
+      headers: {'content-type': 'application/json'},
+    );
+  });
+
+  // The text already in a PDF, for its transcription when the editor asks:
+  // one being added, by its upload token, or one already stored.
+  router.post('/media/pdf-text', (Request r) async {
+    if (editor(r) == null) return notAllowed(r);
+    final body = (jsonDecode(await r.readAsString()) as Map)
+        .cast<String, Object?>();
+    final stored = site.tree.media['${body['key']}'];
+    final file =
+        uploads.file('${body['token']}') ??
+        (stored != null && stored.isDocument
+            ? await site.store.localFile(stored)
+            : null);
+    final text = file == null ? null : await pdfText(file);
+    if (text == null) return jsonError('This PDF has no text of its own.');
+    return Response.ok(
+      jsonEncode({'text': text.text}),
       headers: {'content-type': 'application/json'},
     );
   });
@@ -1720,8 +1755,15 @@ Handler siteHandler(
     if (media == null || media.isBack) {
       return missing(r, 'No photo has the id $key.');
     }
+    final text = media.isDocument
+        ? await pdfText(await site.store.localFile(media))
+        : null;
     return html(
-      render(r).editPhoto(media, help: await helpUnavailable() == null),
+      render(r).editPhoto(
+        media,
+        help: await helpUnavailable() == null,
+        pdfWords: text?.words ?? 0,
+      ),
     );
   });
 

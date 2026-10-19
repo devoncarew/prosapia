@@ -260,7 +260,9 @@ puts them into practice.
   cited as a source; there is no separate kind of source record, so people learn one
   thing. Prosapia asks "where did this come from?" rather than using the word "record".
   Upload formats stay JPEG, HEIC, PNG, TIFF and PDF: text is pasted into an item, and
-  other documents are printed to PDF. Decided after milestone 25.
+  other documents are printed to PDF. Decided after milestone 25. A PDF that has text of
+  its own offers it as the transcription, filled in only when asked. A claim is marked
+  as needing a source with `source: needed` or `[source: needed]`.
 - **Ids in other systems are facts:** `FamilySearch: LZ5X-QRT`, `WikiTree: Carew-123`,
   `Find a Grave: 12345678`, each shown as a link to the record, like GEDCOM 7's `EXID`.
 - **Dates** stay forgiving and as typed; `1861 or 1862` is also read, as between the

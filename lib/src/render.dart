@@ -201,7 +201,7 @@ $body
         '<a href="$url" target="_blank" rel="noopener">$name</a>';
     return page('Research', '''
 <h1>Research</h1>
-<p class="lead">Genealogy techniques and research resources.</p>
+<p class="lead">Genealogy techniques and research resources. In this tree, see <a href="/sources-wanted">sources wanted</a>: facts someone has marked as needing a source.</p>
 <div class="research">
 <h2>How to start</h2>
 <ul>
@@ -546,6 +546,7 @@ ${q('note', 'Where does something go that is not a fact?', 'A <code>Note:</code>
 ${q('story', 'How do I write the story?', 'Below the facts, after a blank line, write as you would anywhere: paragraphs separated by blank lines. Start a line with <code>##</code> for a section heading. <code>*Italics*</code>, <code>**bold**</code> and lists work too; the buttons above the editor add them.', '## 1923: The move to Hartford')}
 ${q('link', 'How do I mention a person in the story?', 'Type <code>@</code> and part of their name, and choose them. The page shows their name as a link.', 'She married @price-walter-7k2m9x in 1910.')}
 ${q('cite', 'How do I say where something in the story came from?', 'Add a <code>[source: …]</code> mark after it, as you would a footnote. It shows as a small number, and the page lists its sources at the end. Write the source as text, or type <code>#</code> and part of a photo or document\'s title to point to it, with any detail after a comma.', 'They married in 1910 [source: #m-gdcade, page 2] and were\nin Hartford by 1920 [source: 1920 census, Hartford].')}
+${q('needed', 'How do I mark something that needs a source?', 'Write <code>needed</code> as its source. It shows as “source needed”, and is listed under <a href="/sources-wanted">Sources wanted</a> for anyone who wants to find one.', 'Born: 1861, source: needed\nShe worked at the mill [source: needed].')}
 ${q('items', 'How do I mention a photo or document in the story?', 'Type <code>#</code> and part of its title, and choose it. The page shows its title as a link. In a fact, <code>source: #…</code> cites it.', 'The certificate is #m-gdcade.')}
 ${q('elsewhere', 'How do I link to their record on FamilySearch, WikiTree or Find a Grave?', 'Add a fact with the site as its label and their id there as the value. It shows as a link on the page.', 'FamilySearch: LZ5X-QRT\nWikiTree: Hughes-123\nFind a Grave: 12345678')}
 ${q('marks', 'What are [date: …] and [place: …]?', 'Marks for a date or a place in the story, so Prosapia reads them reliably. They show as ordinary text. The Date and Place buttons add them.', 'In [date: spring 1923] the family moved to [place: Hartford, CT].')}
@@ -894,12 +895,15 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
   /// Where [e] comes from, as small marks with the source on hover.
   String cite(Event e) => [
     for (final source in e.sources)
-      switch (_source(source)) {
-        (final href?, final title) =>
-          ' <a class="cite" href="$href" title="${esc(title)}">source</a>',
-        (null, final title) =>
-          ' <span class="cite" title="${esc(title)}" tabindex="0">source</span>',
-      },
+      if (isWanted(source))
+        ' <span class="cite needed" title="A source is wanted for this">source needed</span>'
+      else
+        switch (_source(source)) {
+          (final href?, final title) =>
+            ' <a class="cite" href="$href" title="${esc(title)}">source</a>',
+          (null, final title) =>
+            ' <span class="cite" title="${esc(title)}" tabindex="0">source</span>',
+        },
   ].join();
 
   /// Every citation on [p]'s page: where it is (a fact's label, or the
@@ -930,7 +934,7 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     };
     final facts = [
       for (final c in citationsOn(p))
-        if (c.where != 'Story') c,
+        if (c.where != 'Story' && !isWanted(c.source)) c,
     ];
     if (story.isEmpty && facts.isEmpty) return '';
     final sb = StringBuffer('<section class="sources"><h2>Sources</h2>');
@@ -952,6 +956,36 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     }
     sb.write('</section>');
     return sb.toString();
+  }
+
+  /// Whether [source] marks a claim as needing one: `source: needed`, or
+  /// `[source: ?]` in the story.
+  static bool isWanted(String source) =>
+      const {'needed', '?', 'wanted'}.contains(source.trim().toLowerCase());
+
+  /// Every claim marked as needing a source, by person, for anyone who
+  /// wants to find one.
+  String sourcesWanted() {
+    final rows = <String>[];
+    final people = tree.people.values.toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    for (final p in people) {
+      final wanted = [
+        for (final c in citationsOn(p))
+          if (isWanted(c.source)) c.where == 'Story' ? 'the story' : c.where,
+      ];
+      if (wanted.isEmpty) continue;
+      rows.add(
+        '<li>${personLink(p.id, years: true)}: ${esc(wanted.join(', '))}</li>',
+      );
+    }
+    return page(
+      'Sources wanted',
+      '''
+<h1>Sources wanted</h1>
+<p class="lead">Facts and parts of stories that someone has marked as needing a source. Found one? Cite it on the page in place of the mark.</p>
+${rows.isEmpty ? '<p class="empty">Nothing is marked as needing a source.</p>' : '<ul class="corrections">${rows.join()}</ul>'}''',
+    );
   }
 
   /// Where a source leads, and how it reads: a `#` reference to a photo or
@@ -1240,6 +1274,9 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
         .replaceAllMapped(marks, (m) {
           final text = m[1]!.trim();
           if (text.isEmpty) return '';
+          if (isWanted(text)) {
+            return '<sup class="needed" title="A source is wanted for this">source needed</sup>';
+          }
           var n = sources.indexOf(text) + 1;
           if (n == 0) {
             sources.add(text);
@@ -1611,7 +1648,7 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
 <script type="module" src="/assets/photos.js"></script>''');
 
   /// The form for changing what is known about a photo.
-  String editPhoto(Media m, {required bool help}) {
+  String editPhoto(Media m, {required bool help, int pdfWords = 0}) {
     final back = tree.media['${m.id}-back'];
     final people = [
       for (final id in m.people)
@@ -1632,6 +1669,7 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
   ${back != null && back.isImage ? '<img class="thumb large" src="/media/${back.key}/display?w=960" alt="The back">' : ''}
   <textarea id="transcription" name="transcription" spellcheck="true"${m.isDocument || !m.hasFile ? ' class="tall"' : ''}>${esc(back?.transcription ?? m.transcription ?? '')}</textarea>
   ${help && (m.isImage || m.isDocument) ? '<div class="help tidy" data-key="${(back ?? m).key}"><button type="button" class="transcribe">Claude: Transcribe</button></div>' : ''}
+  ${pdfWords > 0 ? '<div class="pdf-text-slot" data-key="${m.key}" data-words="$pdfWords"></div>' : ''}
   <label for="notes">Notes</label>
   <p class="hint">What is known about it, rather than ${m.hasFile ? 'written on it' : 'in it'}: who has the original, who found or scanned it, who identified the people.</p>
   <textarea id="notes" name="notes" class="short" spellcheck="true">${esc(m.notes ?? '')}</textarea>
@@ -1718,6 +1756,7 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
       <button type="button" data-format="person" title="Link a person: type @ and part of a name">@ Person</button>
       <button type="button" data-format="date" title="Mark a date">Date</button>
       <button type="button" data-format="place" title="Mark a place">Place</button>
+      <button type="button" data-format="source" title="Say where this came from: a record, a book, who told you, or # and a photo, document or source">Source</button>
       <span class="spacer"></span>
       <a class="guide-link" href="/help/writing" target="_blank" rel="noopener" title="A whole example page, and answers to common questions. Opens in a new tab.">Format example and editing FAQ…</a>
       <button type="button" data-tidy="/people/${p.id}/format" title="Tidy the text as it will be saved: spacing, quotes and line lengths">Format</button>
@@ -1934,6 +1973,9 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
         );
     }
     sb.write('''
+  <label for="source">Where did this come from?</label>
+  <p class="hint">Optional: a record, a book, who told you, or <code>#</code> and part of a document's title.</p>
+  <input id="source" name="source" value="${v('source')}" maxlength="300" placeholder="1920 census, Hartford">
   <div class="save">${similar.isEmpty ? '<button class="primary">Add</button>' : '<button class="primary" name="create" value="yes">Add as someone new</button>'} <a href="${pathOf(from)}">Cancel</a></div>
 </form>''');
     return page(title, sb.toString());
@@ -2564,6 +2606,7 @@ h2 { font-size: 1.15em; font-weight: 600; margin: 1.8em 0 0.5em; padding-bottom:
 .infobox .add-relative { font-size: 13px; }
 .infobox .also { font-size: 13px; color: var(--muted); }
 .cite-ref { font: 600 11px var(--ui); margin-left: 1px; }
+sup.needed, .cite.needed { font: italic 12px var(--ui); color: var(--muted); margin-left: 2px; }
 .cite-ref a { text-decoration: none; }
 .sources ol, .sources ul { font: 15px/1.5 var(--ui); color: var(--muted); padding-left: 1.4em; }
 .sources .fact-sources { list-style: none; padding-left: 0; }

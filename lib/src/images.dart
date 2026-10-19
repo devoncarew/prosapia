@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -74,4 +75,38 @@ Future<List<int>?> pdfPage(File pdf, int page, int size) async {
   } finally {
     work.deleteSync(recursive: true);
   }
+}
+
+/// The text already in the PDF [pdf], such as one printed from a web page,
+/// with "— Page n —" before each page when there are several; null when it
+/// has none to speak of, as a scan has not.
+Future<({String text, int words})?> pdfText(File pdf) async {
+  final result = await Process.run('pdftotext', [
+    '-enc',
+    'UTF-8',
+    pdf.path,
+    '-',
+  ], stdoutEncoding: utf8);
+  if (result.exitCode != 0) return null;
+  final pages = [
+    for (final page in '${result.stdout}'.split('\f'))
+      page
+          .split('\n')
+          .map((l) => l.trimRight())
+          .join('\n')
+          .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+          .trim(),
+  ];
+  while (pages.isNotEmpty && pages.last.isEmpty) {
+    pages.removeLast();
+  }
+  final all = pages.join(' ');
+  final words = RegExp(r'[\p{L}\p{N}]+', unicode: true).allMatches(all).length;
+  if (words < 5) return null;
+  final text = pages.length == 1
+      ? pages.single
+      : [
+          for (final (i, page) in pages.indexed) '— Page ${i + 1} —\n\n$page',
+        ].join('\n\n');
+  return (text: text, words: words);
 }
