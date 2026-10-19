@@ -210,6 +210,7 @@ const vocabulary = [
   'Name',
   'Nickname',
   'Also known as',
+  'Family name',
   'Sex',
   'Born',
   'Christened',

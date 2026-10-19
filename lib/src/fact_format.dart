@@ -4,7 +4,7 @@ import 'page_syntax.dart';
 import 'tree.dart';
 
 /// Facts whose value is taken whole, as written, not as parts.
-const _whole = {'name', 'note', 'sex', 'photo'};
+const _whole = {'name', 'note', 'sex', 'photo', 'family name'};
 
 /// A fact line in its normal form, as one or more lines: parts separated by
 /// `, `, a value with a comma in quotes, a place or source said to be one,
@@ -13,6 +13,8 @@ const _whole = {'name', 'note', 'sex', 'photo'};
 /// The line is only rewritten when the new form reads exactly as the old
 /// one does; otherwise it is kept as written, with single spaces.
 List<String> formatFact(String label, String value, {int width = pageWidth}) {
+  // Sex is written as one of the values Prosapia uses, when it is one.
+  if (_key(label) == 'sex') value = normalSex(value) ?? value;
   final plain = '$label: $value'.trim();
   // A whole value, such as a note, is broken between words; its lines are
   // joined again with a single space, so it reads the same.
@@ -178,6 +180,10 @@ String _meaning(String line) {
       '${f.label}|${f.description}|${event(f.event)}|${f.people.map(ref).join(';')}',
     p.nicknames.join(';'),
     p.alsoKnownAs.join(';'),
+    p.nameKinds.toString(),
+    '${p.familyName}',
+    for (final e in [p.born, p.christened, p.died, p.buried])
+      p.alternativesTo(e).map(event).join(';'),
     p.issues.join(';'),
   ].join('\n');
 }

@@ -68,14 +68,50 @@ void main() {
     expect(nameParts('Cher').surname, isNull);
   });
 
+  test('empty facts say nothing, and are not problems', () {
+    final q = Person.fromSource(
+      'p-0',
+      'x-0',
+      'Name: Q\nSex:\nBorn:\nDied:\nParents:\nNote:\n',
+    );
+    expect(q.issues, isEmpty);
+    expect(q.born, isNull);
+    expect(q.notes, isEmpty);
+    expect(q.sexValue, 'unknown');
+  });
+
+  test('a fact the records disagree on is also recorded', () {
+    final q = Person.fromSource(
+      'p-0',
+      'x-0',
+      'Name: Q\nBorn: 1911, source: 1920 census\n'
+          'Born: 1912, source: birth certificate\n',
+    );
+    expect(q.born?.date?.year, 1911);
+    expect(q.alternativesTo(q.born).single.date?.year, 1912);
+    expect(q.issues, isEmpty);
+  });
+
+  test('family name and kinds of name', () {
+    final q = Person.fromSource(
+      'p-0',
+      'x-0',
+      'Name: Maria de la Cruz García\nFamily name: de la Cruz\n'
+          'Also known as: Maria Price (married name)\n',
+    );
+    expect(q.surname, 'de la Cruz');
+    expect(q.alsoKnownAs, ['Maria Price']);
+    expect(q.nameKinds['Maria Price'], 'married name');
+  });
+
   test('a date that cannot be read is reported, not taken for a place', () {
     final q = Person.fromSource(
       'p-0',
       'x-0',
-      'Name: Q\nBorn: "New York, NY", 1861 or 1862\n',
+      'Name: Q\nBorn: "New York, NY", between 1861\n',
     );
     expect(q.born?.place, 'New York, NY');
-    expect(q.born?.date?.raw, '1861 or 1862');
+    expect(q.born?.date?.raw, 'between 1861');
     expect(q.issues.single, contains('not a date Prosapia can read'));
   });
 

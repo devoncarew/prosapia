@@ -568,7 +568,7 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
   }
 
   static String surnameOf(Person p) {
-    return nameParts(p.name).surname ?? 'Other';
+    return p.surname ?? 'Other';
   }
 
   // ---------------------------------------------------------------- person
@@ -909,12 +909,26 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     ];
 
     if (p.alsoKnownAs.isNotEmpty) {
-      row('Also known as', [esc(p.alsoKnownAs.join(', '))]);
+      row('Also known as', [
+        for (final name in p.alsoKnownAs)
+          esc(name) +
+              switch (p.nameKinds[name]) {
+                null => '',
+                final kind => ' <span class="years">(${esc(kind)})</span>',
+              },
+      ]);
     }
-    row('Born', [event(p.born)]);
-    row('Christened', [event(p.christened)]);
-    row('Died', [event(p.died)]);
-    row('Buried', [event(p.buried)]);
+    // A life event the records disagree on shows its other versions too.
+    String withOthers(Event? e) => [
+      event(e),
+      for (final other in p.alternativesTo(e))
+        if (event(other).isNotEmpty)
+          '<span class="also">also recorded: ${event(other).replaceAll('<br>', ', ')}</span>',
+    ].where((x) => x.isNotEmpty).join('<br>');
+    row('Born', [withOthers(p.born)]);
+    row('Christened', [withOthers(p.christened)]);
+    row('Died', [withOthers(p.died)]);
+    row('Buried', [withOthers(p.buried)]);
     final parents = [
       for (final id in index.parentsOf(p.id)) qualified(id, p.parents),
       ...named(p.parents, 'parents'),
@@ -2242,6 +2256,7 @@ h2 { font-size: 1.15em; font-weight: 600; margin: 1.8em 0 0.5em; padding-bottom:
               font-weight: 500; white-space: nowrap; }
 .infobox td { padding: 4px 0; }
 .infobox .add-relative { font-size: 13px; }
+.infobox .also { font-size: 13px; color: var(--muted); }
 .corrections li { margin-bottom: 6px; }
 h2 .count { font-size: 0.8em; font-weight: 500; color: var(--muted); }
 .corrections-note { font: 15px var(--ui); }

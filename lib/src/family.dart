@@ -169,8 +169,7 @@ class Hourglass {
   }
 
   static List<String> _fatherFirst(List<String> ids, Tree tree) {
-    bool male(String id) =>
-        tree.people[id]?.sex?.trim().toLowerCase().startsWith('m') ?? false;
+    bool male(String id) => tree.people[id]?.sexValue == 'male';
     final known = ids.where(tree.people.containsKey).toList();
     return [...known.where(male), ...known.where((id) => !male(id))];
   }

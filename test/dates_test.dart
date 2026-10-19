@@ -81,6 +81,9 @@ void main() {
       expect(d.raw, text);
     }
     expect(TreeDate.parse('?').understood, isFalse);
+    final either = TreeDate.parse('1861 or 1862');
+    expect(either.qualifier, 'between');
+    expect(either.end?.year, 1862);
   });
 
   test('what looks like a date', () {

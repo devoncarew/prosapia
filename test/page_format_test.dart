@@ -99,6 +99,30 @@ void main() {
       );
     });
 
+    test('facts are put in the normal order, notes last', () {
+      expect(
+        formatPage(
+          'Name: A\nNote: one\nOccupation: teacher\nChildren: B\n'
+          'Married: @c-333333, 1950\nPartner: @d-444444\nBorn: 1920\n'
+          'Sex: F\nNote: two\n\nStory.\n',
+        ),
+        'Name: A\nSex: female\nBorn: 1920\nMarried: @c-333333, 1950\n'
+        'Partner: @d-444444\nChildren: B\nOccupation: teacher\nNote: one\n'
+        'Note: two\n\nStory.\n',
+      );
+    });
+
+    test('empty facts are kept, and sex is written one way', () {
+      expect(
+        formatPage('Name: A\nSex: m\nBorn:\nParents:\n'),
+        'Name: A\nSex: male\nBorn:\nParents:\n',
+      );
+      expect(
+        formatPage('Name: A\nSex: Two-Spirit\n'),
+        'Name: A\nSex: Two-Spirit\n',
+      );
+    });
+
     test('quoted parts stay apart, and a doubtful date is a date', () {
       expect(
         facts('Born: "New York, NY", 1861 ?'),

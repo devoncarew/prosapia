@@ -1,5 +1,6 @@
 import 'fact_format.dart';
 import 'page_syntax.dart';
+import 'tree.dart';
 
 /// The width prose is wrapped to.
 const pageWidth = 88;
@@ -22,6 +23,9 @@ String formatPage(String source, {int width = pageWidth}) {
   if (i < lines.length &&
       ParsedPage.labelPattern.firstMatch(lines[i])?[1]?.toLowerCase() ==
           'name') {
+    // Each fact, with its place in the normal order.
+    final facts = <(int, List<String>)>[];
+    var rank = 0;
     while (i < lines.length && lines[i].trim().isNotEmpty) {
       // A fact and the indented lines that carry it on.
       var end = i + 1;
@@ -32,15 +36,29 @@ String formatPage(String source, {int width = pageWidth}) {
       }
       final m = ParsedPage.labelPattern.firstMatch(lines[i]);
       if (m == null) {
-        out.addAll([for (final line in lines.sublist(i, end)) _spaces(line)]);
+        // A line that is not a fact stays after the fact it followed.
+        facts.add((
+          rank,
+          [for (final line in lines.sublist(i, end)) _spaces(line)],
+        ));
       } else {
         final value = [
           m[2]!,
           ...lines.sublist(i + 1, end),
         ].map(_spaces).where((v) => v.isNotEmpty).join(' ');
-        out.addAll(formatFact(_spaces(m[1]!), value, width: width));
+        rank = factRank(m[1]!);
+        facts.add((rank, formatFact(_spaces(m[1]!), value, width: width)));
       }
       i = end;
+    }
+    // A stable sort: facts of the same rank keep the order they were in.
+    final ordered = [for (final (n, f) in facts.indexed) (n, f)]
+      ..sort((a, b) {
+        final byRank = a.$2.$1.compareTo(b.$2.$1);
+        return byRank != 0 ? byRank : a.$1.compareTo(b.$1);
+      });
+    for (final (_, (_, written)) in ordered) {
+      out.addAll(written);
     }
   }
   final body = _Body(width).format(lines.sublist(i));
@@ -49,6 +67,32 @@ String formatPage(String source, {int width = pageWidth}) {
     out.addAll(body);
   }
   return out.isEmpty ? '' : '${out.join('\n')}\n';
+}
+
+/// Where a fact with [label] goes in the normal order: names and sex
+/// first, then life events, parents and siblings, partners and marriages,
+/// children, the photo, any other fact, and notes last.
+int factRank(String label) {
+  final key = label.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
+  return switch (key) {
+    'name' => 0,
+    'nickname' => 1,
+    'also known as' => 2,
+    'family name' => 3,
+    'sex' => 4,
+    'born' => 5,
+    'christened' || 'baptized' => 6,
+    'died' => 7,
+    'buried' => 8,
+    'parents' || 'parent' => 9,
+    'siblings' || 'sibling' => 10,
+    'partner' || 'partners' || 'spouse' => 11,
+    _ when Person.coupleEvents.contains(key) => 11,
+    'children' || 'child' => 12,
+    'photo' => 13,
+    'note' => 15,
+    _ => 14,
+  };
 }
 
 /// [s] trimmed, with runs of spaces made one.
