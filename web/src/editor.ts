@@ -170,6 +170,9 @@ async function people(
   };
 }
 
+/** The id of the person whose page is being edited. */
+let pageId = '';
+
 interface ItemSuggestion {
   ref: string;
   title: string;
@@ -179,15 +182,18 @@ interface ItemSuggestion {
 async function items(
   context: CompletionContext,
 ): Promise<CompletionResult | null> {
-  // "#" at the start of a word, followed by part of a photo's or
+  // "#" at the start of a word, perhaps followed by part of a photo's or
   // document's title. "# " at the start of a line is a heading, not this.
   const word = context.matchBefore(
-    /(?:^|[\s([,:])#[\p{L}\p{N}-]+(?: [\p{L}\p{N}]*)?/u,
+    /(?:^|[\s([,:])#(?:[\p{L}\p{N}-]+(?: [\p{L}\p{N}]*)?)?/u,
   );
   if (!word) return null;
   const hash = word.text.indexOf('#');
   const query = word.text.slice(hash + 1);
-  const response = await fetch(`/api/items?q=${encodeURIComponent(query)}`);
+  // With nothing typed yet, the items this page's person is in come first.
+  const response = await fetch(
+    `/api/items?q=${encodeURIComponent(query)}&for=${encodeURIComponent(pageId)}`,
+  );
   if (!response.ok) return null;
   const found = (await response.json()) as ItemSuggestion[];
   return {
@@ -412,6 +418,7 @@ export function mount(form: HTMLFormElement): Mounted {
   const textarea = document.getElementById('source') as HTMLTextAreaElement;
   const preview = document.getElementById('preview')!;
   const previewUrl = form.dataset.preview!;
+  pageId = previewUrl.split('/')[2] ?? '';
   const original = textarea.value;
 
   // ------------------------------------------------------------- write/preview

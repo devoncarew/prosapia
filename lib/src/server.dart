@@ -1379,16 +1379,24 @@ Handler siteHandler(
         .split(RegExp(r'\s+'))
         .where((w) => w.isNotEmpty)
         .toList();
-    if (words.isEmpty) return json(const []);
-    final found = [
-      for (final m in site.tree.media.values)
-        if (!m.isBack &&
-            words.every(
-              (w) =>
-                  (m.title ?? '').toLowerCase().contains(w) || m.id.contains(w),
-            ))
-          m,
-    ]..sort((a, b) => (b.date ?? '').compareTo(a.date ?? ''));
+    // Items showing the person whose page is being edited come first,
+    // then the most recent.
+    final person = r.url.queryParameters['for'] ?? '';
+    int shows(Media m) => m.people.contains(person) ? 0 : 1;
+    final found =
+        [
+          for (final m in site.tree.media.values)
+            if (!m.isBack &&
+                words.every(
+                  (w) =>
+                      (m.title ?? '').toLowerCase().contains(w) ||
+                      m.id.contains(w),
+                ))
+              m,
+        ]..sort((a, b) {
+          final first = shows(a).compareTo(shows(b));
+          return first != 0 ? first : (b.date ?? '').compareTo(a.date ?? '');
+        });
     return json([
       for (final m in found.take(8))
         {
