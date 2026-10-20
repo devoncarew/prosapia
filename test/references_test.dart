@@ -75,4 +75,21 @@ void main() {
     expect(html, contains('<span class="kind">Married</span>'));
     expect(RegExp('<h2>Sources</h2>').allMatches(html), hasLength(1));
   });
+
+  test('a birth or death known only by its place is in Also recorded', () {
+    final t = Tree('test');
+    final p = Person.fromSource(
+      'p-b2b2b2',
+      'b-b2b2b2',
+      'Name: B\nBorn: Ontario, Canada\nDied:\n',
+    );
+    t.people[p.id] = p;
+    final html = Renderer(t, Index.build(t)).personArticle(p);
+    expect(html, contains('<h2>Also recorded</h2>'));
+    expect(
+      html,
+      contains('<li>Born <span class="place">Ontario, Canada</span>'),
+    );
+    expect(html, isNot(contains('<li>Died')));
+  });
 }

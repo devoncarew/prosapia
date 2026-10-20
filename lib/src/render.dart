@@ -1203,7 +1203,9 @@ ${rows.isEmpty ? '<p class="empty">Nothing is marked as needing a source.</p>' :
         '${e.place == null ? '' : ' <span class="place">${esc(e.place)}</span>'}'
         '${cite(e)}';
 
-    if (p.born?.date != null) add(p.born!.date, 'Born${at(p.born!)}');
+    // A birth or death known only by its place is still recorded.
+    bool known(Event? e) => e != null && (e.date != null || e.place != null);
+    if (known(p.born)) add(p.born!.date, 'Born${at(p.born!)}');
     if (p.christened != null) {
       add(p.christened!.date, 'Christened${at(p.christened!)}');
     }
@@ -1248,7 +1250,7 @@ ${rows.isEmpty ? '<p class="empty">Nothing is marked as needing a source.</p>' :
       final d = TreeDate.parse(m[1]!);
       if (d.understood) add(d, esc(m[2]));
     }
-    if (p.died?.date != null) add(p.died!.date, 'Died${at(p.died!)}');
+    if (known(p.died)) add(p.died!.date, 'Died${at(p.died!)}');
     if (p.buried != null) add(p.buried!.date, 'Buried${at(p.buried!)}');
     for (final note in p.notes) {
       undated.add('<span class="kind">Note</span> ${esc(note)}');
