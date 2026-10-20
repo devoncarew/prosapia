@@ -254,6 +254,17 @@ final proseItemRef = RegExp(r'(?<![\w#&/(\]"=])#([a-z0-9]+(?:-[a-z0-9]+)*)');
 String itemIdOf(String reference) =>
     reference.replaceFirst('#', '').split('-').last;
 
+/// A note's text and the source written after it, as in
+/// `Note: Born in Ireland, source: #m-cm6gaj`.
+(String, String?) noteSource(String note) {
+  final m = RegExp(
+    r'^(.*?)\s*,\s*source\s*:\s*(.+?)\s*$',
+    caseSensitive: false,
+    dotAll: true,
+  ).firstMatch(note);
+  return m == null ? (note, null) : (m[1]!, m[2]!);
+}
+
 /// Finds `[source: …]` in prose.
 final proseSource = RegExp(
   r'\[\s*source\s*:\s*([^\]]*?)\s*\]',

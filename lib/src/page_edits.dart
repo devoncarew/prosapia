@@ -232,6 +232,20 @@ String directoryFor(String name, String id) {
   return slug.isEmpty ? suffix : '$slug-$suffix';
 }
 
+/// A readable `#` reference to the item [key] with [title]: a few words
+/// of the title, then its id, as `#obituary-thomas-hughes-gdcade`. Only the
+/// id is relied on, so the words can be changed freely.
+String itemReference(String? title, String key) {
+  const small = {'a', 'an', 'and', 'at', 'for', 'in', 'of', 'on', 'the', 'to'};
+  final words = (title ?? '')
+      .toLowerCase()
+      .split(RegExp(r'[^a-z0-9]+'))
+      .where((w) => w.isNotEmpty && !small.contains(w))
+      .take(4);
+  final id = itemIdOf(key);
+  return words.isEmpty ? '#m-$id' : '#${[...words, id].join('-')}';
+}
+
 /// Applies [edit] to each fact line. [edit] returns the line's new parts,
 /// an empty list to remove the line, or null to leave it as written.
 /// Returns null if no line changed.

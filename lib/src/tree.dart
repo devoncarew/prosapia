@@ -155,8 +155,11 @@ class Person {
       case 'sex':
         sex = line.value;
       case 'photo':
-        // `Photo: #m-qymrdd` and `Photo: m-qymrdd` are the same.
-        photo = line.value.replaceFirst(RegExp(r'^#'), '');
+        // `Photo: #m-qymrdd`, `Photo: m-qymrdd` and a readable
+        // `Photo: #wedding-qymrdd` are the same.
+        photo = line.value.trim().isEmpty
+            ? null
+            : 'm-${itemIdOf(line.value.trim())}';
       case _ when externalSites.containsKey(key):
         externalIds[externalSites[key]!] = line.value;
       case 'note':
