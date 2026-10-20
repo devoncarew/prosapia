@@ -901,8 +901,10 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
         switch (_source(source)) {
           (final href?, final title) =>
             ' <a class="cite" href="$href" title="${esc(title)}">source</a>',
+          // Text alone opens in place, so it can be read on a phone too.
           (null, final title) =>
-            ' <span class="cite" title="${esc(title)}" tabindex="0">source</span>',
+            ' <details class="cite"><summary title="${esc(title)}">source</summary>'
+                '<span>${esc(title)}</span></details>',
         },
   ].join();
 
@@ -2615,6 +2617,14 @@ sup.needed, .cite.needed { font: italic 12px var(--ui); color: var(--muted); mar
 .sources .fact-sources { list-style: none; padding-left: 0; }
 .sources .kind { font-variant: small-caps; margin-right: 4px; }
 a.cite { text-decoration: none; }
+details.cite { display: inline; }
+details.cite summary { display: inline; list-style: none; cursor: pointer; color: var(--link);
+  text-decoration: underline dotted; text-underline-offset: 3px; }
+details.cite summary::-webkit-details-marker { display: none; }
+details.cite[open] > span { display: block; font: 13px/1.4 var(--ui); color: var(--muted); }
+details.cite::details-content { display: inline; }
+details.cite:not([open]) > span { display: none; }
+details.cite[open] + br { display: none; }
 .corrections li { margin-bottom: 6px; }
 h2 .count { font-size: 0.8em; font-weight: 500; color: var(--muted); }
 .corrections-note { font: 15px var(--ui); }
