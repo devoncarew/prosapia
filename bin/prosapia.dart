@@ -123,7 +123,6 @@ Future<void> main(List<String> arguments) async {
     sessions = Sessions(
       app.auth(),
       store,
-      treeName: () => site.tree.name,
       webConfig: {
         'firebase': config,
         if (emulator != null) 'authEmulator': 'http://$emulator',

@@ -10,5 +10,6 @@
 !web/src/
 !web/tsconfig.json
 !web/eslint.config.js
+!web/icons/
 !config/
 !docs/writing.md
