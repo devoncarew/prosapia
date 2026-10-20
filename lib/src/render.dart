@@ -545,7 +545,7 @@ ${q('facts', 'Where do jobs, schools, military service or homes go?', 'Any label
 ${q('note', 'Where does something go that is not a fact?', 'A <code>Note:</code> line holds a short remark as written. Anything longer belongs in the story, below the facts.', "Note: Her mother's family came from Wales.")}
 ${q('story', 'How do I write the story?', 'Below the facts, after a blank line, write as you would anywhere: paragraphs separated by blank lines. Start a line with <code>##</code> for a section heading. <code>*Italics*</code>, <code>**bold**</code> and lists work too; the buttons above the editor add them.', '## 1923: The move to Hartford')}
 ${q('link', 'How do I mention a person in the story?', 'Type <code>@</code> and part of their name, and choose them. The page shows their name as a link.', 'She married @price-walter-7k2m9x in 1910.')}
-${q('cite', 'How do I say where something in the story came from?', 'Add a <code>[source: …]</code> mark after it, as you would a footnote. It shows as a small number, and the page lists its sources at the end. Write the source as text, or type <code>#</code> and part of a photo or document\'s title to point to it, with any detail after a comma.', 'They married in 1910 [source: #m-gdcade, page 2] and were\nin Hartford by 1920 [source: 1920 census, Hartford].')}
+${q('cite', 'How do I say where something in the story came from?', 'Add a <code>[source: …]</code> mark after it, as you would a footnote. It shows as a small number, which leads to the photo or document if it is one, and the page lists its sources at the end. Write the source as text, or type <code>#</code> and part of a photo or document\'s title to point to it, with any detail after a comma.', 'They married in 1910 [source: #m-gdcade, page 2] and were\nin Hartford by 1920 [source: 1920 census, Hartford].')}
 ${q('needed', 'How do I mark something that needs a source?', 'Write <code>needed</code> as its source. It shows as “source needed”, and is listed under <a href="/sources-wanted">Sources wanted</a> for anyone who wants to find one.', 'Born: 1861, source: needed\nShe worked at the mill [source: needed].')}
 ${q('items', 'How do I mention a photo or document in the story?', 'Type <code>#</code> and part of its title, and choose it. The page shows its title as a link. In a fact, <code>source: #…</code> cites it.', 'The certificate is #m-gdcade.')}
 ${q('elsewhere', 'How do I link to their record on FamilySearch, WikiTree or Find a Grave?', 'Add a fact with the site as its label and their id there as the value. It shows as a link on the page.', 'FamilySearch: LZ5X-QRT\nWikiTree: Hughes-123\nFind a Grave: 12345678')}
@@ -597,7 +597,7 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     ];
     final more = [
       if (editable) '<a href="/people/${p.id}/history">View changes</a>',
-      '<a href="/people/${p.id}/text">View text</a>',
+      '<a href="/people/${p.id}/text">View source</a>',
       if (editable && viewer != null && viewer!.person != p.id)
         '<form method="post" action="/people/${p.id}/me"><button title="Make this your page: your home page and family tree start here">This is me</button></form>',
       if (_canEdit) '<a href="/people/${p.id}/delete">Delete page</a>',
@@ -1282,7 +1282,10 @@ ${rows.isEmpty ? '<p class="empty">Nothing is marked as needing a source.</p>' :
             sources.add(text);
             n = sources.length;
           }
-          return '<sup class="cite-ref"><a href="#source-$n" title="${esc(_source(text).$2)}">$n</a></sup>';
+          // A photo or document leads to its page; other sources to the
+          // list at the end.
+          final (href, title) = _source(text);
+          return '<sup class="cite-ref"><a href="${href ?? '#source-$n'}" title="${esc(title)}">$n</a></sup>';
         })
         .replaceAllMapped(proseItemRef, (m) {
           final item = itemOf(tree, m[0]!);
