@@ -17,14 +17,12 @@ class Sessions {
   Sessions(
     this.auth,
     this.store, {
-    required this.treeName,
     required this.webConfig,
     required this.secureCookies,
   });
 
   final Auth auth;
   final TreeStore store;
-  final String Function() treeName;
 
   /// Firebase's public settings for the browser-side sign-in code.
   final Map<String, Object?> webConfig;
@@ -35,7 +33,15 @@ class Sessions {
   /// Firebase Hosting forwards only the cookie with this name to the server.
   static const cookieName = '__session';
   static const _lifetime = Duration(days: 14);
-  static const _open = {'sign-in', 'session', 'sign-out', 'style.css'};
+  static const _open = {
+    'sign-in',
+    'session',
+    'sign-out',
+    'style.css',
+    'favicon.svg',
+    'favicon.ico',
+    'apple-touch-icon.png',
+  };
 
   final _members = <String, ({Member? member, DateTime at})>{};
 
@@ -102,7 +108,7 @@ class Sessions {
       '$cookieName=$value; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge.inSeconds}${secureCookies ? '; Secure' : ''}';
 
   Response signInPage(Request request) => Response.ok(
-    Renderer.signIn(treeName(), webConfig),
+    Renderer.signIn(webConfig),
     headers: {
       'content-type': 'text/html; charset=utf-8',
       'cache-control': 'no-store',

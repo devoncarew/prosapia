@@ -152,6 +152,21 @@ Handler siteHandler(
     (Request r) =>
         Response.ok(stylesheet, headers: {'content-type': 'text/css'}),
   );
+  // The site's icon, beside the browser code.
+  for (final (name, type) in [
+    ('favicon.svg', 'image/svg+xml'),
+    ('favicon.ico', 'image/x-icon'),
+    ('apple-touch-icon.png', 'image/png'),
+  ]) {
+    router.get('/$name', (Request r) {
+      final file = File(p.join(p.dirname(assets), 'icons', name));
+      if (!file.existsSync()) return Response.notFound('no icon');
+      return Response.ok(
+        file.openRead(),
+        headers: {'content-type': type, 'cache-control': 'max-age=86400'},
+      );
+    });
+  }
   router.get('/assets/<name>', (Request r, String name) {
     final file = File(p.join(assets, p.basename(name)));
     if (!file.existsSync()) return Response.notFound('no such asset');

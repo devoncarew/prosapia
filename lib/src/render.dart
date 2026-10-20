@@ -48,6 +48,9 @@ class Renderer {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${title == tree.name ? esc(title) : "${esc(title)} · ${esc(tree.name)}"}</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
@@ -2422,16 +2425,21 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
     '<h1>Not allowed</h1><p class="lead">${esc(what)}</p>',
   );
 
-  /// The page shown to someone who is not signed in. [config] is handed to
-  /// the browser-side sign-in code.
-  static String signIn(String treeName, Map<String, Object?> config) =>
+  /// The page shown to someone who is not signed in: what Prosapia is,
+  /// and a way in for those invited. It names no tree, since anyone can
+  /// see it. [config] is handed to the browser-side sign-in code.
+  static String signIn(Map<String, Object?> config) =>
       '''
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign in · ${esc(treeName)}</title>
+<title>Prosapia</title>
+<meta name="description" content="A private wiki for a family's history.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
@@ -2439,10 +2447,20 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
 </head>
 <body>
 <main class="sign-in">
-<h1>${esc(treeName)}</h1>
-<p class="lead">This family tree is private. Sign in with the Google account you were invited with.</p>
+<h1>Prosapia</h1>
+<p class="tagline">Genealogy, in prose.</p>
+<p>Prosapia is a private wiki for a family's history. Everyone in the family has a page: their story, the facts known about them, their photos and documents, and where each piece of it came from. Relatives add what they remember and correct what they know better, and every change is kept.</p>
+<ul class="features">
+<li>Stories first, with dates, places and relationships alongside</li>
+<li>A family tree to move around in</li>
+<li>Photos and documents, with what is written on them</li>
+<li>Every claim can say where it came from</li>
+<li>The whole tree kept as plain files the family can always read</li>
+</ul>
+<p>Prosapia is in early access, by private invitation. If you have been invited, sign in with the Google account the invitation was sent to.</p>
 <p><button id="sign-in" class="primary">Sign in with Google</button></p>
 <p id="message" class="message" role="alert"></p>
+<p class="meta"><a href="https://github.com/devoncarew/prosapia">More about Prosapia</a></p>
 </main>
 <script id="config" type="application/json">${jsonEncode(config).replaceAll('<', r'\u003c')}</script>
 <script type="module" src="/assets/sign_in.js"></script>
@@ -2973,7 +2991,10 @@ button { font: inherit; padding: 5px 12px; border: 1px solid var(--line); border
          background: var(--surface); color: var(--text); cursor: pointer; }
 button.primary { font: 600 16px var(--ui); padding: 10px 20px; }
 button:disabled { opacity: 0.6; cursor: default; }
-.sign-in { max-width: 520px; padding-top: 12vh; }
+.sign-in { max-width: 560px; padding-top: 10vh; }
+.sign-in h1 { margin-bottom: 0; }
+.sign-in .tagline { font-style: italic; color: var(--muted); margin-top: 4px; }
+.sign-in .features { color: var(--muted); padding-left: 1.2em; }
 .message { font: 16px/1.5 var(--ui); color: #b3261e; min-height: 1.5em; }
 @media (max-width: 640px) {
   .infobox { float: none; width: auto; margin: 0 0 16px; }

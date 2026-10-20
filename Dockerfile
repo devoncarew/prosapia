@@ -32,6 +32,7 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=server /out/bundle ./
 COPY --from=web /web/dist web/dist
+COPY web/icons web/icons
 COPY config config
 COPY docs/writing.md docs/writing.md
 # Cloud Run's disk is memory and is lost on restart; the cache is rebuilt.
