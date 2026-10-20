@@ -1415,7 +1415,7 @@ Handler siteHandler(
     return json([
       for (final m in found.take(8))
         {
-          'ref': '#${m.key}',
+          'ref': itemReference(m.title, m.key),
           'title': m.title ?? 'Untitled',
           'detail': [m.kind, ?m.date].join(', '),
         },

@@ -895,6 +895,24 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     return sb.toString();
   }
 
+  /// A note as HTML: its `@` and `#` references linked, and the source
+  /// written after it cited.
+  String noteHtml(String note) {
+    final (text, source) = noteSource(note);
+    final html = esc(text)
+        .replaceAllMapped(proseItemRef, (m) {
+          final item = itemOf(tree, m[0]!);
+          return item == null
+              ? m[0]!
+              : '<a href="/media/${item.key}">${esc(item.title ?? 'Untitled')}</a>';
+        })
+        .replaceAllMapped(proseRef, (m) {
+          final person = tree.people['p-${m[1]!.split('-').last}'];
+          return person == null ? m[0]! : personLink(person.id);
+        });
+    return source == null ? html : html + cite(Event(sources: [source]));
+  }
+
   /// Where [e] comes from, as small marks with the source on hover.
   String cite(Event e) => [
     for (final source in e.sources)
@@ -926,6 +944,8 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
       for (final s in c.event.sources) (where: c.kind, source: s),
     for (final f in p.facts)
       for (final s in f.event.sources) (where: f.label, source: s),
+    for (final n in p.notes)
+      if (noteSource(n).$2 case final s?) (where: 'Note', source: s),
     for (final m in proseSource.allMatches(p.body))
       (where: 'Story', source: m[1]!.trim()),
   ];
@@ -1256,7 +1276,7 @@ ${rows.isEmpty ? '<p class="empty">Nothing is marked as needing a source.</p>' :
     if (known(p.died)) add(p.died!.date, 'Died${at(p.died!)}');
     if (p.buried != null) add(p.buried!.date, 'Buried${at(p.buried!)}');
     for (final note in p.notes) {
-      undated.add('<span class="kind">Note</span> ${esc(note)}');
+      undated.add('<span class="kind">Note</span> ${noteHtml(note)}');
     }
 
     // A stable sort keeps birth first and death last among equal dates.

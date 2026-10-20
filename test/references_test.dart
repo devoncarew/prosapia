@@ -1,4 +1,5 @@
 import 'package:prosapia/src/index.dart';
+import 'package:prosapia/src/page_edits.dart';
 import 'package:prosapia/src/render.dart';
 import 'package:prosapia/src/tree.dart';
 import 'package:test/test.dart';
@@ -91,5 +92,49 @@ void main() {
       contains('<li>Born <span class="place">Ontario, Canada</span>'),
     );
     expect(html, isNot(contains('<li>Died')));
+  });
+
+  test('a note cites its source and links its references', () {
+    final p = Person.fromSource(
+      'p-c3c3c3',
+      'c-c3c3c3',
+      'Name: C\nNote: Father of @a-a1a1a1, born in Ireland, '
+          'source: #marriage-certificate-gdcade\n',
+    );
+    tree.people[p.id] = p;
+    final html = r.personArticle(p);
+    expect(
+      html,
+      contains(
+        'Father of <a href="/people/a-a1a1a1">A</a>, born in Ireland '
+        '<a class="cite" href="/media/m-gdcade"',
+      ),
+    );
+    expect(html, isNot(contains('source: #')));
+    expect(r.citationsOn(p).single, (
+      where: 'Note',
+      source: '#marriage-certificate-gdcade',
+    ));
+    tree.people.remove(p.id);
+  });
+
+  test('readable item references', () {
+    expect(
+      itemReference('Obituary of Thomas Hughes, Scranton Times', 'm-gdcade'),
+      '#obituary-thomas-hughes-scranton-gdcade',
+    );
+    expect(itemReference(null, 'm-gdcade'), '#m-gdcade');
+    expect(
+      itemOf(tree, '#obituary-thomas-hughes-scranton-gdcade')?.key,
+      'm-gdcade',
+    );
+    expect(
+      Person.fromSource(
+        'p-d4d4d4',
+        'd-d4d4d4',
+        'Name: D\nPhoto: #wedding-gdcade\n',
+      ).photo,
+      'm-gdcade',
+    );
   });
 }
