@@ -2656,9 +2656,9 @@ sup.needed, .cite.needed { font: italic 12px var(--ui); color: var(--muted); mar
 .sources ol, .sources ul { font: 15px/1.5 var(--ui); color: var(--muted); padding-left: 1.4em; }
 .sources .fact-sources { list-style: none; padding-left: 0; }
 .sources .kind { font-variant: small-caps; margin-right: 4px; }
-a.cite { text-decoration: none; }
+a.cite, .cite-ref a { text-decoration: none; cursor: pointer; }
 details.cite { display: inline; }
-details.cite summary { display: inline; list-style: none; cursor: pointer; color: var(--link);
+details.cite summary { display: inline; list-style: none; cursor: help; color: var(--link);
   text-decoration: underline dotted; text-underline-offset: 3px; }
 details.cite summary::-webkit-details-marker { display: none; }
 details.cite[open] > span { display: block; font: 13px/1.4 var(--ui); color: var(--muted); }
