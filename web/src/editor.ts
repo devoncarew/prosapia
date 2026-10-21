@@ -267,6 +267,10 @@ const vocabulary = [
   'Degree',
   'Graduated',
   'Title',
+  'Photo',
+  'FamilySearch',
+  'WikiTree',
+  'Find a Grave',
   'Note',
 ];
 
