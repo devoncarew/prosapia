@@ -13,7 +13,7 @@ async function select(row: HTMLTableRowElement): Promise<void> {
   const version = row.dataset.version!;
   history.replaceState({}, '', `?version=${version}`);
   const response = await fetch(
-    `/people/${table.dataset.person}/revisions/${version}?fragment`,
+    `${table.dataset.base}/revisions/${version}?fragment`,
   );
   // Only the latest choice is shown, if several are made quickly.
   if (response.ok && row.getAttribute('aria-selected') === 'true') {

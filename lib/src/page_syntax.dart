@@ -7,7 +7,9 @@ import 'dates.dart';
 class ParsedPage {
   ParsedPage._(this.facts, this.body, this.strayLines);
 
-  factory ParsedPage.parse(String source) {
+  /// [first] is the label the facts block starts with: `name` for a
+  /// person's page, `title` for a page about something else.
+  factory ParsedPage.parse(String source, {String first = 'name'}) {
     final lines = source.replaceAll('\r\n', '\n').split('\n');
     var i = 0;
     while (i < lines.length && lines[i].trim().isEmpty) {
@@ -16,7 +18,7 @@ class ParsedPage {
     final facts = <FactLine>[];
     final stray = <String>[];
     if (i < lines.length &&
-        labelPattern.firstMatch(lines[i])?[1]?.toLowerCase() == 'name') {
+        labelPattern.firstMatch(lines[i])?[1]?.toLowerCase() == first) {
       for (; i < lines.length && lines[i].trim().isNotEmpty; i++) {
         // An indented line carries on the fact above it.
         if (continues(lines[i]) && facts.isNotEmpty) {

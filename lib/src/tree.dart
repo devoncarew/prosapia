@@ -10,6 +10,13 @@ class Tree {
   final people = <String, Person>{};
   final media = <String, Media>{};
 
+  /// Pages about something other than one person: a family, a house, a
+  /// company. Keyed by id, `w-k3m9qa`.
+  final pages = <String, WikiPage>{};
+
+  /// Such pages that were deleted, as they were last written.
+  final deletedPages = <String, WikiPage>{};
+
   /// Pages that were deleted, as they were last written. They are not part
   /// of the tree, but their history is kept and they can be brought back.
   final deleted = <String, Person>{};
@@ -73,8 +80,92 @@ class Fact {
   final List<PersonRef> people;
 }
 
-class Person {
-  Person._(this.id, this.directory, this.source);
+/// A page of the tree as it is stored and edited: a person's page, or a
+/// page about something else. Each is text, saved with its history.
+abstract class Page {
+  Page(this.id, this.directory, this.source);
+
+  final String id;
+
+  /// The page's directory in the file layout, and what follows `@` or `#`
+  /// in a reference to it: a readable name ending in the id.
+  final String directory;
+
+  /// The page exactly as written. Everything else is read from it.
+  final String source;
+
+  /// The number of the saved version this is. Zero when the store keeps no
+  /// history.
+  int revision = 0;
+
+  /// The story: the markdown after the facts.
+  String body = '';
+
+  /// Who last saved the page, and when, if the store records it.
+  String? editedBy;
+  DateTime? editedAt;
+
+  /// What could not be read from the page, in words for its editors.
+  final issues = <String>[];
+
+  /// What the page is called: a person's name, or a page's title.
+  String get title;
+
+  /// Whether [id] is a page about something other than a person.
+  static bool isWiki(String id) => id.startsWith('w-');
+}
+
+/// A page about something other than one person, such as a family, a house
+/// or a company: a `Title:` line, then a story. The people its story
+/// mentions, and those whose pages name it in a `Family:` line, are shown
+/// with it, and it is shown on their pages.
+class WikiPage extends Page {
+  WikiPage._(super.id, super.directory, super.source);
+
+  factory WikiPage.fromSource(
+    String id,
+    String directory,
+    String source, {
+    int revision = 0,
+  }) {
+    final page = WikiPage._(id, directory, source)..revision = revision;
+    final parsed = ParsedPage.parse(source, first: 'title');
+    page.body = parsed.body;
+    for (final line in parsed.strayLines) {
+      page.issues.add('Not a "Label: value" line: $line');
+    }
+    if (parsed.facts.isEmpty) {
+      page.issues.add('The page does not start with a "Title:" line.');
+    }
+    for (final line in parsed.facts) {
+      if (line.key == 'title') {
+        if (line.value.trim().isNotEmpty) page.name = line.value.trim();
+      } else {
+        page.issues.add('"${line.label}:" is not a line this page uses.');
+      }
+    }
+    return page;
+  }
+
+  /// The id prefix of these pages.
+  static const prefix = 'w';
+
+  String name = '(no title)';
+
+  @override
+  String get title => name;
+
+  /// What a reference to this page looks like: `#carew-family-k3m9qa`.
+  String get reference => '#$directory';
+
+  /// The ids of the people its story mentions with `@`, in order, once each.
+  List<String> get mentioned => {
+    for (final m in proseRef.allMatches(body)) 'p-${m[1]!.split('-').last}',
+  }.toList();
+}
+
+class Person extends Page {
+  Person._(super.id, super.directory, super.source);
 
   /// Reads a person from their page text. Never fails: anything that does
   /// not fit is recorded in [issues] and shown on the page.
@@ -164,6 +255,19 @@ class Person {
         externalIds[externalSites[key]!] = line.value;
       case 'note':
         notes.add(line.value);
+      case 'family':
+        // `Family: #carew-family-k3m9qa`: the pages about the families they
+        // belong to.
+        for (final s in line.segments) {
+          final ref = s.value.trim();
+          if (ref.startsWith('#')) {
+            families.add('${WikiPage.prefix}-${itemIdOf(ref)}');
+          } else {
+            issues.add(
+              'In "${line.label}:", "${s.text}" is not a # reference to a page.',
+            );
+          }
+        }
       case _ when lifeEvents.contains(key):
         final event = _event(line, line.segments, placeUnmarked: true);
         // When the records disagree the event is written again: the first
@@ -336,20 +440,13 @@ class Person {
     );
   }
 
-  final String id;
-
-  /// The person's directory in the file layout, and what follows `@` in a
-  /// reference to them: a readable name ending in the id.
-  final String directory;
-
-  /// The page exactly as written. Everything else here is read from it.
-  final String source;
-
-  /// The number of the saved version this is. Zero when the store keeps no
-  /// history.
-  int revision = 0;
-
   String name = '(no name)';
+
+  @override
+  String get title => name;
+
+  /// The ids of the pages named in `Family:` lines: `w-k3m9qa`.
+  final families = <String>[];
   String? sex;
 
   /// [sex] as one of `male`, `female`, `intersex` or `unknown`.
@@ -392,14 +489,6 @@ class Person {
   final couples = <CoupleEvent>[];
   final facts = <Fact>[];
   final notes = <String>[];
-  String body = '';
-
-  /// Who last saved the page, and when, if the store records it.
-  String? editedBy;
-  DateTime? editedAt;
-
-  /// What could not be read from the page, in words for its editors.
-  final issues = <String>[];
 
   /// What a reference to this person looks like: `@hughes-thomas-3f8d1a`.
   String get reference => '@$directory';
@@ -576,3 +665,8 @@ String? normalSex(String text) => switch (text.trim().toLowerCase()) {
 /// null. Only the id at its end is relied on.
 Media? itemOf(Tree tree, String reference) =>
     tree.media['m-${itemIdOf(reference)}'];
+
+/// The page about a family or a thing that a `#` [reference] names, such as
+/// `#carew-family-k3m9qa`, or null.
+WikiPage? wikiPageOf(Tree tree, String reference) =>
+    tree.pages['${WikiPage.prefix}-${itemIdOf(reference)}'];

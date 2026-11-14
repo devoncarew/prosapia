@@ -1,4 +1,4 @@
-// A person's page. Edit opens the editor in place of the story, as editing
+// A person's page, or a page about a family or a thing. Edit opens the editor in place of the story, as editing
 // an issue does on GitHub: the title and the facts stay where they are, and
 // Discard puts the story back. The editor's code is loaded only when it is
 // first needed.
@@ -8,7 +8,9 @@ import type { Mounted } from './editor';
 
 const edit = document.querySelector<HTMLAnchorElement>('a[data-edit]');
 const actions = document.querySelector<HTMLElement>('.person-head .actions');
-const article = document.querySelector<HTMLElement>('main > article.person');
+const article = document.querySelector<HTMLElement>(
+  'main > article.person, main > article.wiki',
+);
 const body = article?.querySelector<HTMLElement>('.person-body');
 const edited = document.querySelector<HTMLElement>('main > .edited');
 let open: { box: HTMLElement; mounted: Mounted } | null = null;

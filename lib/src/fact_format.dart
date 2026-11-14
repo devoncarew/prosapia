@@ -38,7 +38,8 @@ List<String> _parts(FactLine line) {
   final life = Person.lifeEvents.contains(key);
   final couple = Person.coupleEvents.contains(key);
   final relation = Person.relationships.contains(key);
-  final names = key == 'nickname' || key == 'also known as';
+  // Lists of names, or of `#` references to pages, keep each part apart.
+  final names = key == 'nickname' || key == 'also known as' || key == 'family';
   final segments = line.segments;
 
   if (relation || names) {

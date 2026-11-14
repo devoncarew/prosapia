@@ -19,6 +19,8 @@ import 'tree.dart';
 ///   people/{id}                source (the page as written), directory, revision,
 ///                              deleted (when the page has been deleted)
 ///     revisions/{number}       every saved version: source, author, summary, at
+///   pages/{id}                 a page about a family or a thing, kept as people
+///     revisions/{number}       are: source, directory, revision, deleted
 ///   media/{key}                what each file says about itself
 ///   changes/{auto}             the log: author, summary, at, pages, summaryBy
 ///   usage/{yyyy-mm}            what calls to a language model cost
@@ -84,6 +86,7 @@ class FirestoreStore extends TreeStore {
     final results = await Future.wait([
       _tree.collection('people').get(),
       _tree.collection('media').get(),
+      _tree.collection('pages').get(),
     ]);
     void each(
       QuerySnapshot<Map<String, Object?>> docs,
@@ -113,6 +116,18 @@ class FirestoreStore extends TreeStore {
       } else {
         tree.people[person.id] = person;
       }
+    }
+    for (final doc in results[2].docs) {
+      final data = doc.data();
+      final page = WikiPage.fromSource(
+        doc.id,
+        data['directory'] as String? ?? doc.id,
+        data['source'] as String? ?? '',
+        revision: data['revision'] as int? ?? 0,
+      )..editedBy = data['editedBy'] as String?;
+      if (data['editedAt'] case final Timestamp at) page.editedAt = at.toDate();
+      (data['deleted'] == true ? tree.deletedPages : tree.pages)[page.id] =
+          page;
     }
     each(results[1], (data) {
       final media = Media.fromMap(data);
@@ -180,7 +195,12 @@ class FirestoreStore extends TreeStore {
             ? (data['editedAt'] as Timestamp).toDate()
             : null;
 
-  static Map<String, Object?> _personDoc(Person person, int revision) => {
+  /// Where the page with [id] is kept: people in `people`, other pages in
+  /// `pages`.
+  DocumentReference<Map<String, Object?>> _page(String id) =>
+      _tree.collection(Page.isWiki(id) ? 'pages' : 'people').doc(id);
+
+  static Map<String, Object?> _personDoc(Page person, int revision) => {
     'source': person.source,
     'directory': person.directory,
     'revision': revision,
@@ -199,9 +219,7 @@ class FirestoreStore extends TreeStore {
     String? helpedBy,
     String? summaryBy,
   }) {
-    final refs = [
-      for (final w in pages) _tree.collection('people').doc(w.person.id),
-    ];
+    final refs = [for (final w in pages) _page(w.page.id)];
     // The pages, their revisions, the log entry and the tree's version
     // change together or not at all.
     return _db.runTransaction((tx) async {
@@ -210,9 +228,9 @@ class FirestoreStore extends TreeStore {
       for (final (i, w) in pages.indexed) {
         final revision = current[i]?['revision'] as int? ?? 0;
         if (revision != w.basedOn) {
-          return SaveResult.conflict(revision, conflictPage: w.person.id);
+          return SaveResult.conflict(revision, conflictPage: w.page.id);
         }
-        next[w.person.id] = revision + 1;
+        next[w.page.id] = revision + 1;
       }
       final stamp = {
         'author': author.email,
@@ -221,16 +239,16 @@ class FirestoreStore extends TreeStore {
         'at': FieldValue.serverTimestamp,
       };
       for (final (i, w) in pages.indexed) {
-        final number = next[w.person.id]!;
+        final number = next[w.page.id]!;
         tx.set(refs[i], {
-          ..._personDoc(w.person, number),
+          ..._personDoc(w.page, number),
           if (w.delete) 'deleted': true,
           'editedBy': author.name ?? author.email,
           'editedAt': FieldValue.serverTimestamp,
         });
         tx.set(refs[i].collection('revisions').doc('$number'), {
           'number': number,
-          'source': w.delete ? '' : w.person.source,
+          'source': w.delete ? '' : w.page.source,
           if (w.delete) 'deleted': true,
           'helpedBy': ?helpedBy,
           'summaryBy': ?summaryBy,
@@ -243,7 +261,7 @@ class FirestoreStore extends TreeStore {
         ...stamp,
       });
       tx.update(_tree, {'version': const FieldValue.increment(1)});
-      return SaveResult.saved(next[pages.first.person.id]!);
+      return SaveResult.saved(next[pages.first.page.id]!);
     });
   }
 
@@ -301,25 +319,17 @@ class FirestoreStore extends TreeStore {
 
   @override
   Future<List<Revision>> history(String personId) async {
-    final snapshot = await _tree
-        .collection('people')
-        .doc(personId)
-        .collection('revisions')
-        .orderBy('number', descending: true)
-        .get();
+    final snapshot = await _page(
+      personId,
+    ).collection('revisions').orderBy('number', descending: true).get();
     return [for (final doc in snapshot.docs) _revision(doc.data())];
   }
 
   @override
   Future<Revision?> revision(String personId, int number) async {
-    final data =
-        (await _tree
-                .collection('people')
-                .doc(personId)
-                .collection('revisions')
-                .doc('$number')
-                .get())
-            .data();
+    final data = (await _page(
+      personId,
+    ).collection('revisions').doc('$number').get()).data();
     return data == null ? null : _revision(data);
   }
 
@@ -450,7 +460,7 @@ class FirestoreStore extends TreeStore {
   /// and change log. Members are kept, and so are files in storage, which
   /// [replaceWith] reuses when they are unchanged.
   Future<void> clearRecords() async {
-    for (final name in ['people', 'unions', 'media', 'changes']) {
+    for (final name in ['people', 'pages', 'unions', 'media', 'changes']) {
       await _db.recursiveDelete(_tree.collection(name));
     }
   }
@@ -470,8 +480,8 @@ class FirestoreStore extends TreeStore {
       'summary': 'Loaded from files',
       'at': FieldValue.serverTimestamp,
     };
-    for (final person in tree.people.values) {
-      final ref = _tree.collection('people').doc(person.id);
+    for (final Page person in [...tree.people.values, ...tree.pages.values]) {
+      final ref = _page(person.id);
       writes.add((ref, _personDoc(person, 1)));
       writes.add((
         ref.collection('revisions').doc('1'),
@@ -481,7 +491,9 @@ class FirestoreStore extends TreeStore {
     writes.add((
       _tree.collection('changes').doc(),
       {
-        'pages': {for (final id in tree.people.keys) id: 1},
+        'pages': {
+          for (final id in [...tree.people.keys, ...tree.pages.keys]) id: 1,
+        },
         ...stamp,
       },
     ));
