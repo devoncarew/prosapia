@@ -73,6 +73,14 @@ class Index {
         ].nonNulls.join('\n'),
       ]);
     }
+    for (final page in tree.pages.values) {
+      db.execute('insert into search values (?, ?, ?, ?)', [
+        'page',
+        page.id,
+        page.title,
+        page.body,
+      ]);
+    }
     for (final m in tree.media.values) {
       for (final person in m.people) {
         db.execute('insert into shown values (?, ?)', [m.key, person]);
@@ -137,7 +145,7 @@ class Index {
   List<String> peopleByName() =>
       _ids('select id from person order by name, born', const []);
 
-  /// Full-text search over people and media. Each word matches as a prefix.
+  /// Full-text search over people, pages and media. Each word matches as a prefix.
   List<({String kind, String id, String snippet})> search(String query) {
     final words = RegExp(
       r'[\p{L}\p{N}]+',

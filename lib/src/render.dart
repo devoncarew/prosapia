@@ -76,6 +76,50 @@ $body
   /// Only the trailing id is relied on, so older addresses keep working.
   static String pathOf(Person p) => '/people/${p.directory}';
 
+  /// A page's address, readable: `/pages/carew-family-k3m9qa`.
+  static String wikiPath(WikiPage w) => '/pages/${w.directory}';
+
+  /// Where a person's page or another page is, by its id, for its history
+  /// and actions: `/people/p-tbczm8`, `/pages/w-k3m9qa`.
+  static String basePath(String id) =>
+      Page.isWiki(id) ? '/pages/$id' : '/people/$id';
+
+  /// A link to the page [id]: a person's, or a page about something else.
+  String pageLink(String id) {
+    if (!Page.isWiki(id)) return personLink(id);
+    final w = tree.pages[id];
+    if (w != null) return '<a href="${wikiPath(w)}">${esc(w.title)}</a>';
+    final gone = tree.deletedPages[id];
+    return gone == null
+        ? '<span class="missing">unknown page ($id)</span>'
+        : '<a class="deleted" href="/pages/$id">${esc(gone.title)}</a> <span class="years">(page deleted)</span>';
+  }
+
+  /// The pages about families and things that [p] belongs to, by a
+  /// `Family:` line on their page, and those whose stories mention them.
+  ({List<WikiPage> families, List<WikiPage> mentions}) pagesFor(Person p) {
+    final families = [for (final id in p.families) ?tree.pages[id]];
+    final mentions = [
+      for (final w in tree.pages.values)
+        if (!families.contains(w) && w.mentioned.contains(p.id)) w,
+    ]..sort((a, b) => a.title.compareTo(b.title));
+    return (families: families, mentions: mentions);
+  }
+
+  /// The people a page is about: those whose pages name it in a `Family:`
+  /// line, then those its story mentions.
+  List<Person> peopleOf(WikiPage w) {
+    final family = [
+      for (final p in tree.people.values)
+        if (p.families.contains(w.id)) p,
+    ]..sort((a, b) => a.name.compareTo(b.name));
+    return [
+      ...family,
+      for (final id in w.mentioned)
+        if (tree.people[id] case final p? when !family.contains(p)) p,
+    ];
+  }
+
   /// A link to [id]'s page; with [nickname], named as the family knew them.
   String personLink(String id, {bool years = false, bool nickname = false}) {
     final p = tree.people[id];
@@ -132,11 +176,19 @@ $body
         );
       }
     }
+    final pages = _wikiList();
+    if (pages != null) {
+      sb.write(
+        '<h2 class="with-action"><span>Families, places and things</span>'
+        '${_canEdit ? '<a class="button" href="/pages/new">New page</a>' : ''}</h2>$pages',
+      );
+    }
     sb.write(
       '<h2>Find your way around</h2><ul class="try">'
       '<li><a href="/people">Everyone in the tree</a>, grouped by family name. Or type a name in the search box at the top of any page.</li>'
       '<li><a href="/family">The family tree</a>: anyone with their parents, grandparents, children and grandchildren.</li>'
       '<li><a href="/media">Photos and documents</a>.</li>'
+      '<li><a href="/pages">Pages</a> about a family, a house, a company: anything that belongs to several people.</li>'
       '<li><a href="/research">Research</a>: where to look for more about the family.</li>'
       '${_canEdit ? '<li><a href="/help/writing">How to write a page</a>: an example, and answers to common questions.</li>' : ''}'
       '${_canEdit ? switch (correctionCount()) {
@@ -187,7 +239,18 @@ $body
     }
     sb.write('<div class="surnames">');
     groups.forEach((surname, people) {
-      sb.write('<section><h2>${esc(surname)}</h2><ul>');
+      // The pages about this family that its people name.
+      final pages = {
+        for (final p in people)
+          for (final id in p.families) ?tree.pages[id],
+      };
+      sb.write('<section><h2>${esc(surname)}</h2>');
+      if (pages.isNotEmpty) {
+        sb.write(
+          '<p class="meta">${pages.map((w) => '<a href="${wikiPath(w)}">${esc(w.title)}</a>').join(' · ')}</p>',
+        );
+      }
+      sb.write('<ul>');
       for (final p in people) {
         sb.write('<li>${personLink(p.id, years: true, nickname: true)}</li>');
       }
@@ -552,6 +615,7 @@ ${q('cite', 'How do I say where something in the story came from?', 'Add a <code
 ${q('needed', 'How do I mark something that needs a source?', 'Write <code>needed</code> as its source. It shows as “source needed”, and is listed under <a href="/sources-wanted">Sources wanted</a> for anyone who wants to find one.', 'Born: 1861, source: needed\nShe worked at the mill [source: needed].')}
 ${q('items', 'How do I mention a photo or document in the story?', 'Type <code>#</code> and part of its title, and choose it. The page shows its title as a link. In a fact, <code>source: #…</code> cites it.', 'The certificate is #m-gdcade.')}
 ${q('elsewhere', 'How do I link to their record on FamilySearch, WikiTree or Find a Grave?', 'Add a fact with the site as its label and their id there as the value. It shows as a link on the page.', 'FamilySearch: LZ5X-QRT\nWikiTree: Hughes-123\nFind a Grave: 12345678')}
+${q('family', 'How do I show that someone belongs to a family page?', 'A <a href="/pages">page</a> about a family, a house or a company lists the people its story mentions, and shows on their pages. To add someone it does not mention, add a <code>Family:</code> line to their page with the page\'s <code>#</code> reference; type <code>#</code> and part of its title to find it.', 'Family: #carew-family-k3m9qa')}
 ${q('marks', 'What are [date: …] and [place: …]?', 'Marks for a date or a place in the story, so Prosapia reads them reliably. They show as ordinary text. The Date and Place buttons add them.', 'In [date: spring 1923] the family moved to [place: Hartford, CT].')}
 ${q('long', 'A fact is too long for one line.', 'Carry it on to the next line, indented by two spaces. Format does this for you.', 'Married: Walter Price, 12 June 1910, place: "St. Luke\'s Church, Scranton, PA",\n  source: Pennsylvania marriage records')}
 ${q('format', 'What does the Format button do?', 'It tidies the text the way Publish will save it: single spaces, quotes and labels where they make the meaning clear, and long lines wrapped. It puts the facts in the usual order (names, birth and death, parents, partners, children, other facts, notes last) and writes sex as male, female, intersex or unknown. It never changes what the page says; a line it cannot be sure of is left as you wrote it.')}
@@ -720,6 +784,191 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     return sb.toString();
   }
 
+  // ------------------------------------------------------------- wiki pages
+
+  /// A page about a family or a thing: its title, then the story, the people
+  /// it is about, and the photos and documents its story names. With an
+  /// [editor], the editor takes the story's place.
+  String wikiPage(WikiPage w, {String? editor}) {
+    final more = [
+      if (editable) '<a href="/pages/${w.id}/history">View changes</a>',
+      '<a href="/pages/${w.id}/text">View source</a>',
+      if (_canEdit) '<a href="/pages/${w.id}/delete">Delete page</a>',
+    ];
+    final actions = [
+      if (_canEdit)
+        '<a class="button primary edit" href="${wikiPath(w)}?edit" data-edit="/pages/${w.id}/edit?fragment">Edit</a>',
+      '<details class="more"><summary class="button" aria-label="More actions" title="More actions">⋯</summary><div class="menu">${more.join()}</div></details>',
+    ];
+    final head =
+        '<div class="person-head"><div class="title"><div class="name"><h1>${esc(w.title)}</h1></div>'
+        '<div class="actions"${editor == null ? '' : ' hidden'}>${actions.join()}</div></div></div>';
+    final edited = editable && w.editedBy != null && w.editedAt != null
+        ? '<p class="edited">Edited by ${esc(w.editedBy)} ${ago(w.editedAt!)} · <a href="/pages/${w.id}/history">View changes</a></p>'
+        : '';
+    return page(
+      editor == null ? w.title : 'Editing ${w.title}',
+      '$head${wikiArticle(w, editor: editor)}${editor == null ? edited : ''}'
+      '${editor != null
+          ? '<script type="module" src="/assets/editor.js"></script>'
+          : _canEdit
+          ? '<script type="module" src="/assets/page.js"></script>'
+          : ''}',
+    );
+  }
+
+  /// The story of a page about a family or a thing, and what it names. Also
+  /// the editor's preview, where [w] is the text being typed.
+  String wikiArticle(WikiPage w, {bool preview = false, String? editor}) {
+    final sb = StringBuffer(
+      '<article class="wiki${editor == null ? '' : ' editing-on'}">',
+    );
+    if (editor != null) {
+      sb.write('<div class="editing">$editor</div></article>');
+      return sb.toString();
+    }
+    // The part the editor takes the place of, as on a person's page.
+    sb.write('<div class="person-body">');
+    final issues = [
+      ...w.issues,
+      for (final m in proseRef.allMatches(w.body))
+        if (!tree.people.containsKey('p-${m[1]!.split('-').last}'))
+          'No one in the tree matches @${m[1]}.',
+    ];
+    if (issues.isNotEmpty && (_canEdit || !requiresViewer)) {
+      sb.write(
+        '<details class="issues"><summary>${issues.length == 1 ? 'One thing' : '${issues.length} things'} on this page could not be read</summary><ul>',
+      );
+      for (final item in issues) {
+        sb.write('<li>${esc(item)}</li>');
+      }
+      sb.write('</ul></details>');
+    }
+    if (w.body.isNotEmpty) {
+      sb.write('<div class="prose">${markdown(w.body)}</div>');
+    } else {
+      sb.write('<p class="empty">Nothing has been written here yet.</p>');
+    }
+    final people = preview
+        ? [for (final id in w.mentioned) ?tree.people[id]]
+        : peopleOf(w);
+    if (people.isNotEmpty) {
+      sb.write(
+        '<h2>People <span class="years">(${people.length})</span></h2><ul class="shown">',
+      );
+      for (final p in people) {
+        sb.write('<li>${personLink(p.id, years: true, nickname: true)}</li>');
+      }
+      sb.write('</ul>');
+    }
+    if (!preview) {
+      final media = <Media>{
+        for (final m in proseItemRef.allMatches(w.body)) ?itemOf(tree, m[0]!),
+        for (final m in proseSource.allMatches(w.body))
+          ?itemOf(tree, m[1]!.trim().split(',').first),
+      }.where((m) => !m.isBack).toList();
+      if (media.isNotEmpty) {
+        sb.write(
+          '<h2>Photos, documents and sources <span class="years">(${media.length})</span></h2>${strip(media)}',
+        );
+      }
+    }
+    sb.write('</div></article>');
+    return sb.toString();
+  }
+
+  /// A page's text as written.
+  String wikiText(WikiPage w) => page(
+    'Text of ${w.title}',
+    '<h1>Text of ${pageLink(w.id)}</h1>'
+        '<p class="lead">The page as it is written: its title, then the story.'
+        '${_canEdit ? ' <a href="${wikiPath(w)}?edit">Edit it</a>' : ''}</p>'
+        '<pre class="source">${esc(w.source)}</pre>',
+  );
+
+  /// Every page about a family or a thing, by title.
+  String wikiPages() {
+    final sb = StringBuffer(
+      '<h1 class="with-action"><span>Pages</span>'
+      '${_canEdit ? '<a class="button" href="/pages/new">New page</a>' : ''}</h1>'
+      '<p class="lead">Pages about a family, a house, a company: anything that '
+      'belongs to several people rather than one.</p>',
+    );
+    sb.write(_wikiList() ?? '<p class="empty">There are no pages yet.</p>');
+    return page('Pages', sb.toString());
+  }
+
+  /// The pages as a list, or null if there are none.
+  String? _wikiList() {
+    if (tree.pages.isEmpty) return null;
+    final pages = tree.pages.values.toList()
+      ..sort((a, b) => a.title.compareTo(b.title));
+    return '<ul class="pages">${[for (final w in pages) '<li><a href="${wikiPath(w)}">${esc(w.title)}</a>'
+          '${switch (peopleOf(w).length) {
+            0 => '',
+            1 => ' <span class="years">(one person)</span>',
+            final n => ' <span class="years">($n people)</span>',
+          }}</li>'].join()}</ul>';
+  }
+
+  /// Starting a page about a family or a thing: its title first.
+  String newWikiPage({String title = '', String? error}) => page('New page', '''
+<h1>New page</h1>
+<p class="lead">A page for something that belongs to several people rather than one: a family, a house, a company. Its story can mention people with @, and photos and documents with #.</p>
+${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
+<form class="memory" method="post" action="/pages/new">
+  <label for="title">Title</label>
+  <input id="title" name="title" value="${esc(title)}" required maxlength="120" placeholder="The Carew family">
+  <p class="hint">To show this page on someone's page, mention them in its story, or add <code>Family:</code> and the page's # reference to theirs.</p>
+  <div class="save"><button class="primary">Create the page</button> <a href="/pages">Cancel</a></div>
+</form>''');
+
+  /// Asks before deleting a page about a family or a thing.
+  String deleteWikiPage(WikiPage w) {
+    final naming = [
+      for (final p in tree.people.values)
+        if (p.families.contains(w.id) ||
+            proseItemRef
+                .allMatches(p.body)
+                .any((m) => wikiPageOf(tree, m[0]!) == w))
+          p,
+    ];
+    return page('Delete ${w.title}', '''
+<h1>Delete “${esc(w.title)}”?</h1>
+<p class="lead">The page leaves the tree. Its text is kept in its history, and the deletion can be undone from Recent changes or from the page's address.</p>
+${naming.isEmpty ? '' : '<p>${naming.length == 1 ? 'One page refers' : '${naming.length} pages refer'} to it, and will show the reference as not found: ${naming.map((p) => personLink(p.id)).join(', ')}.</p>'}
+<form class="memory" method="post" action="/pages/${w.id}/delete">
+  <input type="hidden" name="based_on" value="${w.revision}">
+  <div class="save"><button class="danger">Delete the page</button> <a href="${wikiPath(w)}">Cancel</a></div>
+</form>''');
+  }
+
+  /// What is shown at a deleted page's address. [undo] is the change that
+  /// deleted it, when it can be undone.
+  String deletedWikiPage(WikiPage w, {Change? undo}) => page(w.title, '''
+<h1>${esc(w.title)}</h1>
+<p class="lead">This page was deleted. Its earlier versions are in its <a href="/pages/${w.id}/history">change history</a>.</p>
+${!_canEdit
+      ? ''
+      : undo != null && undoable(undo)
+      ? '<form method="post" action="/changes/${undo.id}/undo"><button>Bring the page back</button></form>'
+      : w.revision > 1
+      ? '<form method="post" action="/pages/${w.id}/restore"><input type="hidden" name="number" value="${w.revision - 1}"><button>Bring the page back</button></form>'
+      : ''}''');
+
+  /// A page about a family or a thing with the editor in place of its
+  /// story.
+  String editWikiPage(
+    WikiPage w, {
+    required String source,
+    required int basedOn,
+    String? conflict,
+  }) => wikiPage(
+    w,
+    editor:
+        '${conflict ?? ''}${editorForm(w, source: source, basedOn: basedOn)}',
+  );
+
   /// Whether pages are only for signed-in members (otherwise the tree is a
   /// local set of files, and its reader is its editor).
   bool get requiresViewer => viewer != null;
@@ -745,12 +994,15 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
       for (final m in proseSource.allMatches(p.body)) m[1]!,
     ])
       if (source.trim().startsWith('#') &&
-          itemOf(tree, source.trim().split(',').first) == null)
+          target(source.trim().split(',').first) == null)
         'Nothing in the tree matches ${source.trim().split(',').first}.',
     if (p.photo != null &&
         tree.media[p.photo] == null &&
         tree.deletedMedia[p.photo] == null)
       'No photo has the id ${p.photo}.',
+    for (final id in p.families)
+      if (!tree.pages.containsKey(id))
+        'No page in the tree has the id $id, named in a "Family:" line.',
   ];
 
   /// Dates that look unlikely. These are questions, never errors: real
@@ -901,10 +1153,10 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
     final (text, source) = noteSource(note);
     final html = esc(text)
         .replaceAllMapped(proseItemRef, (m) {
-          final item = itemOf(tree, m[0]!);
-          return item == null
+          final found = target(m[0]!);
+          return found == null
               ? m[0]!
-              : '<a href="/media/${item.key}">${esc(item.title ?? 'Untitled')}</a>';
+              : '<a href="${found.href}">${esc(found.title)}</a>';
         })
         .replaceAllMapped(proseRef, (m) {
           final person = tree.people['p-${m[1]!.split('-').last}'];
@@ -1022,10 +1274,22 @@ ${rows.isEmpty ? '<p class="empty">Nothing is marked as needing a source.</p>' :
     final comma = text.indexOf(',');
     final reference = comma < 0 ? text : text.substring(0, comma);
     final detail = comma < 0 ? '' : text.substring(comma + 1).trim();
+    final found = target(reference);
+    if (found == null) return (null, text);
+    final title = found.title;
+    return (found.href, detail.isEmpty ? title : '$title, $detail');
+  }
+
+  /// What a `#` [reference] names: a photo, a document or a source, or a
+  /// page about a family or a thing. Null if it names nothing in the tree.
+  ({String href, String title})? target(String reference) {
     final item = itemOf(tree, reference);
-    if (item == null) return (null, text);
-    final title = item.title ?? 'Untitled';
-    return ('/media/${item.key}', detail.isEmpty ? title : '$title, $detail');
+    if (item != null) {
+      return (href: '/media/${item.key}', title: item.title ?? 'Untitled');
+    }
+    final page = wikiPageOf(tree, reference);
+    if (page != null) return (href: wikiPath(page), title: page.title);
+    return null;
   }
 
   /// A date as typed, with how it was read shown on hover.
@@ -1187,6 +1451,14 @@ ${rows.isEmpty ? '<p class="empty">Nothing is marked as needing a source.</p>' :
             ...named([r], 'children', from: parent),
     ]);
 
+    final (:families, :mentions) = pagesFor(p);
+    row('Family', [
+      for (final w in families) '<a href="${wikiPath(w)}">${esc(w.title)}</a>',
+    ]);
+    row('Mentioned in', [
+      for (final w in mentions) '<a href="${wikiPath(w)}">${esc(w.title)}</a>',
+    ]);
+
     // The person's records in other systems, as links.
     if (p.externalIds.isNotEmpty) {
       rows.add((
@@ -1315,10 +1587,10 @@ ${rows.isEmpty ? '<p class="empty">Nothing is marked as needing a source.</p>' :
           return '<sup class="cite-ref"><a href="${href ?? '#source-$n'}" title="${esc(title)}">$n</a></sup>';
         })
         .replaceAllMapped(proseItemRef, (m) {
-          final item = itemOf(tree, m[0]!);
-          return item == null
+          final found = target(m[0]!);
+          return found == null
               ? m[0]!
-              : '<a href="/media/${item.key}">${esc(item.title ?? 'Untitled')}</a>';
+              : '<a href="${found.href}">${esc(found.title)}</a>';
         })
         .replaceAllMapped(proseRef, (m) {
           final id = 'p-${m[1]!.split('-').last}';
@@ -1556,7 +1828,13 @@ ${rows.isEmpty ? '<p class="empty">Nothing is marked as needing a source.</p>' :
         citing.putIfAbsent(p, () => {}).add('mentioned in the story');
       }
     }
-    if (citing.isNotEmpty) {
+    final pagesCiting = [
+      for (final w in tree.pages.values)
+        if (proseItemRef.allMatches(w.body).any((m) => isThis(m[0]!)) ||
+            proseSource.allMatches(w.body).any((m) => isThis(m[1]!)))
+          w,
+    ];
+    if (citing.isNotEmpty || pagesCiting.isNotEmpty) {
       final people = citing.keys.toList()
         ..sort((a, b) => a.name.compareTo(b.name));
       sb.write('<h2>Cited by</h2><ul class="shown">');
@@ -1564,6 +1842,9 @@ ${rows.isEmpty ? '<p class="empty">Nothing is marked as needing a source.</p>' :
         sb.write(
           '<li>${personLink(p.id)} <span class="years">${esc(citing[p]!.join(', '))}</span></li>',
         );
+      }
+      for (final w in pagesCiting) {
+        sb.write('<li>${pageLink(w.id)} <span class="years">page</span></li>');
       }
       sb.write('</ul>');
     }
@@ -1730,6 +2011,8 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
             .replaceAll('&lt;&#47;mark&gt;', '</mark>');
         final link = r.kind == 'person'
             ? personLink(r.id, years: true)
+            : r.kind == 'page'
+            ? '${pageLink(r.id)} <span class="years">(page)</span>'
             : '<a href="/media/${r.id}">${esc(tree.media[r.id]?.title ?? 'Untitled')}</a> <span class="years">(${tree.media[r.id]?.isImage ?? false ? 'photo' : 'document'})</span>';
         sb.write(
           '<li>$link${snippet.trim().isEmpty ? '' : '<div class="snippet">$snippet</div>'}</li>',
@@ -1750,28 +2033,31 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
   /// while editing. [inPlace] marks one opened from the page itself, whose
   /// script starts and stops it.
   String editorForm(
-    Person p, {
+    Page p, {
     required String source,
     required int basedOn,
     bool help = false,
     String? helpOff,
     String? helpedBy,
     bool inPlace = false,
-  }) =>
-      '''
-<form class="editor" method="post" action="/people/${p.id}/edit" data-preview="/people/${p.id}/preview"${inPlace ? ' data-in-place' : ''}>
+  }) {
+    final base = basePath(p.id);
+    // Help from Claude is for people's pages, for now.
+    if (p is! Person) help = false;
+    return '''
+<form class="editor" method="post" action="$base/edit" data-preview="$base/preview"${inPlace ? ' data-in-place' : ''}>
   <input type="hidden" name="based_on" value="$basedOn">
   <input type="hidden" name="helped_by" value="${esc(helpedBy ?? '')}">
   <div class="tabs" role="tablist">
     <button type="button" role="tab" id="tab-write" aria-selected="true" aria-controls="panel-write">Write</button>
     <button type="button" role="tab" id="tab-preview" aria-selected="false" aria-controls="panel-preview">Preview</button>
     ${help
-          ? '''<span class="help" data-url="/people/${p.id}/help">
+        ? '''<span class="help" data-url="$base/help">
       <button type="button" data-request="draft" title="Write the story, or work new information into it">Claude: Draft…</button>
     </span>'''
-          : helpOff != null && viewer?.role == Role.owner
-          ? '<span class="help off">${esc(helpOff)} <a href="/settings">Settings</a></span>'
-          : ''}
+        : helpOff != null && viewer?.role == Role.owner
+        ? '<span class="help off">${esc(helpOff)} <a href="/settings">Settings</a></span>'
+        : ''}
   </div>
   <div class="help-bar" hidden role="status"></div>
   ${help ? _draftPanel : ''}
@@ -1789,19 +2075,24 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
       <button type="button" data-format="source" title="Say where this came from: a record, a book, who told you, or # and a photo, document or source">Source</button>
       <span class="spacer"></span>
       <a class="guide-link" href="/help/writing" target="_blank" rel="noopener" title="A whole example page, and answers to common questions. Opens in a new tab.">Format example and editing FAQ…</a>
-      <button type="button" data-tidy="/people/${p.id}/format" title="Tidy the text as it will be saved: spacing, quotes and line lengths">Format</button>
+      <button type="button" data-tidy="$base/format" title="Tidy the text as it will be saved: spacing, quotes and line lengths">Format</button>
     </div>
     <textarea id="source" name="source" spellcheck="true" required aria-label="Page text">${esc(source)}</textarea>
   </div>
   <div class="tab-panel" id="panel-preview" role="tabpanel" aria-labelledby="tab-preview" hidden>
-    <div id="preview" class="preview">${personArticle(p, preview: true)}</div>
+    <div id="preview" class="preview">${switch (p) {
+      Person() => personArticle(p, preview: true),
+      WikiPage() => wikiArticle(p, preview: true),
+      _ => '',
+    }}</div>
   </div>
   <div class="save">
-    <a class="button discard" href="${pathOf(p)}">Discard</a>
+    <a class="button discard" href="${p is Person ? pathOf(p) : wikiPath(p as WikiPage)}">Discard</a>
     <button class="primary" title="Publish (⌘ Enter)">Publish <kbd>⌘ ⏎</kbd></button>
   </div>
 </form>
 ''';
+  }
 
   /// What "Claude: Draft…" opens: what to do, and anything new to work in.
   static const _draftPanel =
@@ -2128,22 +2419,24 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
   /// one shows what it changed below the list, from [panel], and offers to
   /// restore it.
   String history(
-    Person p,
+    Page p,
     List<Revision> revisions, {
     int? selected,
     String panel = '',
   }) {
-    final sb = StringBuffer('<h1>Change history: ${personLink(p.id)}</h1>');
+    final sb = StringBuffer('<h1>Change history: ${pageLink(p.id)}</h1>');
     if (revisions.isEmpty) {
       sb.write(
         '<p class="lead">No versions have been recorded for this page.</p>',
       );
-      return page('Change history of ${p.name}', sb.toString());
+      return page('Change history of ${p.title}', sb.toString());
     }
     sb.write(
       '<p class="lead">${revisions.length} saved ${revisions.length == 1 ? 'version' : 'versions'}, newest first. Choose one to see what it changed.</p>',
     );
-    sb.write('<table class="history versions" data-person="${p.id}"><tbody>');
+    sb.write(
+      '<table class="history versions" data-base="${basePath(p.id)}"><tbody>',
+    );
     for (final (i, r) in revisions.indexed) {
       final helped = Model.byId(r.helpedBy);
       final restorable =
@@ -2159,7 +2452,7 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
             : i == 0
             ? ' <span class="years">(current)</span>'
             : ''}</td>'
-        '<td class="restore">${restorable ? '<form method="post" action="/people/${p.id}/restore"><input type="hidden" name="number" value="${r.number}"><button>Restore this version</button></form>' : ''}</td>'
+        '<td class="restore">${restorable ? '<form method="post" action="${basePath(p.id)}/restore"><input type="hidden" name="number" value="${r.number}"><button>Restore this version</button></form>' : ''}</td>'
         '</tr>',
       );
     }
@@ -2169,7 +2462,7 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
       '<section class="version-panel" aria-live="polite">$panel</section>'
       '<script type="module" src="/assets/history.js"></script>',
     );
-    return page('Change history of ${p.name}', sb.toString());
+    return page('Change history of ${p.title}', sb.toString());
   }
 
   /// The single note on a page listing changes whose summaries a model
@@ -2365,7 +2658,7 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
   (String, String) _changeParts(Change c) {
     final pages = c.pages.length > 5
         ? '${c.pages.length} pages'
-        : c.pages.keys.map(personLink).join(', ');
+        : c.pages.keys.map(pageLink).join(', ');
     // A front and its back are one photo.
     final photos = c.media.where((key) => !key.endsWith('-back')).toList();
     final media = [
@@ -2381,7 +2674,7 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
       '$pages${pages.isNotEmpty && media.isNotEmpty ? ', ' : ''}$media',
       only == null
           ? esc(c.summary)
-          : '<a href="/people/${only.key}/history?version=${only.value}">${esc(c.summary)}</a>',
+          : '<a href="${basePath(only.key)}/history?version=${only.value}">${esc(c.summary)}</a>',
     );
   }
 
@@ -2395,7 +2688,12 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
           : c.media.isEmpty) &&
       c.pages.length <= 10 &&
       c.pages.entries.every(
-        (e) => (tree.people[e.key] ?? tree.deleted[e.key])?.revision == e.value,
+        (e) =>
+            (Page.isWiki(e.key)
+                    ? tree.pages[e.key] ?? tree.deletedPages[e.key]
+                    : tree.people[e.key] ?? tree.deleted[e.key])
+                ?.revision ==
+            e.value,
       );
 
   static const _monthNames = [
@@ -2716,8 +3014,10 @@ mark { background: var(--mark); color: inherit; }
 .strip.rows-2 .gallery { grid-template-rows: repeat(2, auto); }
 .strip.rows-3 .gallery { grid-template-rows: repeat(3, auto); }
 @media (max-width: 700px) { .strip.rows-2 .gallery, .strip.rows-3 .gallery { grid-auto-columns: 110px; } }
-h2.with-action { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-h2.with-action .button { font: 14px var(--ui); padding: 3px 12px; }
+h1.with-action, h2.with-action { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+h1.with-action .button, h2.with-action .button { font: 14px var(--ui); padding: 3px 12px; }
+ul.pages { padding-left: 20px; }
+ul.pages li { margin: 4px 0; }
 .strip button { position: absolute; top: calc(50% - 30px); z-index: 1; width: 36px; height: 36px; padding: 0;
   border-radius: 50%; font: 22px/1 var(--ui); background: var(--surface);
   box-shadow: 0 2px 8px rgba(0,0,0,0.2); }

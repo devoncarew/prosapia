@@ -12,7 +12,7 @@ import 'claude.dart';
 import 'completion.dart';
 import 'diff.dart';
 import 'family.dart';
-import 'file_store.dart' show idFromDirectory;
+import 'file_store.dart' show idFromDirectory, pageIdFromDirectory;
 import 'firestore_store.dart' show contentTypes;
 import 'images.dart';
 import 'index.dart';
@@ -237,6 +237,10 @@ Handler siteHandler(
   /// A page in the tree, or one that was deleted, for its history.
   Person? anyPerson(String id) => site.tree.people[id] ?? site.tree.deleted[id];
 
+  /// A page about a family or a thing, or one that was deleted.
+  WikiPage? anyWikiPage(String id) =>
+      site.tree.pages[id] ?? site.tree.deletedPages[id];
+
   // ---------------------------------------------------------------- editing
 
   Response seeOther(String location) => Response.seeOther(location);
@@ -280,11 +284,16 @@ Handler siteHandler(
   /// Answers a change of several pages that could not be saved because one
   /// of them had changed meanwhile.
   Response changedMeanwhile(Request r, SaveResult result) {
-    final page = anyPerson(result.conflictPage ?? '');
+    final id = result.conflictPage ?? '';
+    final Page? page = Page.isWiki(id) ? anyWikiPage(id) : anyPerson(id);
     return html(
       render(r).message(
         'Not saved',
-        '${page == null ? 'A page' : "${page.name}'s page"} was changed by someone else at the same time, so nothing was saved. Look at it again and retry.',
+        '${page == null
+            ? 'A page'
+            : page is WikiPage
+            ? '“${page.title}”'
+            : "${page.title}'s page"} was changed by someone else at the same time, so nothing was saved. Look at it again and retry.',
       ),
       status: 409,
     );
@@ -553,6 +562,262 @@ Handler siteHandler(
       to == null ? '/people/$id/history' : '/people/$id/revisions/$to',
     );
   });
+
+  // ------------------------------------------- pages about families and things
+
+  router.get('/pages', (Request r) => html(render(r).wikiPages()));
+
+  router.get('/pages/new', (Request r) {
+    if (editor(r) == null) return notAllowed(r);
+    return html(render(r).newWikiPage());
+  });
+
+  router.post('/pages/new', (Request r) async {
+    final member = editor(r);
+    if (member == null) return notAllowed(r);
+    final title = (await form(
+      r,
+    ))['title']?.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (title == null || title.isEmpty) {
+      return html(
+        render(r).newWikiPage(error: 'A page needs a title.'),
+        status: 422,
+      );
+    }
+    final id = newId(WikiPage.prefix, (id) => itemIdTaken(site.tree, id));
+    final directory = pageDirectoryFor(title, id);
+    final page = WikiPage.fromSource(id, directory, 'Title: $title\n');
+    final result = await site.store.savePerson(
+      page,
+      basedOn: 0,
+      author: member,
+      summary: 'Start a page: $title',
+    );
+    await site.reload();
+    if (!result.saved) return changedMeanwhile(r, result);
+    return seeOther('/pages/$directory?edit');
+  });
+
+  /// Runs [action] for a member who may edit the page [id].
+  Future<Response> editingPage(
+    Request r,
+    String id,
+    Future<Response> Function(WikiPage, Member) action, {
+    bool deleted = false,
+  }) async {
+    final page = deleted ? anyWikiPage(id) : site.tree.pages[id];
+    if (page == null) return missing(r, 'No page has the id $id.');
+    final member = editor(r);
+    if (member == null) return notAllowed(r);
+    return action(page, member);
+  }
+
+  router.get('/pages/<id>', (Request r, String id) async {
+    final page = site.tree.pages[id];
+    if (page != null) {
+      if (editor(r) != null && r.url.queryParameters.containsKey('edit')) {
+        return html(
+          render(
+            r,
+          ).editWikiPage(page, source: page.source, basedOn: page.revision),
+        );
+      }
+      return html(render(r).wikiPage(page));
+    }
+    final deleted = site.tree.deletedPages[id];
+    if (deleted != null) {
+      return html(
+        render(r).deletedWikiPage(
+          deleted,
+          undo: await site.store.changeOf(id, deleted.revision),
+        ),
+      );
+    }
+    return missing(r, 'No page has the id $id.');
+  });
+
+  router.get(
+    '/pages/<id>/edit',
+    (Request r, String id) => editingPage(r, id, (page, member) async {
+      if (!r.url.queryParameters.containsKey('fragment')) {
+        return seeOther('/pages/${page.directory}?edit');
+      }
+      return html(
+        render(r).editorForm(
+          page,
+          source: page.source,
+          basedOn: page.revision,
+          inPlace: true,
+        ),
+      );
+    }),
+  );
+
+  router.get('/pages/<id>/text', (Request r, String id) {
+    final page = site.tree.pages[id];
+    return page == null
+        ? missing(r, 'No page has the id $id.')
+        : html(render(r).wikiText(page));
+  });
+
+  router.post(
+    '/pages/<id>/format',
+    (Request r, String id) => editingPage(
+      r,
+      id,
+      (page, member) async => Response.ok(
+        formatPage((await r.readAsString()).replaceAll('\r\n', '\n')),
+        headers: {'content-type': 'text/plain; charset=utf-8'},
+      ),
+    ),
+  );
+
+  router.post(
+    '/pages/<id>/preview',
+    (Request r, String id) => editingPage(r, id, (page, member) async {
+      final draft = WikiPage.fromSource(
+        id,
+        page.directory,
+        (await r.readAsString()).replaceAll('\r\n', '\n'),
+      );
+      return html(render(r).wikiArticle(draft, preview: true));
+    }),
+  );
+
+  router.post(
+    '/pages/<id>/edit',
+    (Request r, String id) => editingPage(r, id, (page, member) async {
+      final fields = await form(r);
+      final typed = (fields['source'] ?? '').replaceAll('\r\n', '\n');
+      final basedOn = int.tryParse(fields['based_on'] ?? '') ?? page.revision;
+      final source = formatPage(typed);
+      if (basedOn == page.revision &&
+          (typed.trim() == page.source.trim() ||
+              source == formatPage(page.source))) {
+        return seeOther('/pages/$id'); // nothing changed
+      }
+      final draft = WikiPage.fromSource(id, page.directory, source);
+      final summary = await summaryOf([
+        (name: page.title, before: formatPage(page.source), after: source),
+      ]);
+      final result = await site.store.savePerson(
+        draft,
+        basedOn: basedOn,
+        author: member,
+        summary: summary.text,
+        summaryBy: summary.by,
+      );
+      if (result.saved) {
+        await site.reload();
+        return seeOther('/pages/$id');
+      }
+      final theirs = await site.store.revision(id, result.conflictWith!);
+      final base = await site.store.revision(id, basedOn);
+      return html(
+        render(r).editWikiPage(
+          page,
+          source: source,
+          basedOn: result.conflictWith!,
+          conflict: theirs == null
+              ? null
+              : render(r).conflictNotice(theirs, base?.source ?? ''),
+        ),
+        status: 409,
+      );
+    }),
+  );
+
+  router.get('/pages/<id>/history', (Request r, String id) async {
+    final page = anyWikiPage(id);
+    if (page == null) return missing(r, 'No page has the id $id.');
+    final revisions = await site.store.history(id);
+    final selected =
+        int.tryParse(r.url.queryParameters['version'] ?? '') ??
+        revisions.firstOrNull?.number;
+    final at = revisions.indexWhere((v) => v.number == selected);
+    return html(
+      render(r).history(
+        page,
+        revisions,
+        selected: selected,
+        panel: at < 0
+            ? ''
+            : render(r).versionPanel(
+                revisions[at],
+                previous: revisions.elementAtOrNull(at + 1),
+              ),
+      ),
+    );
+  });
+
+  router.get('/pages/<id>/revisions/<number|[0-9]+>', (
+    Request r,
+    String id,
+    String number,
+  ) async {
+    if (!r.url.queryParameters.containsKey('fragment')) {
+      return seeOther('/pages/$id/history?version=$number');
+    }
+    final page = anyWikiPage(id);
+    final revision = page == null
+        ? null
+        : await site.store.revision(id, int.parse(number));
+    if (page == null || revision == null) {
+      return missing(r, 'There is no such version.');
+    }
+    final previous = revision.number > 1
+        ? await site.store.revision(id, revision.number - 1)
+        : null;
+    return html(render(r).versionPanel(revision, previous: previous));
+  });
+
+  router.post(
+    '/pages/<id>/restore',
+    (Request r, String id) => editingPage(r, id, (page, member) async {
+      final number = int.tryParse((await form(r))['number'] ?? '');
+      final old = number == null ? null : await site.store.revision(id, number);
+      if (old == null || old.deleted) {
+        return missing(r, 'There is no such version.');
+      }
+      final result = await site.store.savePerson(
+        WikiPage.fromSource(id, page.directory, old.source),
+        basedOn: page.revision,
+        author: member,
+        summary: 'Restore version $number',
+      );
+      await site.reload();
+      return seeOther(result.saved ? '/pages/$id' : '/pages/$id/history');
+    }, deleted: true),
+  );
+
+  router.get(
+    '/pages/<id>/delete',
+    (Request r, String id) => editingPage(
+      r,
+      id,
+      (page, member) async => html(render(r).deleteWikiPage(page)),
+    ),
+  );
+
+  router.post(
+    '/pages/<id>/delete',
+    (Request r, String id) => editingPage(r, id, (page, member) async {
+      final fields = await form(r);
+      final result = await site.store.saveChange(
+        [
+          PageWrite.delete(
+            page,
+            basedOn: int.tryParse(fields['based_on'] ?? '') ?? page.revision,
+          ),
+        ],
+        author: member,
+        summary: 'Delete the page “${page.title}”',
+      );
+      await site.reload();
+      if (!result.saved) return changedMeanwhile(r, result);
+      return seeOther('/pages/$id');
+    }),
+  );
 
   // ------------------------------------------------------ help from Claude
 
@@ -1335,10 +1600,12 @@ Handler siteHandler(
     // one has changed it since.
     final writes = <PageWrite>[];
     for (final MapEntry(key: page, value: number) in change.pages.entries) {
-      final current = anyPerson(page);
+      final Page? current = Page.isWiki(page)
+          ? anyWikiPage(page)
+          : anyPerson(page);
       if (current == null || current.revision != number) {
         return refuse(
-          '${current?.name ?? 'A page'} has been changed again since, so this '
+          '${current?.title ?? 'A page'} has been changed again since, so this '
           'change cannot be undone in one step. Edit the page by hand, or '
           'undo the later changes first.',
         );
@@ -1350,13 +1617,15 @@ Handler siteHandler(
         writes.add(PageWrite.delete(current, basedOn: number));
       } else if (before.source.startsWith('---')) {
         return refuse(
-          "The version of ${current.name}'s page before this change is in "
+          "The version of ${current.title}'s page before this change is in "
           'the page format Prosapia used before, and cannot be restored.',
         );
       } else {
         writes.add(
           PageWrite(
-            Person.fromSource(page, current.directory, before.source),
+            current is WikiPage
+                ? WikiPage.fromSource(page, current.directory, before.source)
+                : Person.fromSource(page, current.directory, before.source),
             basedOn: number,
           ),
         );
@@ -1364,7 +1633,11 @@ Handler siteHandler(
     }
     // Undoing a deletion goes back to the page it brings back.
     final revived = change.pages.keys
-        .where(site.tree.deleted.containsKey)
+        .where(
+          (id) =>
+              site.tree.deleted.containsKey(id) ||
+              site.tree.deletedPages.containsKey(id),
+        )
         .firstOrNull;
     final result = await site.store.saveChange(
       writes,
@@ -1373,7 +1646,7 @@ Handler siteHandler(
     );
     await site.reload();
     if (!result.saved) return changedMeanwhile(r, result);
-    return seeOther(revived == null ? '/changes' : '/people/$revived');
+    return seeOther(revived == null ? '/changes' : Renderer.basePath(revived));
   });
 
   // Completion for the editor and the search box.
@@ -1412,8 +1685,19 @@ Handler siteHandler(
           final first = shows(a).compareTo(shows(b));
           return first != 0 ? first : (b.date ?? '').compareTo(a.date ?? '');
         });
+    // Pages about families and things whose title has every word come
+    // first: there are few of them.
+    final pages = [
+      for (final w in site.tree.pages.values)
+        if (words.every(
+          (word) => w.title.toLowerCase().contains(word) || w.id.contains(word),
+        ))
+          w,
+    ]..sort((a, b) => a.title.compareTo(b.title));
     return json([
-      for (final m in found.take(8))
+      for (final w in pages.take(4))
+        {'ref': w.reference, 'title': w.title, 'detail': 'page'},
+      for (final m in found.take(8 - min(pages.length, 4)))
         {
           'ref': itemReference(m.title, m.key),
           'title': m.title ?? 'Untitled',
@@ -1597,6 +1881,7 @@ Handler siteHandler(
         .cast<Map<String, Object?>>();
     if (photos.isEmpty) return jsonError('Choose a photo first.', status: 400);
     final taken = {for (final m in site.tree.media.values) m.id};
+    bool used(String id) => taken.contains(id) || itemIdTaken(site.tree, id);
     final set = photos.length > 1 ? newId('s', (id) => false) : null;
     final writes = <MediaWrite>[];
     for (final (i, photo) in photos.indexed) {
@@ -1607,7 +1892,7 @@ Handler siteHandler(
       final back = photo['back'] == null
           ? null
           : uploads.file('${photo['back']}');
-      final id = newId('m', taken.contains);
+      final id = newId('m', used);
       taken.add(id);
       final details = PhotoDetails(
         title: text(photo['title']),
@@ -1690,7 +1975,7 @@ Handler siteHandler(
         status: 422,
       );
     }
-    final id = newId('m', (id) => site.tree.media.containsKey(id));
+    final id = newId('m', (id) => itemIdTaken(site.tree, id));
     final item =
         itemWith(
             id,
@@ -1958,6 +2243,27 @@ Handler siteHandler(
   Handler handler = (Request request) async {
     await site.refreshIfChanged();
     final segments = request.url.pathSegments;
+    if (segments.length >= 2 &&
+        segments[0] == 'pages' &&
+        segments[1] != 'new') {
+      final slug = segments[1];
+      final id = pageIdFromDirectory(slug);
+      final page = site.tree.pages[id] ?? site.tree.deletedPages[id];
+      if (segments.length == 2 &&
+          request.method == 'GET' &&
+          page != null &&
+          slug != page.directory) {
+        return Response.found(
+          Uri(
+            path: '/pages/${page.directory}',
+            query: request.url.hasQuery ? request.url.query : null,
+          ).toString(),
+        );
+      }
+      if (slug != id) {
+        request = _withPath(request, ['pages', id, ...segments.skip(2)]);
+      }
+    }
     if (segments.length >= 2 && segments[0] == 'people') {
       final slug = segments[1];
       final id = idFromDirectory(slug);
@@ -1991,6 +2297,17 @@ String newPersonId(Tree tree, [Random? random]) => newId(
   (id) => tree.people.containsKey(id) || tree.deleted.containsKey(id),
   random,
 );
+
+/// Whether the six characters at the end of [id] already name a photo, a
+/// document, a source or a page, deleted or not: a `#` reference relies on
+/// them alone, so they are unique across all of these.
+bool itemIdTaken(Tree tree, String id) {
+  final end = id.split('-').last;
+  return tree.media.containsKey('m-$end') ||
+      tree.deletedMedia.containsKey('m-$end') ||
+      tree.pages.containsKey('${WikiPage.prefix}-$end') ||
+      tree.deletedPages.containsKey('${WikiPage.prefix}-$end');
+}
 
 /// A new id such as `m-x2k9ab`: [prefix], then six characters that are
 /// easy to read aloud, not [taken].

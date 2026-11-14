@@ -56,6 +56,17 @@ class FileStore extends TreeStore {
       );
       tree.people[person.id] = person;
     }
+    for (final dir in _list(p.join(root, 'pages')).whereType<Directory>()) {
+      final file = File(p.join(dir.path, 'index.md'));
+      if (!file.existsSync()) continue;
+      final directory = p.basename(dir.path);
+      final page = WikiPage.fromSource(
+        pageIdFromDirectory(directory),
+        directory,
+        file.readAsStringSync(),
+      );
+      tree.pages[page.id] = page;
+    }
     await _loadMedia(tree);
     return tree;
   }
@@ -158,6 +169,11 @@ class FileStore extends TreeStore {
 /// A person's id from their directory name: `hughes-thomas-3f8d1a` gives
 /// `p-3f8d1a`.
 String idFromDirectory(String directory) => 'p-${directory.split('-').last}';
+
+/// A page's id from its directory name: `carew-family-k3m9qa` gives
+/// `w-k3m9qa`.
+String pageIdFromDirectory(String directory) =>
+    '${WikiPage.prefix}-${directory.split('-').last}';
 
 /// A date as written by `photoshop:DateCreated`, `1949:06`, as a person
 /// would write it: `June 1949`.

@@ -232,6 +232,17 @@ String directoryFor(String name, String id) {
   return slug.isEmpty ? suffix : '$slug-$suffix';
 }
 
+/// The directory of a new page about a family or a thing, with [title]
+/// and [id]: a few words of the title, then the id, as
+/// `carew-family-k3m9qa`. It is also what follows `#` in a reference to
+/// the page.
+String pageDirectoryFor(String title, String id) {
+  final reference = itemReference(title, id);
+  return reference.startsWith('#m-')
+      ? 'page-${itemIdOf(id)}'
+      : reference.substring(1);
+}
+
 /// A readable `#` reference to the item [key] with [title]: a few words
 /// of the title, then its id, as `#obituary-thomas-hughes-gdcade`. Only the
 /// id is relied on, so the words can be changed freely.

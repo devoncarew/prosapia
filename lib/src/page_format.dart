@@ -20,7 +20,23 @@ String formatPage(String source, {int width = pageWidth}) {
     i++;
   }
   final out = <String>[];
+  // A page about something other than a person starts with its title. Its
+  // facts keep their order, with single spaces.
   if (i < lines.length &&
+      ParsedPage.labelPattern.firstMatch(lines[i])?[1]?.toLowerCase() ==
+          'title') {
+    while (i < lines.length && lines[i].trim().isNotEmpty) {
+      final m = ParsedPage.labelPattern.firstMatch(lines[i]);
+      out.add(
+        ParsedPage.continues(lines[i])
+            ? '  ${_spaces(lines[i])}'
+            : m == null
+            ? _spaces(lines[i])
+            : '${_spaces(m[1]!)}: ${_spaces(m[2]!)}'.trimRight(),
+      );
+      i++;
+    }
+  } else if (i < lines.length &&
       ParsedPage.labelPattern.firstMatch(lines[i])?[1]?.toLowerCase() ==
           'name') {
     // Each fact, with its place in the normal order.

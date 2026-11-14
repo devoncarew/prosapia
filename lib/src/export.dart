@@ -122,8 +122,14 @@ class Exporter {
 
   Future<void> _writeChange(String checkout, Tree tree, Change change) async {
     for (final MapEntry(key: id, value: number) in change.pages.entries) {
-      final person = tree.people[id] ?? tree.deleted[id];
-      final dir = p.join(checkout, 'people', person?.directory ?? id);
+      final Page? person = Page.isWiki(id)
+          ? tree.pages[id] ?? tree.deletedPages[id]
+          : tree.people[id] ?? tree.deleted[id];
+      final dir = p.join(
+        checkout,
+        Page.isWiki(id) ? 'pages' : 'people',
+        person?.directory ?? id,
+      );
       final revision = await store.revision(id, number);
       if (revision == null) continue;
       if (revision.deleted) {
@@ -232,7 +238,9 @@ class Exporter {
         'A copy of the family tree kept in Prosapia, written each night: one '
         'commit for each change made there, with its author and time.\n\n'
         'Each person is a page in `people/`: facts as "Label: value" lines, '
-        'then their story in markdown. Photos and documents are in `media/`, '
+        'then their story in markdown. Pages about a family, a house or '
+        'anything else are in `pages/`, a `Title:` line and then the story. '
+        'Photos and documents are in `media/`, '
         'with what is known about them written into each file.\n',
       );
     }

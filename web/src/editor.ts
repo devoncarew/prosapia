@@ -268,6 +268,7 @@ const vocabulary = [
   'Graduated',
   'Title',
   'Photo',
+  'Family',
   'FamilySearch',
   'WikiTree',
   'Find a Grave',

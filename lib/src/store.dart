@@ -30,7 +30,7 @@ abstract class TreeStore {
   /// moved on since, nothing is written and the result says so: one
   /// person's edit never silently overwrites another's.
   Future<SaveResult> savePerson(
-    Person person, {
+    Page person, {
     required int basedOn,
     required Member author,
     required String summary,
@@ -155,13 +155,14 @@ class Member {
 
 /// One page in a change: its new text, or its deletion.
 class PageWrite {
-  PageWrite(this.person, {required this.basedOn}) : delete = false;
+  PageWrite(this.page, {required this.basedOn}) : delete = false;
 
   /// Deletes [person]'s page. Its text stays in the history, and the last
   /// version is kept so the page can be shown as deleted and brought back.
-  PageWrite.delete(this.person, {required this.basedOn}) : delete = true;
+  PageWrite.delete(this.page, {required this.basedOn}) : delete = true;
 
-  final Person person;
+  /// A person's page, or a page about something else.
+  final Page page;
 
   /// The revision this write was based on; zero for a new page.
   final int basedOn;

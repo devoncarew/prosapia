@@ -274,6 +274,27 @@ puts them into practice.
   person or one family, with others linked as associations. Until then a fact can name
   the others involved, such as `Godparent: @…`.
 
+### Pages about families and things
+
+Decided after milestone 25, to be refined with use. Some writing belongs to several
+people rather than one: a family's history, a house, a company. It goes on a page of its
+own.
+
+- **A page is a general page,** used for families first. It is a `Title:` line, then a
+  story, and lives at `/pages/carew-family-k3m9qa`. It is kept as a person's page is,
+  with its history, and exported to `pages/carew-family-k3m9qa/index.md`.
+- **It is an item, referred to with `#`:** `#carew-family-k3m9qa`, with completion. Its
+  six-character id is unique across photos, documents, sources and pages.
+- **Who it is about is read from the text,** never stored apart: the people its story
+  mentions with `@`, and anyone whose page has a `Family:` line naming it
+  (`Family: #carew-family-k3m9qa`; a person may name several). It lists them, and their
+  pages show it, under Family or Mentioned in.
+- **It is found** from the home page, from the family name's heading in the People list
+  (for pages named in `Family:` lines), from search, and from the people it is about.
+- **Not yet:** membership by descent from an ancestor, and pages chosen as a family
+  name's page without a `Family:` line. Two unrelated families of one name are simply
+  two pages.
+
 ### Proposed
 
 - **Stable opaque ids** (`p-7k2m9x`) name people, sources and media. Names change and
