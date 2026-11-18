@@ -13,8 +13,8 @@ into changes to the tree, each with its source.
 Read these before starting a task:
 
 - [method.md](method.md): how to research, and which records to look for.
-- [sites.md](sites.md): which sites you may search, which a person searches, and how
-  to build their search links.
+- [sites.md](sites.md): which sites you may search, which a person searches, and how to
+  build their search links.
 - [docs/content-model.md](../../../docs/content-model.md), the "Decided in milestone 24"
   section: the page syntax, `@` and `#` references, and how sources are cited.
 - [docs/writing.md](../../../docs/writing.md): how story text and change summaries read.
@@ -31,9 +31,10 @@ Read these before starting a task:
 
   It can be up to a day behind the site; if a page looks out of date, ask. A person's
   page is `people/<id>/index.md`; a page about a family is `pages/<id>/index.md`; items
-  are in `media/`, a file such as `m-5t1q8z.jpg`, or `m-5t1q8z.json` for an item with
-  no file. `grep` the `people/` directory to find a person's relatives and the pages that
+  are in `media/`, a file such as `m-5t1q8z.jpg`, or `m-5t1q8z.json` for an item with no
+  file. `grep` the `people/` directory to find a person's relatives and the pages that
   mention them.
+
 - **Task logs, the queue and inboxes** are under `data/research/`, which is never
   committed. Task names are the person's id and a word or two:
   `carew-michael-k3m9qa-birth`.
@@ -57,9 +58,9 @@ Read these before starting a task:
    who were his parents?" not "Research Michael". If the owner's request is broad, pick
    the gap that would unlock the most (usually an event that names parents or a place)
    and say why in the log.
-4. **Plan the searches.** From [method.md](method.md), list the records that would answer
-   the question, for the person's time and place, and where each is held. Siblings,
-   parents and neighbours are often how a record is found.
+4. **Plan the searches.** From [method.md](method.md), list the records that would
+   answer the question, for the person's time and place, and where each is held.
+   Siblings, parents and neighbours are often how a record is found.
 5. **Search what you may.** Run the searches on the free sources in
    [sites.md](sites.md). Log every one, with the query, the link and what it found,
    including "nothing". Keep requests few and slow.
@@ -89,6 +90,7 @@ Read these before starting a task:
 
    Show each change as a diff against the current page. Nothing is written until the
    owner has entered it.
+
 10. **Close.** Record in the log what was written, what is still open, and any search
     that found nothing worth keeping on the page as a `Note:`. Mark the queue lines
     done.
@@ -113,5 +115,5 @@ Read these before starting a task:
 - **Living people are left alone.** Do not search for anyone who may be living unless
   the owner asks, and never put a living person's details in a query.
 - **Ask when the right person is unclear.** Two candidates of the same name and age in
-  the same town is a question for the owner, with the evidence for each, not a choice
-  to make silently.
+  the same town is a question for the owner, with the evidence for each, not a choice to
+  make silently.

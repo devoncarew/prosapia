@@ -18,8 +18,8 @@ birthplace.>
 
 ## Plan
 
-<The records that would answer the question for this time and place, and where each
-is held. Mark which you search and which go in the brief.>
+<The records that would answer the question for this time and place, and where each is
+held. Mark which you search and which go in the brief.>
 
 1. <record> at <site> (<you, or brief>)
 
@@ -27,8 +27,8 @@ is held. Mark which you search and which go in the brief.>
 
 One line per search, including those that found nothing.
 
-| Date | Site | Query | Result |
-| --- | --- | --- | --- |
+| Date         | Site   | Query           | Result                        |
+| ------------ | ------ | --------------- | ----------------------------- |
 | <yyyy-mm-dd> | <site> | <query, linked> | <what it found, or "nothing"> |
 
 ## Brief
@@ -37,9 +37,9 @@ Searches for a person to run. Each is also in `queue.md`. Save what you find in
 `data/research/<task>/`: the image or PDF, the record's link, and its details copied as
 text. Write "not found" against a search that found nothing.
 
-- [ ] **<Site>, <collection>**: [search](<link>). Looking for <name>, <born about yyyy>
-  in <place>. A match should show <what would confirm it: parents' names, a street, an
-  age>.
+- [ ] **<Site>, <collection>**: [search](link). Looking for <name>, <born about yyyy> in
+      <place>. A match should show <what would confirm it: parents' names, a street, an
+      age>.
 
 ## Findings
 
@@ -71,5 +71,5 @@ Summary: <Add Michael's birth date and place>
 
 ## Open
 
-<What is still unanswered, conflicts left visible, problems noticed on other pages,
-and the next question worth asking.>
+<What is still unanswered, conflicts left visible, problems noticed on other pages, and
+the next question worth asking.>
