@@ -67,6 +67,8 @@ Not yet scheduled or detailed. Roughly grouped; the order means nothing.
 ### Sources and research
 
 - Capture a record from a research site as a draft source.
+- Research from Claude Code, outside the website, is planned in
+  [research.md](research.md).
 
 ### Language-model assistance
 
