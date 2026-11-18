@@ -27,17 +27,17 @@ see it. The milestones below are numbered R1, R2 and so on, apart from that plan
    still unsourced, using the commands in R2.
 3. **Search.** Claude searches the free sources (R4) and records each search in the task
    log, including the ones that found nothing.
-4. **Brief.** Searches it may not run are written into the log as a brief for a person,
-   with the site, the collection, a search link with the fields already filled in, and
-   what a match should show. Each search also goes into one shared queue, by site, so a
-   person can run a site's searches together, Ancestry's during a subscription.
-5. **Hand back.** The person runs the brief and saves what they find (an image, a PDF, a
-   pasted transcription, the record's link) into the task's inbox folder.
-6. **Write.** Claude turns the findings into changes: a new item for the record, a fact
-   with a `source:` citing it, or a dated section in the story. Each change is shown as
-   a diff and applied only when the owner agrees.
+4. **Searches for a person.** Searches it may not run are written into the log, one
+   section each, headed with the site, with a search link with the fields already filled
+   in and what a match should show.
+5. **Hand back.** The person runs them, saves what they find (an image or PDF, and the
+   record's link) into the task's inbox folder, and writes under each search what it
+   turned up, including related finds and "not found". They may edit pages as they go.
+6. **Write.** Claude turns the findings into changes: items first, then a section per
+   person with the facts citing them and any dated section for the story. Each is shown
+   as a diff, which the owner reviews in the log, and applied only when they agree.
 7. **Close.** The log records what was written, with the change ids, and what is still
-   open.
+   open. Searches worth running later move to one file of open searches.
 
 ## Parts
 
@@ -55,7 +55,8 @@ A project skill at `.claude/skills/genealogy-research/`. It holds method, not ac
 - Rules: never state a match as fact without a source; when records disagree, add a
   second value with its source rather than replacing the first; leave a page's prose
   alone unless the task is about it.
-- Templates for the task log, a brief, and an item for each common kind of record.
+- Templates for the task log, the open searches, and an item for each common kind of
+  record.
 
 The in-app help in [assist.dart](../lib/src/assist.dart) can later read the same method
 file, so that its record suggestions agree with the skill.
@@ -106,20 +107,25 @@ logs hold family details:
 data/research/
   carew-michael-k3m9qa-birth.md     one task's log
   carew-michael-k3m9qa-birth/       its inbox: what a person saved for it
-  queue.md                          every search waiting for a person, by site
+  open.md                           searches worth running later, from closed tasks
 ```
 
-The queue has a section per site (FamilySearch, Ancestry, Find a Grave, MyHeritage), and
-each search in it links back to its task's log, where its result is written when it has
-been run. One queue, rather than one per site, means a person sees everything waiting in
-one place, and a site that needs a subscription is simply a section left until there is
-one.
+A search for a person lives in its task's log, as a section headed with the site first
+("### Ancestry: 1900 census"), with a Results list below it that the person fills in:
+the record's link, the file saved, related finds, or "not found". A search with results
+is done; there are no checkboxes to tick, and nothing is kept in two places. One site's
+searches across every task are found by searching the logs for its heading, which is how
+Ancestry's are batched during a subscription. When a task closes, the one or two
+searches still worth running move to `open.md`, each linking back to its log.
 
-A log has: the question, what was already known, each search (site, query, link, what it
-found), the brief for a person as a checklist, the findings, and the changes written.
-What lasts goes into the tree as items and facts, not in the log. A search that found
-nothing can be kept on the page as a `Note:`, where it stops the next researcher
-repeating it.
+Images are kept in preference to links, since an image is self-contained and outlasts a
+subscription; the link is still asked for, as the item's citation.
+
+A log has: the question, what was already known, each search Claude ran (site, query,
+link, what it found), the searches for a person with their results, the findings, and
+the changes proposed and written. What lasts goes into the tree as items and facts, not
+in the log. A search that found nothing can be kept on the page as a `Note:`, where it
+stops the next researcher repeating it.
 
 ## Milestones
 
@@ -129,8 +135,15 @@ repeating it.
 - Run one real task from start to finish, reading the tree from an export and writing
   changes by hand in the website.
 
-Done when one task produces a log, a brief that a person can run in under fifteen
+Done when one task produces a log, searches that a person can run in under fifteen
 minutes, and a sourced change to a page.
+
+Run on Michael F. Carew (November 2026): the searches found four censuses, his wife's
+death certificate and her parents' gravestone. What it showed: an image matters more
+than a link but both are wanted; ticking a brief and a queue was double work, and
+searches turn up more than their question, so results are now free-form under each
+search; and entering items, then facts that cite them, by hand takes two passes, which
+R3 removes. Its changes will be entered with R2 and R3, as their test.
 
 ### R2: Reading commands
 
@@ -158,8 +171,8 @@ Done when a task finds and cites a newspaper item without a person searching.
 
 - Claude reads a task's inbox: transcribes images and PDFs, proposes items and facts
   from them, and files each one.
-- A session at one site: work through that site's section of `queue.md`, saving each
-  find to its task's inbox.
+- A session at one site: work through that site's searches across the open logs and
+  `open.md`, saving each find to its task's inbox.
 
 Done when a batch of saved Ancestry records becomes cited items and facts in one
 sitting.
