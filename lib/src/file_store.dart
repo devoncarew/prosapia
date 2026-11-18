@@ -44,8 +44,8 @@ class FileStore extends TreeStore {
       final source = file.readAsStringSync();
       if (source.startsWith('---')) {
         tree.problems.add(
-          'people/$directory/index.md is in the old format; '
-          'convert it with tool/convert_tree.dart',
+          'people/$directory/index.md is in the old format, with YAML '
+          'front matter, which is no longer read',
         );
         continue;
       }
