@@ -152,6 +152,11 @@ R3 removes. Its changes will be entered with R2 and R3, as their test.
 
 Done when Claude can start a task from a person's id alone, without a fresh export.
 
+Built in November 2026, in [bin/research.dart](../bin/research.dart) and
+[lib/src/research.dart](../lib/src/research.dart). `show` also lists the pages that
+mention the person and the relatives named without a page; `find` takes `--born`,
+`--within` and `--place`.
+
 ### R3: Writing commands
 
 - `append`, `edit` and `add-item`, with a diff by default and `--apply`.
