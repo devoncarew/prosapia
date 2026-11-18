@@ -17,14 +17,22 @@ Fetch a few results at a time, a second or more apart, and log each query.
 - API: `https://www.loc.gov/collections/chronicling-america/?q=<words>&dates=<yyyy>/<yyyy>&fo=json`.
   Add `&fa=location_state:<state>` to narrow by state, such as `location_state:new+york`.
   Results give a title, a date, a link to the page, and its text.
-- Search an exact name in quotes, and with the initial (`"M. Carew"`). The text is OCR
-  and has errors.
+- Quotes do not force an exact phrase: `"m. f. carew"` matched 638 pages, most of them
+  unrelated. Check each hit's text before treating it as a lead. The text is OCR and has
+  errors.
+- To read a hit, fetch its page with `fo=json`; `resource.fulltext_file` is the page's
+  text. Search that text for the name rather than reading the whole page.
+- Coverage is thin for the Bronx and for New York after 1922, so a later death notice
+  usually goes in the brief (the Brooklyn Daily Eagle is free through the Brooklyn
+  Public Library; others are on Newspapers.com).
 - A finding is an item with no file: the newspaper, date, page and the link, with a
   transcription of the relevant paragraph.
 
 **Internet Archive.** County histories, city directories, yearbooks, church histories.
 - API: `https://archive.org/advancedsearch.php?q=<query>&fl[]=identifier&fl[]=title&fl[]=date&rows=20&output=json`.
   Narrow with `mediatype:texts`, and terms such as `title:(directory) AND title:(scranton)`.
+- Reclaim the Records' free indexes are here (`collection:reclaimtherecords`). Its New
+  York City marriage indexes start in 1908.
 - A book's full text is at `https://archive.org/stream/<identifier>/<identifier>_djvu.txt`;
   search it for the name rather than reading it whole.
 
@@ -38,7 +46,8 @@ better full-text search.
 **WikiTree.** A shared tree, for spot checks only: a profile is a lead to the records
 it cites, not a source.
 - API: `https://api.wikitree.com/api.php?appId=prosapia&action=searchPerson&FirstName=<first>&LastName=<last>&BirthDate=<yyyy-mm-dd>`
-  to find a profile, and `appId=prosapia&action=getProfile&key=<WikiTree-ID>&fields=Name,FirstName,LastNameAtBirth,BirthDate,BirthLocation,DeathDate,DeathLocation,Father,Mother&bioFormat=text`
+  to find a profile (with only the year known, use `<yyyy>-01-01`; results are loose,
+  so check each name), and `appId=prosapia&action=getProfile&key=<WikiTree-ID>&fields=Name,FirstName,LastNameAtBirth,BirthDate,BirthLocation,DeathDate,DeathLocation,Father,Mother&bioFormat=text`
   to read one. Public profiles need no sign-in. Without `appId` every request is
   refused with "Limit exceeded".
 - When a profile is the same person, propose `WikiTree: <id>` as a fact, and follow its
