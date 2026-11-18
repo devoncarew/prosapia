@@ -23,14 +23,14 @@ see it. The milestones below are numbered R1, R2 and so on, apart from that plan
 ## How a task runs
 
 1. **Start.** The owner asks for a task in Claude Code. The research skill loads.
-2. **Read.** Claude reads the person's page, their close family, their items and what
-   is still unsourced, using the commands in R2.
-3. **Search.** Claude searches the free sources (R4) and records each search in the
-   task log, including the ones that found nothing.
+2. **Read.** Claude reads the person's page, their close family, their items and what is
+   still unsourced, using the commands in R2.
+3. **Search.** Claude searches the free sources (R4) and records each search in the task
+   log, including the ones that found nothing.
 4. **Brief.** Searches it may not run are written into the log as a brief for a person,
-   with the site, the collection, a search link with the fields already filled in,
-   and what a match should show. Each search also goes into one shared queue, by site,
-   so a person can run a site's searches together, Ancestry's during a subscription.
+   with the site, the collection, a search link with the fields already filled in, and
+   what a match should show. Each search also goes into one shared queue, by site, so a
+   person can run a site's searches together, Ancestry's during a subscription.
 5. **Hand back.** The person runs the brief and saves what they find (an image, a PDF, a
    pasted transcription, the record's link) into the task's inbox folder.
 6. **Write.** Claude turns the findings into changes: a new item for the record, a fact
@@ -47,8 +47,8 @@ A project skill at `.claude/skills/genealogy-research/`. It holds method, not ac
 
 - The Genealogical Proof Standard in short: search reasonably widely, cite every source,
   weigh conflicting evidence, and write down the reasoning.
-- Which records to look for by event, era and place: census, civil and parish
-  registers, probate, land, military, immigration, city directories, newspapers.
+- Which records to look for by event, era and place: census, civil and parish registers,
+  probate, land, military, immigration, city directories, newspapers.
 - Which sites Claude may search itself and which go into a brief, as listed above.
 - How to cite in Prosapia: items, `source: #…` on facts, `[source: …]` in the story, ids
   in other systems as facts (`FamilySearch: LZ5X-QRT`), and `source: needed`.
@@ -86,21 +86,21 @@ undone. Prosapia has no review step, and this does not add one; the owner readin
 diff before `--apply` is the review.
 
 [Architecture](architecture.md) says only the server touches the database. These
-commands go through the same store code as the server, so the rule
-that matters (one store interface, revisions and the log on every write) still holds.
+commands go through the same store code as the server, so the rule that matters (one
+store interface, revisions and the log on every write) still holds.
 
 ### Free-source search
 
 `dart run prosapia:research lookup <source> <query> [--years …] [--place …]`, with
 `newspapers`, `books` and `wikitree` to start. Each result is a candidate in the shape
-of an item: title, date, place, link, a snippet of text, and the date it was accessed.
-A candidate becomes an item through `add-item`. Requests are slow and few, within each
+of an item: title, date, place, link, a snippet of text, and the date it was accessed. A
+candidate becomes an item through `add-item`. Requests are slow and few, within each
 API's rate limit.
 
 ### Task logs and the inbox
 
-Kept on the owner's computer under `data/research/`, which is never committed, since
-the logs hold family details:
+Kept on the owner's computer under `data/research/`, which is never committed, since the
+logs hold family details:
 
 ```
 data/research/
@@ -109,14 +109,14 @@ data/research/
   queue.md                          every search waiting for a person, by site
 ```
 
-The queue has a section per site (FamilySearch, Ancestry, Find a Grave, MyHeritage),
-and each search in it links back to its task's log, where its result is written when
-it has been run. One queue, rather than one per site, means a person sees everything
-waiting in one place, and a site that needs a subscription is simply a section left
-until there is one.
+The queue has a section per site (FamilySearch, Ancestry, Find a Grave, MyHeritage), and
+each search in it links back to its task's log, where its result is written when it has
+been run. One queue, rather than one per site, means a person sees everything waiting in
+one place, and a site that needs a subscription is simply a section left until there is
+one.
 
-A log has: the question, what was already known, each search (site, query, link, what
-it found), the brief for a person as a checklist, the findings, and the changes written.
+A log has: the question, what was already known, each search (site, query, link, what it
+found), the brief for a person as a checklist, the findings, and the changes written.
 What lasts goes into the tree as items and facts, not in the log. A search that found
 nothing can be kept on the page as a `Note:`, where it stops the next researcher
 repeating it.
