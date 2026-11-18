@@ -86,7 +86,7 @@ undone. Prosapia has no review step, and this does not add one; the owner readin
 diff before `--apply` is the review.
 
 [Architecture](architecture.md) says only the server touches the database. These
-commands, like `tool/migrate_tree.dart`, go through the same store code, so the rule
+commands go through the same store code as the server, so the rule
 that matters (one store interface, revisions and the log on every write) still holds.
 
 ### Free-source search
