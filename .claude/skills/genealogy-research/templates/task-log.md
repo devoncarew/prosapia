@@ -19,9 +19,9 @@ birthplace.>
 ## Plan
 
 <The records that would answer the question for this time and place, and where each is
-held. Mark which you search and which go in the brief.>
+held. Mark which you search and which a person searches.>
 
-1. <record> at <site> (<you, or brief>)
+1. <record> at <site> (<you, or a person>)
 
 ## Searches
 
@@ -31,15 +31,23 @@ One line per search, including those that found nothing.
 | ------------ | ------ | --------------- | ----------------------------- |
 | <yyyy-mm-dd> | <site> | <query, linked> | <what it found, or "nothing"> |
 
-## Brief
+## Searches for a person
 
-Searches for a person to run. Each is also in `queue.md`. Save what you find in
-`data/research/<task>/`: the image or PDF, the record's link, and its details copied as
-text. Write "not found" against a search that found nothing.
+Searches only a person can run, one section each, with the site first in the heading so
+that one site's searches across all tasks can be found together
+(`grep -h "^### Ancestry" data/research/*.md`). Save files in the task's inbox,
+`data/research/<task>/`, and write what was found under Results: the record's link, the
+file saved, its details, anything else found along the way, or "not found". A search
+with results is done; remove or reword searches as the task moves on.
 
-- [ ] **<Site>, <collection>**: [search](link). Looking for <name>, <born about yyyy> in
-      <place>. A match should show <what would confirm it: parents' names, a street, an
-      age>.
+### <Site>: <collection or record>
+
+[search](link). Looking for <name>, <born about yyyy> in <place>. A match should show
+<what would confirm it: parents' names, a street, an age>.
+
+Results:
+
+- <link to the record; file saved in the inbox; details; related finds; or "not found">
 
 ## Findings
 
@@ -54,9 +62,14 @@ whether it is the person, with the reasons.>
 
 ## Changes
 
-<The exact text proposed for the tree, and once entered, the change it was saved as.>
+<The exact text proposed for the tree, for the owner to review here before anything is
+written: edit, strike or approve each part. Items come first, since one record can name
+several people; then a section per person, citing the items. Once entered, record the
+change it was saved as.>
 
-### Item: <title>
+### Items
+
+#### <Record title>
 
 <details from templates/items.md>
 
@@ -72,4 +85,5 @@ Summary: <Add Michael's birth date and place>
 ## Open
 
 <What is still unanswered, conflicts left visible, problems noticed on other pages, and
-the next question worth asking.>
+the next question worth asking. At close, the searches worth running later move to
+`data/research/open.md`.>

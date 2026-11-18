@@ -16,6 +16,11 @@ when an item is added.
 | Link          | The record's address: a FamilySearch ARK, an Ancestry record link, a newspaper page                                                                             |
 | Found         | The date it was found, and the site: "17 November 2026, FamilySearch"                                                                                           |
 
+The image is the evidence, and is kept whenever there is one: it is self-contained and
+does not depend on a site or a subscription. The link is its citation, where it came
+from and how to open it again, so ask for both. When only one was saved, the image is
+enough.
+
 ## By kind of record
 
 **Census entry.**
@@ -64,7 +69,8 @@ Latin, and give the translation as well as the text.
 - Transcription: every field of the card or entry.
 
 **Index entry only** (no image seen): say so in the Title ("Index of …") and the Notes,
-and add the search for the original to the brief. An index is a lead to the record.
+and add a search for the original to the log's searches for a person. An index is a lead
+to the record.
 
 ## Citing an item from the page
 

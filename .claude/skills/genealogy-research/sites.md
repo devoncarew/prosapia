@@ -1,9 +1,9 @@
 # Sites
 
 Two kinds: sites you may search yourself, with `curl` or a web fetch, and sites only a
-person may search, for which you write a brief. The line between them is each site's
-terms of use, not what is technically possible. When a site is not listed here, ask the
-owner before fetching anything from it.
+person may search, for which you write the search into the task's log. The line between
+them is each site's terms of use, not what is technically possible. When a site is not
+listed here, ask the owner before fetching anything from it.
 
 The search links below have been worked out from each site's own search pages and may
 drift. When the owner says a link opened the wrong search, correct it here.
@@ -26,8 +26,8 @@ Fetch a few results at a time, a second or more apart, and log each query.
 - To read a hit, fetch its page with `fo=json`; `resource.fulltext_file` is the page's
   text. Search that text for the name rather than reading the whole page.
 - Coverage is thin for the Bronx and for New York after 1922, so a later death notice
-  usually goes in the brief (the Brooklyn Daily Eagle is free through the Brooklyn
-  Public Library; others are on Newspapers.com).
+  usually goes to a person (the Brooklyn Daily Eagle is free through the Brooklyn Public
+  Library; others are on Newspapers.com).
 - A finding is an item with no file: the newspaper, date, page and the link, with a
   transcription of the relevant paragraph.
 
@@ -49,7 +49,7 @@ better full-text search.
 - Full-text search:
   `https://babel.hathitrust.org/cgi/ls?q1=<words>&anyall1=phrase&lmt=ft`. Only
   public-domain books (`lmt=ft`) can be read in full.
-- It refuses most automated requests (403). When it does, put the search in the brief
+- It refuses most automated requests (403). When it does, write the search for a person
   rather than retrying.
 
 **WikiTree.** A shared tree, for spot checks only: a profile is a lead to the records it
@@ -66,8 +66,8 @@ cites, not a source.
   sources.
 
 **Free national indexes.** Free and public, but with search pages rather than APIs:
-fetch a results page only when the site's terms allow it, and otherwise put the search
-in the brief.
+fetch a results page only when the site's terms allow it, and otherwise write the search
+for a person.
 
 - irishgenealogy.ie (Irish civil and some church records), the National Archives of
   Ireland's 1901 and 1911 census, FreeBMD and FreeCEN (England and Wales).
@@ -75,8 +75,8 @@ in the brief.
 ## Sites a person searches
 
 These forbid automated access, or need a person signed in. Never fetch them, even a
-single page. Write the search into the brief and the queue, with a link that opens it
-with the fields filled in.
+single page. Write the search into the task's log for a person, with a link that opens
+it with the fields filled in.
 
 **FamilySearch** (free, sign-in needed). The most useful site for this family: records
 from around the world, many with images, and a shared tree.
@@ -121,4 +121,4 @@ Scandinavia. Write the name, dates and place for the person to enter; its search
 are not reliable to build.
 
 **Newspapers.com, GenealogyBank, Findmypast, Fold3** (paid): the same as Ancestry.
-Mention them in a brief only when the owner has an account.
+Suggest them only when the owner has an account.
