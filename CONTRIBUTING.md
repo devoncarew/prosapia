@@ -72,10 +72,6 @@ testing; sign in with a real Google account that is one of its members.
 
 - `dart run tool/check_pages.dart <tree-directory>` reads every page of a tree in files
   and lists anything it could not read, such as a date it did not understand.
-- `dart run tool/convert_tree.dart <tree-directory>` converts a tree in files from the
-  earlier YAML format to the page syntax.
-- `dart run tool/migrate_tree.dart --project <id> --tree <id> --by <email>` does the
-  same for a tree in Firestore, keeping the old text in each page's history.
 
 ## Checks
 

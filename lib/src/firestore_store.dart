@@ -6,7 +6,6 @@ import 'package:google_cloud_firestore/google_cloud_firestore.dart';
 import 'package:google_cloud_storage/google_cloud_storage.dart' as gcs;
 import 'package:path/path.dart' as p;
 
-import 'legacy.dart';
 import 'store.dart';
 import 'tree.dart';
 
@@ -105,8 +104,7 @@ class FirestoreStore extends TreeStore {
       final data = doc.data();
       if (data['source'] is! String) {
         tree.problems.add(
-          '${doc.ref.path} is in the old format; convert it with '
-          'tool/migrate_tree.dart',
+          '${doc.ref.path} has no page text, so it was not loaded',
         );
         continue;
       }
@@ -565,68 +563,6 @@ class FirestoreStore extends TreeStore {
     } on gcs.NotFoundException {
       return null;
     }
-  }
-
-  /// Converts every page still in the old format (structured fields plus
-  /// separate partnership records) to the page syntax. Each converted page
-  /// gets a new revision, and the change is logged as one entry. Returns how
-  /// many pages were converted.
-  Future<int> convertFromOldFormat({required String by}) async {
-    final people = await _tree.collection('people').get();
-    final unions = await _tree.collection('unions').get();
-    final old =
-        <
-          String,
-          ({Map<dynamic, dynamic> fields, String body, String directory})
-        >{};
-    final revisions = <String, int>{};
-    for (final doc in people.docs) {
-      final data = doc.data();
-      if (data['source'] is String) continue;
-      old[doc.id] = (
-        fields: data,
-        body: data['body'] as String? ?? '',
-        directory: data['directory'] as String? ?? doc.id,
-      );
-      revisions[doc.id] = data['revision'] as int? ?? 0;
-    }
-    if (old.isEmpty) return 0;
-    final converted = convertLegacy(old, [
-      for (final u in unions.docs) u.data(),
-    ]);
-
-    final stamp = {
-      'author': by,
-      'summary': 'Converted to the new page syntax',
-      'at': FieldValue.serverTimestamp,
-    };
-    final writes =
-        <(DocumentReference<Map<String, Object?>>, Map<String, Object?>)>[];
-    final pages = <String, int>{};
-    converted.forEach((id, source) {
-      final next = revisions[id]! + 1;
-      final ref = _tree.collection('people').doc(id);
-      writes.add((
-        ref,
-        {'source': source, 'directory': old[id]!.directory, 'revision': next},
-      ));
-      writes.add((
-        ref.collection('revisions').doc('$next'),
-        {'number': next, 'source': source, ...stamp},
-      ));
-      pages[id] = next;
-    });
-    writes.add((_tree.collection('changes').doc(), {'pages': pages, ...stamp}));
-    for (var i = 0; i < writes.length; i += 400) {
-      final batch = _db.batch();
-      for (final (ref, data) in writes.skip(i).take(400)) {
-        batch.set(ref, data);
-      }
-      await batch.commit();
-    }
-    await _db.recursiveDelete(_tree.collection('unions'));
-    await _tree.update({'version': const FieldValue.increment(1)});
-    return converted.length;
   }
 
   @override
