@@ -28,6 +28,10 @@ class Research {
     return tree.people['p-$suffix'] ?? tree.pages['${WikiPage.prefix}-$suffix'];
   }
 
+  /// What on [page] could not be read, or refers to nothing in the tree.
+  List<String> issuesOf(Page page) =>
+      page is Person ? _render.issuesOf(page) : page.issues;
+
   /// A page as written and as read: its text and revision, its facts, its
   /// family, the items that show it or that it cites, and the pages that
   /// mention it.

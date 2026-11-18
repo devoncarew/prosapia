@@ -1832,29 +1832,6 @@ Handler siteHandler(
       if (site.tree.people[id] case final p?) (id: p.id, name: p.name),
   ];
 
-  /// A photo's file, with [details] written into it, ready to store.
-  Future<MediaWrite> prepare(
-    File source,
-    Media media,
-    PhotoDetails details,
-  ) async {
-    final work = Directory.systemTemp.createTempSync('prosapia_photo');
-    final file = source.copySync(p.join(work.path, media.fileName));
-    await writeMetadata(file, media.key, details);
-    media
-      ..title = details.title
-      ..date = details.date
-      ..place = details.place
-      ..transcription = details.transcription
-      ..notes = details.notes
-      ..set = details.set
-      ..setIndex = details.setIndex;
-    media.people
-      ..clear()
-      ..addAll([if (!media.isBack) ...details.people.map((p) => p.id)]);
-    return MediaWrite(media, file);
-  }
-
   /// An item without a file, with [details].
   Media itemWith(String id, PhotoDetails details) {
     final item = Media(id, isBack: false, extension: '', location: '')
@@ -1916,7 +1893,7 @@ Handler siteHandler(
         };
         try {
           writes.add(
-            await prepare(
+            await prepareMedia(
               archival,
               Media(id, isBack: isBack, extension: extension, location: ''),
               details,
@@ -2022,7 +1999,7 @@ Handler siteHandler(
     };
     final MediaWrite write;
     try {
-      write = await prepare(
+      write = await prepareMedia(
         archival,
         Media(media.id, isBack: false, extension: extension, location: ''),
         PhotoDetails(
@@ -2098,7 +2075,7 @@ Handler siteHandler(
     final writes = [
       for (final m in [media, ?back])
         m.hasFile
-            ? await prepare(
+            ? await prepareMedia(
                 await site.store.localFile(m),
                 Media(
                   m.id,

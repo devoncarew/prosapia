@@ -21,7 +21,8 @@ Read these before starting a task:
 
 ## Where things are
 
-- **The tree.** Read the live tree with the research command, which prints JSON:
+- **The tree.** Read and write the live tree with the research command. Reading prints
+  JSON:
 
   ```
   dart run prosapia:research --project prosapia-ea818 --tree carew show <id>
@@ -101,10 +102,27 @@ Read these before starting a task:
      [docs/writing.md](../../../docs/writing.md).
 
    Show each change as a diff against the current page. The owner reviews the proposal
-   in the log, editing, striking or approving each part, and nothing is written until
-   they have entered it.
+   in the log, editing, striking or approving each part. Nothing is written until they
+   have approved it.
 
-10. **Close.** Record in the log what was written, what is still open, and any search
+10. **Write what was approved.** With the research command, as the owner (`--by`, their
+    email address, or `PROSAPIA_BY` in `.env`). Each write prints what it would save and
+    saves only with `--apply`; run it once without, check the output, then apply.
+    - **Items first**, since the facts cite them. Put the item's details in a JSON file
+      (`title`, `date`, `place`, `transcription`, `notes`, `link`, `found`, `people`)
+      and run `add-item --details <item.json> --file <inbox file> --summary <summary>`.
+      It prints the new id, such as `#m-x2k9ab`: replace the `#NEW-…` placeholder with
+      it everywhere in the log.
+    - **Then each person's page**: `show <id>` again for its text and revision, apply
+      the approved changes to that text in a scratch file, and run
+      `edit <id> --file <page.md> --based-on <revision> --summary <summary>`. A dated
+      story section alone can go through `append <id> --file <section.md>`.
+    - It refuses a page that has moved on since `--based-on` (show it again and redo the
+      edit), and new text with a reference to nothing, such as a `#NEW-…` placeholder
+      left in.
+    - Record each change id it prints in the log.
+
+11. **Close.** Record in the log what was written, what is still open, and any search
     that found nothing worth keeping on the page as a `Note:`. Move the one or two
     searches worth running later to `data/research/open.md`
     ([templates/open.md](templates/open.md)), linking back to the log.
