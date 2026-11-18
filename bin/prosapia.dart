@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:prosapia/src/assist.dart';
 import 'package:prosapia/src/auth.dart';
 import 'package:prosapia/src/claude.dart';
+import 'package:prosapia/src/env.dart';
 import 'package:prosapia/src/export.dart';
 import 'package:prosapia/src/file_store.dart';
 import 'package:prosapia/src/firestore_store.dart';
@@ -172,27 +173,6 @@ Future<void> main(List<String> arguments) async {
     'Serving ${site.tree.name} at http://localhost:${server.port}'
     '${sessions == null ? ' (from files, no sign-in)' : ' (from Firestore, sign-in required)'}',
   );
-}
-
-/// Reads `NAME=value` lines from [path], if it exists. Blank lines and lines
-/// starting with `#` are skipped, and quotes around a value are removed.
-Map<String, String> readDotEnv(String path) {
-  final file = File(path);
-  if (!file.existsSync()) return const {};
-  final settings = <String, String>{};
-  for (final line in file.readAsLinesSync()) {
-    if (line.trimLeft().startsWith('#')) continue;
-    final m = RegExp(r'^\s*([A-Za-z_]\w*)\s*=\s*(.*?)\s*$').firstMatch(line);
-    if (m == null) continue;
-    var value = m[2]!;
-    if (value.length >= 2 &&
-        (value.startsWith('"') || value.startsWith("'")) &&
-        value.endsWith(value[0])) {
-      value = value.substring(1, value.length - 1);
-    }
-    settings[m[1]!] = value;
-  }
-  return settings;
 }
 
 /// `prosapia export`: copies the tree into its backup repository, one commit

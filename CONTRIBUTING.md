@@ -72,6 +72,9 @@ testing; sign in with a real Google account that is one of its members.
 
 - `dart run tool/check_pages.dart <tree-directory>` reads every page of a tree in files
   and lists anything it could not read, such as a date it did not understand.
+- `dart run prosapia:research show|gaps|find …` reads a tree for research, as JSON: a
+  page with its family and items, what it lacks, or people matching a name. It reads
+  Firestore (`--tree`) or files (`--files`); see [docs/research.md](docs/research.md).
 
 ## Checks
 

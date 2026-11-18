@@ -21,19 +21,28 @@ Read these before starting a task:
 
 ## Where things are
 
-- **The tree.** Read it from the nightly export, a git repository of the tree in plain
-  files. Clone it once into `data/export` and pull it at the start of each task:
+- **The tree.** Read the live tree with the research command, which prints JSON:
 
   ```
-  git clone git@github.com:devoncarew/prosapia-carew.git data/export   # once
-  git -C data/export pull
+  dart run prosapia:research --project prosapia-ea818 --tree carew show <id>
+  dart run prosapia:research --project prosapia-ea818 --tree carew gaps <id>
+  dart run prosapia:research --project prosapia-ea818 --tree carew find <name> [--born <year>] [--place <text>]
   ```
 
-  It can be up to a day behind the site; if a page looks out of date, ask. A person's
-  page is `people/<id>/index.md`; a page about a family is `pages/<id>/index.md`; items
-  are in `media/`, a file such as `m-5t1q8z.jpg`, or `m-5t1q8z.json` for an item with no
-  file. `grep` the `people/` directory to find a person's relatives and the pages that
-  mention them.
+  `<id>` is a page's id or reference: `carew-michael-k3m9qa`, `@carew-michael-k3m9qa` or
+  `p-k3m9qa`. `show` gives the page's text and revision, its facts with their sources,
+  its parents, partners, children and siblings (whichever page states them), relatives
+  named without a page, the items that show it or that it cites (with each item's
+  details and transcription), and the pages that mention it. `gaps` lists the empty
+  facts, the facts without a source, those marked `source: needed`, contradictions with
+  other pages, and dates worth checking. `find` lists people whose names match, to tell
+  whether a record's people are already in the tree.
+
+  It needs Google credentials that can read the project
+  (`gcloud auth application-default login`). Without them, read the nightly export with
+  `--files data/export` instead (clone `git@github.com:devoncarew/prosapia-carew.git`
+  there once, and `git -C data/export pull`); it can be a day behind the site. An item's
+  file is in the export's `media/` folder, such as `m-5t1q8z.jpg`.
 
 - **Task logs, inboxes and open searches** are under `data/research/`, which is never
   committed. Task names are the person's id and a word or two:
@@ -48,12 +57,13 @@ Read these before starting a task:
 
 ## A task, step by step
 
-1. **Set up.** Pull the export. Create the task's log from
+1. **Set up.** Create the task's log from
    [templates/task-log.md](templates/task-log.md), or open it if the task is already
    under way: read it first, and carry on from where it stopped.
-2. **Read what is known.** The person's page; their parents', partners' and children's
-   pages; the items that name them; any `Note:` lines recording searches already run.
-   Write down in the log what is known, with each fact's source or "no source".
+2. **Read what is known.** `show` and `gaps` for the person, then `show` for their
+   parents, partners and children; the items that name them; any `Note:` lines recording
+   searches already run. Write down in the log what is known, with each fact's source or
+   "no source".
 3. **Frame the question.** One specific question: "When and where was Michael born, and
    who were his parents?" not "Research Michael". If the owner's request is broad, pick
    the gap that would unlock the most (usually an event that names parents or a place)
