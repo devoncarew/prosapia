@@ -179,12 +179,25 @@ sealed class Segment {
       ? part.substring(1, part.length - 1).replaceAll('""', '"')
       : part;
 
-  /// [value] as a part: quoted if it has a comma or a quote, so it reads
+  /// [value] as a part: quoted if it has a comma that [split] would split
+  /// at (one outside `(...)` and `[...]`), a quote or an `@`, so it reads
   /// back as one part.
   static String quote(String value) =>
-      value.contains(',') || value.contains('"') || value.contains('@')
+      _splits(value) || value.contains('"') || value.contains('@')
       ? '"${value.replaceAll('"', '""')}"'
       : value;
+
+  /// Whether [value] has a comma outside brackets, as [split] counts them.
+  static bool _splits(String value) {
+    var depth = 0;
+    for (var i = 0; i < value.length; i++) {
+      final c = value[i];
+      if (c == '[' || c == '(') depth++;
+      if ((c == ']' || c == ')') && depth > 0) depth--;
+      if (c == ',' && depth == 0) return true;
+    }
+    return false;
+  }
 }
 
 /// `@hughes-thomas-3f8d1a`, optionally followed by a qualifier in

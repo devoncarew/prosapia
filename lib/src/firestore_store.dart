@@ -21,7 +21,8 @@ import 'tree.dart';
 ///   pages/{id}                 a page about a family or a thing, kept as people
 ///     revisions/{number}       are: source, directory, revision, deleted
 ///   media/{key}                what each file says about itself
-///   changes/{auto}             the log: author, summary, at, pages, summaryBy
+///   changes/{auto}             the log: author, summary, at, pages, media,
+///                              helpedBy, summaryBy
 ///   usage/{yyyy-mm}            what calls to a language model cost
 /// ```
 class FirestoreStore extends TreeStore {
@@ -255,6 +256,7 @@ class FirestoreStore extends TreeStore {
       }
       tx.set(_tree.collection('changes').doc(), {
         'pages': next,
+        'helpedBy': ?helpedBy,
         'summaryBy': ?summaryBy,
         ...stamp,
       });
@@ -268,6 +270,7 @@ class FirestoreStore extends TreeStore {
     List<MediaWrite> files, {
     required Member author,
     required String summary,
+    String? helpedBy,
   }) async {
     final storage = app.storage().bucket(bucketName).storage;
     final batch = _db.batch();
@@ -304,6 +307,7 @@ class FirestoreStore extends TreeStore {
     batch.set(_tree.collection('changes').doc(), {
       'pages': <String, int>{},
       'media': [for (final w in files) w.media.key],
+      'helpedBy': ?helpedBy,
       'author': author.email,
       'authorName': ?author.name,
       'summary': summary,
@@ -384,6 +388,7 @@ class FirestoreStore extends TreeStore {
     pages: ((data['pages'] as Map?) ?? const {}).cast<String, int>(),
     media: ((data['media'] as List?) ?? const []).cast<String>(),
     mediaDeleted: data['mediaDeleted'] == true,
+    helpedBy: data['helpedBy'] as String?,
     summaryBy: data['summaryBy'] as String?,
   );
 

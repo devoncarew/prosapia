@@ -21,7 +21,8 @@ class MemoryStore extends TreeStore {
           String? summaryBy,
         })
       >[];
-  final media = <({List<MediaWrite> files, String summary})>[];
+  final media =
+      <({List<MediaWrite> files, String summary, String? helpedBy})>[];
 
   @override
   Future<Tree> load() async => tree;
@@ -63,7 +64,8 @@ class MemoryStore extends TreeStore {
     List<MediaWrite> files, {
     required Member author,
     required String summary,
-  }) async => media.add((files: files, summary: summary));
+    String? helpedBy,
+  }) async => media.add((files: files, summary: summary, helpedBy: helpedBy));
 }
 
 Tree _tree() {
@@ -259,7 +261,7 @@ void main() {
         'people': ['p-k3m9qa'],
         'link': 'https://example.com/ark',
         'found': '18 November 2026, FamilySearch',
-      }).save(store, tree, author: _me);
+      }).save(store, tree, author: _me, helpedBy: 'claude-opus-5-5');
       expect(saved.id, matches(RegExp(r'^m-[a-z0-9]{6}$')));
       expect(saved.id, isNot('m-c4n5us'));
       expect(saved.hasFile, isFalse);
@@ -267,6 +269,7 @@ void main() {
       expect(saved.found, '18 November 2026, FamilySearch');
       expect(saved.people, ['p-k3m9qa']);
       expect(store.media.single.summary, 'Add a source: 1920 census');
+      expect(store.media.single.helpedBy, 'claude-opus-5-5');
     });
 
     test(

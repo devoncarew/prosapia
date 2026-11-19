@@ -187,7 +187,27 @@ class Person extends Page {
     for (final line in page.facts) {
       person._read(line);
     }
+    person.born = person._dated(person.born);
+    person.christened = person._dated(person.christened);
+    person.died = person._dated(person.died);
+    person.buried = person._dated(person.buried);
     return person;
+  }
+
+  /// The version of a life event to use: [first], unless it has no date
+  /// and another version has one. Then that one is used and [first] is also
+  /// recorded, so that a line giving only a place does not keep the event
+  /// out of the years and the timeline.
+  Event? _dated(Event? first) {
+    final others = alternativesTo(first);
+    if (first == null || first.date?.understood == true || others.isEmpty) {
+      return first;
+    }
+    final dated = others.where((e) => e.date?.understood == true).firstOrNull;
+    if (dated == null) return first;
+    alsoRecorded.remove(first);
+    alsoRecorded[dated] = [first, ...others.where((e) => e != dated)];
+    return dated;
   }
 
   static const lifeEvents = {

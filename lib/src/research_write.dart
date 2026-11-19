@@ -181,15 +181,16 @@ class NewItem {
     if (file != null) 'file': '${file!.path} ($kind)',
   };
 
-  /// Adds the item to the tree as one change by [author], and returns it
-  /// with its new id. A file is stored as the website stores an upload: a
-  /// JPEG, HEIC or PDF as it is, anything else as a JPEG, with the details
-  /// written into it.
+  /// Adds the item to the tree as one change by [author], with [helpedBy]
+  /// the model that helped, and returns it with its new id. A file is
+  /// stored as the website stores an upload: a JPEG, HEIC or PDF as it is,
+  /// anything else as a JPEG, with the details written into it.
   Future<Media> save(
     TreeStore store,
     Tree tree, {
     required Member author,
     String? summary,
+    String? helpedBy,
   }) async {
     final id = newId('m', (id) => itemIdTaken(tree, id));
     final Media item;
@@ -225,6 +226,7 @@ class NewItem {
     await store.saveMedia(
       [write],
       author: author,
+      helpedBy: helpedBy,
       summary:
           summary ??
           'Add a ${switch (item.kind) {
