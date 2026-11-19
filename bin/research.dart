@@ -29,6 +29,9 @@ Writing: each shows what it would save, and saves only with --apply.
       --summary <text>                             add a section to the story
   dart run prosapia:research [options] add-item --details <json> [--file <file>]
                                                    add an item, with or without a file
+  dart run prosapia:research [options] edit-item <item> --details <json>
+                                                   change an item's details: those
+                                                   given replace, "" clears
 Writes are saved as --by, a member who may edit, with --helped-by in the history.
 
 Searching the free sources, as JSON; neither needs a tree:
@@ -48,7 +51,7 @@ See docs/research.md.
 ''';
 
 const reading = {'show', 'gaps', 'find'};
-const writing = {'edit', 'append', 'add-item'};
+const writing = {'edit', 'append', 'add-item', 'edit-item'};
 const searching = {'lookup', 'text'};
 
 Future<void> main(List<String> arguments) async {
@@ -132,7 +135,7 @@ Future<void> main(List<String> arguments) async {
       ('file', {'edit', 'append'}),
       ('based-on', {'edit'}),
       ('summary', {'edit', 'append'}),
-      ('details', {'add-item'}),
+      ('details', {'add-item', 'edit-item'}),
     ]) {
       if (needed.contains(command) && args[option] == null) {
         throw FormatException('$command needs --$option.');
@@ -251,18 +254,61 @@ Future<int> write(
     return 64;
   }
 
+  if (command == 'edit-item') {
+    final item = itemOf(research.tree, words.single);
+    if (item == null) {
+      stderr.writeln('No item in the tree matches ${words.single}.');
+      return 1;
+    }
+    final ItemEdit edit;
+    try {
+      edit = ItemEdit.read(
+        research,
+        item,
+        readDetails(args['details'] as String),
+      );
+    } on FormatException catch (e) {
+      stderr.writeln(e.message);
+      return 65;
+    } on FileSystemException catch (e) {
+      stderr.writeln('${e.message}: ${e.path}');
+      return 66;
+    }
+    if (!edit.changed) {
+      stdout.writeln('No change to #${item.key}.');
+      return 0;
+    }
+    stdout.writeln('#${item.key}, ${item.title}:\n');
+    const json = JsonEncoder.withIndent('  ');
+    for (final MapEntry(:key, value: (:from, :to)) in edit.changes.entries) {
+      stdout.writeln(
+        '$key:\n  was: ${json.convert(from)}\n  now: ${json.convert(to)}',
+      );
+    }
+    if (!apply) {
+      stdout.writeln('\nNot saved. Run again with --apply to save it.');
+      return 0;
+    }
+    await edit.save(
+      store,
+      author: author!,
+      summary: args['summary'] as String?,
+      helpedBy: helpedBy,
+    );
+    final change = (await store.recentChanges(
+      limit: 20,
+    )).where((c) => c.media.contains(item.key)).firstOrNull;
+    stdout.writeln(
+      '\nSaved #${item.key}${change == null ? '' : ' (change ${change.id})'}.',
+    );
+    return 0;
+  }
+
   if (command == 'add-item') {
     final details = args['details'] as String;
     final NewItem item;
     try {
-      final json = jsonDecode(
-        details.trimLeft().startsWith('{')
-            ? details
-            : File(details).readAsStringSync(),
-      );
-      if (json is! Map<String, Object?>) {
-        throw const FormatException('The details should be a JSON object.');
-      }
+      final json = readDetails(details);
       final file = args['file'] as String?;
       item = NewItem.read(
         research,
@@ -406,4 +452,17 @@ Future<int> search(String command, List<String> words, ArgResults args) async {
   } finally {
     lookup.close();
   }
+}
+
+/// Item details given as JSON, or as the path of a JSON file.
+Map<String, Object?> readDetails(String details) {
+  final json = jsonDecode(
+    details.trimLeft().startsWith('{')
+        ? details
+        : File(details).readAsStringSync(),
+  );
+  if (json is! Map<String, Object?>) {
+    throw const FormatException('The details should be a JSON object.');
+  }
+  return json;
 }

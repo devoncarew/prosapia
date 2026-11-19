@@ -83,6 +83,8 @@ diff for writing.
   already refuses the write if the page has moved on.
 - `add-item --file <image or pdf> --details <json>`: a new item, with or without a file,
   with its title, date, place, people, transcription, link and access date.
+- `edit-item <item> --details <json>`: change an item's details, such as a link found
+  later; those given replace, an empty one clears, and the rest are kept.
 
 Writes show their diff and change nothing without `--apply`. They are saved like any
 edit: a revision, a change log entry with a summary, the owner as author (`--by`), and

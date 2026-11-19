@@ -74,10 +74,10 @@ testing; sign in with a real Google account that is one of its members.
   and lists anything it could not read, such as a date it did not understand.
 - `dart run prosapia:research show|gaps|find …` reads a tree for research, as JSON: a
   page with its family and items, what it lacks, or people matching a name.
-  `edit|append|add-item …` write to it, showing a diff and saving only with `--apply`.
-  `lookup newspapers|books|wikitree …` and `text <link> <words>` search the free
-  sources, and need no tree. It reads Firestore (`--tree`) or files (`--files`); see
-  [docs/research.md](docs/research.md).
+  `edit|append|add-item|edit-item …` write to it, showing a diff and saving only with
+  `--apply`. `lookup newspapers|books|wikitree …` and `text <link> <words>` search the
+  free sources, and need no tree. It reads Firestore (`--tree`) or files (`--files`);
+  see [docs/research.md](docs/research.md).
 
 ## Checks
 

@@ -136,6 +136,9 @@ Read these before starting a task:
     - It refuses a page that has moved on since `--based-on` (show it again and redo the
       edit), and new text with a reference to nothing, such as a `#NEW-…` placeholder
       left in.
+    - **An item already in the tree** (a link or transcription to add or correct):
+      `edit-item <item> --details '{"link": "…"}'`. The details given replace what it
+      has, `""` clears one, and the rest are kept; `people` replaces the whole list.
     - Record each change id it prints in the log.
 
 11. **Close.** Record in the log what was written, what is still open, and any search

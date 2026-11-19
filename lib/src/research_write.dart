@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -95,42 +96,11 @@ class NewItem {
     Map<String, Object?> json, {
     File? file,
   }) {
-    String? text(String key) {
-      final value = json[key];
-      if (value != null && value is! String) {
-        throw FormatException('"$key" should be text.');
-      }
-      final s = (value as String?)?.trim() ?? '';
-      return s.isEmpty ? null : s;
-    }
-
-    const known = {
-      'title',
-      'date',
-      'place',
-      'transcription',
-      'notes',
-      'link',
-      'found',
-      'people',
-    };
-    for (final key in json.keys) {
-      if (!known.contains(key)) {
-        throw FormatException(
-          '"$key" is not a detail of an item. Use: ${known.join(', ')}.',
-        );
-      }
-    }
+    _checkKeys(json);
+    String? text(String key) => _text(json, key);
     final title = text('title');
     if (title == null) throw const FormatException('An item needs a title.');
-    final people = <({String id, String name})>[];
-    for (final ref in (json['people'] as List?) ?? const []) {
-      final page = research.pageOf('$ref');
-      if (page is! Person) {
-        throw FormatException('No person in the tree matches $ref.');
-      }
-      people.add((id: page.id, name: page.name));
-    }
+    final people = _people(research, json['people']);
     String? kind;
     if (file != null) {
       if (!file.existsSync()) {
@@ -236,6 +206,184 @@ class NewItem {
           }}: ${details.title}',
     );
     return item;
+  }
+}
+
+/// The details an item has.
+const itemKeys = [
+  'title',
+  'date',
+  'place',
+  'people',
+  'transcription',
+  'notes',
+  'link',
+  'found',
+];
+
+void _checkKeys(Map<String, Object?> json) {
+  for (final key in json.keys) {
+    if (!itemKeys.contains(key)) {
+      throw FormatException(
+        '"$key" is not a detail of an item. Use: ${itemKeys.join(', ')}.',
+      );
+    }
+  }
+}
+
+/// [json]'s [key] as text, or null if it is empty or missing.
+String? _text(Map<String, Object?> json, String key) {
+  final value = json[key];
+  if (value != null && value is! String) {
+    throw FormatException('"$key" should be text.');
+  }
+  final s = (value as String?)?.trim() ?? '';
+  return s.isEmpty ? null : s;
+}
+
+/// The people [refs] names, each a page id or reference.
+List<({String id, String name})> _people(Research research, Object? refs) {
+  if (refs != null && refs is! List) {
+    throw const FormatException('"people" should be a list.');
+  }
+  return [
+    for (final ref in (refs as List?) ?? const [])
+      switch (research.pageOf('$ref')) {
+        final Person p => (id: p.id, name: p.name),
+        _ => throw FormatException('No person in the tree matches $ref.'),
+      },
+  ];
+}
+
+/// New details for an item already in the tree: those given replace what
+/// it has, an empty one clears it, and the rest are kept.
+class ItemEdit {
+  ItemEdit._(this.research, this.item, this.details, this.link, this.found);
+
+  /// [item] with the details in [json] changed: any of `title`, `date`,
+  /// `place`, `transcription`, `notes`, `link`, `found`, and `people` (the
+  /// whole list). Throws a [FormatException] saying what is wrong.
+  static ItemEdit read(
+    Research research,
+    Media item,
+    Map<String, Object?> json,
+  ) {
+    _checkKeys(json);
+    String? text(String key, String? now) =>
+        json.containsKey(key) ? _text(json, key) : now;
+    final title = text('title', item.title);
+    if (title == null) throw const FormatException('An item needs a title.');
+    return ItemEdit._(
+      research,
+      item,
+      PhotoDetails(
+        title: title,
+        date: text('date', item.date),
+        place: text('place', item.place),
+        transcription: text('transcription', item.transcription),
+        notes: text('notes', item.notes),
+        people: json.containsKey('people')
+            ? _people(research, json['people'])
+            : [
+                for (final id in item.people)
+                  (id: id, name: research.tree.people[id]?.name ?? id),
+              ],
+        set: item.set,
+        setIndex: item.setIndex,
+      ),
+      text('link', item.link),
+      text('found', item.found),
+    );
+  }
+
+  final Research research;
+  final Media item;
+  final PhotoDetails details;
+  final String? link, found;
+
+  Map<String, Object?> _now() => {
+    'title': item.title,
+    'date': item.date,
+    'place': item.place,
+    'people': [for (final id in item.people) _person(id)],
+    'transcription': item.transcription,
+    'notes': item.notes,
+    'link': item.link,
+    'found': item.found,
+  };
+
+  Map<String, Object?> _next() => {
+    'title': details.title,
+    'date': details.date,
+    'place': details.place,
+    'people': [for (final p in details.people) '${p.name} (${p.id})'],
+    'transcription': details.transcription,
+    'notes': details.notes,
+    'link': link,
+    'found': found,
+  };
+
+  String _person(String id) =>
+      '${research.tree.people[id]?.name ?? 'someone not in the tree'} ($id)';
+
+  /// Each detail that changes, as it is and as it will be.
+  Map<String, ({Object? from, Object? to})> get changes {
+    final now = _now(), next = _next();
+    return {
+      for (final key in itemKeys)
+        if (jsonEncode(now[key]) != jsonEncode(next[key]))
+          key: (from: now[key], to: next[key]),
+    };
+  }
+
+  bool get changed => changes.isNotEmpty;
+
+  /// Saves the new details as one change by [author], as the website does:
+  /// written into the item's file, and its back's, when it has one.
+  Future<void> save(
+    TreeStore store, {
+    required Member author,
+    String? summary,
+    String? helpedBy,
+  }) async {
+    final back = research.tree.media['${item.id}-back'];
+    final writes = [
+      for (final m in [item, ?back])
+        m.hasFile
+            ? await prepareMedia(
+                await store.localFile(m),
+                Media(
+                  m.id,
+                  isBack: m.isBack,
+                  extension: m.extension,
+                  location: m.location,
+                ),
+                details,
+              )
+            : MediaWrite(
+                Media(m.id, isBack: m.isBack, extension: '', location: '')
+                  ..title = details.title
+                  ..date = details.date
+                  ..place = details.place
+                  ..transcription = details.transcription
+                  ..notes = details.notes
+                  ..set = details.set
+                  ..setIndex = details.setIndex
+                  ..people.addAll(details.people.map((p) => p.id)),
+                null,
+              ),
+    ];
+    for (final w in writes) {
+      w.media
+        ..link = link
+        ..found = found;
+    }
+    await store.saveMedia(
+      writes,
+      author: author,
+      summary: summary ?? 'Change the details of ${details.title}',
+      helpedBy: helpedBy,
+    );
   }
 }
 
