@@ -2641,10 +2641,13 @@ ${help ? '<script type="module" src="/assets/memory.js"></script>' : ''}
       );
       for (final c in changes) {
         final (items, summary) = _changeParts(c);
+        final helped = Model.byId(c.helpedBy);
         sb.write(
           '<tr><td class="when">${time(c.at)}</td><td>${esc(c.by)}</td>'
           '<td>$items</td>'
-          '<td>$summary</td></tr>',
+          '<td>$summary'
+          '${helped == null ? '' : ' <span class="years">(with ${esc(helped.name)})</span>'}'
+          '</td></tr>',
         );
       }
       sb.write('</table>');

@@ -99,6 +99,11 @@ void main() {
       );
     });
 
+    test('a comma in parentheses needs no quotes', () {
+      const line = 'Also known as: Helen (family name, from the HJC chart)';
+      expect(facts(line), 'Name: A\n$line\n');
+    });
+
     test('facts are put in the normal order, notes last', () {
       expect(
         formatPage(

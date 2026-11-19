@@ -229,8 +229,9 @@ puts them into practice.
   better with single parents, unknown partners and blended families.
 - **Several values for one fact.** A life event may be repeated when the records
   disagree, as GEDCOM allows. The first is used for the infobox, the timeline and
-  sorting; the others are shown beside it as "also recorded", with their sources. It is
-  not a problem to correct; an editor removes a line once the question is settled.
+  sorting, unless it has no date and another has one: then the first with a date is
+  used. The others are shown beside it as "also recorded", with their sources. It is not
+  a problem to correct; an editor removes a line once the question is settled.
 - **Names are kept whole.** `Family name:` is an optional fact for the rare name the
   guess from its words gets wrong, such as "Maria de la Cruz García"; most pages never
   need it. `Also known as:` may say what kind of name it is, in parentheses as

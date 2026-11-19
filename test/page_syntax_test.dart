@@ -92,6 +92,17 @@ void main() {
     expect(q.issues, isEmpty);
   });
 
+  test('a version with only a place gives way to one with a date', () {
+    final q = Person.fromSource(
+      'p-0',
+      'x-0',
+      'Name: Q\nBorn: "County Cork, Ireland"\n'
+          'Born: about 1815, Ireland, source: 1860 census\n',
+    );
+    expect(q.born?.date?.year, 1815);
+    expect(q.alternativesTo(q.born).single.place, 'County Cork, Ireland');
+  });
+
   test('family name and kinds of name', () {
     final q = Person.fromSource(
       'p-0',

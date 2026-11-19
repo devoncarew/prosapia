@@ -170,8 +170,12 @@ Built in November 2026, in
 that refers to nothing in the tree, so a `#NEW-…` placeholder for an item not yet added
 cannot be saved by mistake. The change summary is recorded as written by the model that
 helped. Tests use a store in memory; the commands were also run against the emulators.
-Items record their author but not `helpedBy`, which the store does not yet keep for
-them.
+Each entry in the change log now records `helpedBy` too, for items as well as pages, and
+Recent changes shows it.
+
+First used for real on the task for Michael F. Carew (`carew-michael-f-7tjx8a-life`), in
+November 2026: six items and thirteen pages written from Claude Code, each after the
+owner reviewed its diff.
 
 ### R4: Free-source search
 

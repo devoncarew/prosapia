@@ -243,6 +243,7 @@ Future<int> write(
       research.tree,
       author: author!,
       summary: args['summary'] as String?,
+      helpedBy: helpedBy,
     );
     final change = (await store.recentChanges(
       limit: 20,

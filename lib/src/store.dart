@@ -73,11 +73,13 @@ abstract class TreeStore {
 
   /// Adds photos to the tree: each [MediaWrite]'s file is stored and its
   /// record written, as one entry in the log. Also used to replace a
-  /// photo's file after its details change.
+  /// photo's file after its details change. [helpedBy] names the model that
+  /// helped write the details, when one did.
   Future<void> saveMedia(
     List<MediaWrite> files, {
     required Member author,
     required String summary,
+    String? helpedBy,
   }) => throw UnsupportedError('This store is read-only.');
 
   /// Deletes photos, or with [restore] brings deleted ones back, as one
@@ -245,6 +247,7 @@ class Change {
     required this.pages,
     this.media = const [],
     this.mediaDeleted = false,
+    this.helpedBy,
     this.summaryBy,
   });
 
@@ -262,6 +265,9 @@ class Change {
 
   /// Whether the change deleted the photos in [media].
   final bool mediaDeleted;
+
+  /// The model that helped write the change, if one did.
+  final String? helpedBy;
 
   /// The model that wrote [summary], if one did.
   final String? summaryBy;
