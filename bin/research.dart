@@ -3,25 +3,40 @@ import 'dart:io';
 
 import 'package:args/args.dart';
 import 'package:firebase_admin_sdk/firebase_admin_sdk.dart';
+import 'package:prosapia/src/claude.dart';
 import 'package:prosapia/src/env.dart';
 import 'package:prosapia/src/file_store.dart';
 import 'package:prosapia/src/firestore_store.dart';
 import 'package:prosapia/src/research.dart';
+import 'package:prosapia/src/research_write.dart';
 import 'package:prosapia/src/store.dart';
 import 'package:prosapia/src/tree.dart';
 
 const usage = '''
-Read a tree for research, from Firestore or from a tree's files. Prints JSON.
+Read and write a tree for research, in Firestore or (reading only) a tree's files.
 
+Reading, as JSON:
   dart run prosapia:research [options] show <id>     a page, its family and items
   dart run prosapia:research [options] gaps <id>     what a person's page lacks
   dart run prosapia:research [options] find <name>   people matching a name
       [--born <year>] [--within <years>] [--place <text>]
 
+Writing: each shows what it would save, and saves only with --apply.
+  dart run prosapia:research [options] edit <id> --file <page.md>
+      --based-on <revision> --summary <text>       replace a page's text
+  dart run prosapia:research [options] append <id> --file <section.md>
+      --summary <text>                             add a section to the story
+  dart run prosapia:research [options] add-item --details <json> [--file <file>]
+                                                   add an item, with or without a file
+Writes are saved as --by, a member who may edit, with --helped-by in the history.
+
 <id> is a page's id or reference: carew-michael-k3m9qa, @carew-michael-k3m9qa,
 p-k3m9qa, or #carew-family-k3m9qa for a page about a family.
 See docs/research.md.
 ''';
+
+const reading = {'show', 'gaps', 'find'};
+const writing = {'edit', 'append', 'add-item'};
 
 Future<void> main(List<String> arguments) async {
   final env = {...readDotEnv('.env'), ...Platform.environment};
@@ -42,6 +57,29 @@ Future<void> main(List<String> arguments) async {
     ..addOption('born', help: 'find: a birth year.')
     ..addOption('within', defaultsTo: '5', help: 'find: years either side.')
     ..addOption('place', help: 'find: part of a place name.')
+    ..addOption('file', help: 'edit, append: the text; add-item: the file.')
+    ..addOption(
+      'details',
+      help:
+          'add-item: the details as JSON, or a JSON file: title, date, '
+          'place, transcription, notes, link, found, people.',
+    )
+    ..addOption(
+      'based-on',
+      help: 'edit: the revision the new text started from.',
+    )
+    ..addOption('summary', help: 'The change summary, as the history shows it.')
+    ..addOption(
+      'by',
+      defaultsTo: env['PROSAPIA_BY'],
+      help: 'The email address of the member saving the change.',
+    )
+    ..addOption(
+      'helped-by',
+      defaultsTo: Model.writer.id,
+      help: 'The model that helped write the change.',
+    )
+    ..addFlag('apply', negatable: false, help: 'Save the change.')
     ..addFlag('help', abbr: 'h', negatable: false);
 
   final ArgResults args;
@@ -51,9 +89,22 @@ Future<void> main(List<String> arguments) async {
       stdout.writeln('$usage\n${parser.usage}');
       return;
     }
-    if (args.rest.length < 2 ||
-        !const {'show', 'gaps', 'find'}.contains(args.rest.first)) {
+    final command = args.rest.firstOrNull;
+    if (command == 'add-item' ? args.rest.length != 1 : args.rest.length < 2) {
       throw const FormatException('Give a command and its argument.');
+    }
+    if (!reading.contains(command) && !writing.contains(command)) {
+      throw FormatException('"$command" is not a command.');
+    }
+    for (final (option, needed) in [
+      ('file', {'edit', 'append'}),
+      ('based-on', {'edit'}),
+      ('summary', {'edit', 'append'}),
+      ('details', {'add-item'}),
+    ]) {
+      if (needed.contains(command) && args[option] == null) {
+        throw FormatException('$command needs --$option.');
+      }
     }
     if (args['files'] == null && args['tree'] == null) {
       throw const FormatException('Give --tree or --files.');
@@ -86,6 +137,10 @@ Future<void> main(List<String> arguments) async {
 
   try {
     final research = Research(await store.load());
+    if (writing.contains(command)) {
+      exitCode = await write(command, words, args, research, store);
+      return;
+    }
     final Object result;
     if (command == 'find') {
       final born = args['born'] as String?;
@@ -116,4 +171,146 @@ Future<void> main(List<String> arguments) async {
     await store.close();
     await app?.close();
   }
+}
+
+/// Runs a writing [command]: shows what it would save, and with `--apply`
+/// saves it. Returns the exit code.
+Future<int> write(
+  String command,
+  List<String> words,
+  ArgResults args,
+  Research research,
+  TreeStore store,
+) async {
+  final apply = args.flag('apply');
+  Member? author;
+  if (apply) {
+    if (!store.editable) {
+      stderr.writeln('This tree is read-only here; write with --tree.');
+      return 64;
+    }
+    final by = args['by'] as String?;
+    author = by == null ? null : await store.member(by);
+    if (author == null || !author.role.canEdit) {
+      stderr.writeln(
+        by == null
+            ? 'Give --by, the email address of a member who may edit.'
+            : '$by is not a member of this tree who may edit.',
+      );
+      return 64;
+    }
+  }
+  final helpedBy = Model.byId(args['helped-by'] as String?)?.id;
+  if (helpedBy == null && args['helped-by'] != null) {
+    stderr.writeln(
+      '--helped-by should be one of ${Model.all.map((m) => m.id).join(', ')}.',
+    );
+    return 64;
+  }
+
+  if (command == 'add-item') {
+    final details = args['details'] as String;
+    final NewItem item;
+    try {
+      final json = jsonDecode(
+        details.trimLeft().startsWith('{')
+            ? details
+            : File(details).readAsStringSync(),
+      );
+      if (json is! Map<String, Object?>) {
+        throw const FormatException('The details should be a JSON object.');
+      }
+      final file = args['file'] as String?;
+      item = NewItem.read(
+        research,
+        json,
+        file: file == null ? null : File(file),
+      );
+    } on FormatException catch (e) {
+      stderr.writeln(e.message);
+      return 65;
+    } on FileSystemException catch (e) {
+      stderr.writeln('${e.message}: ${e.path}');
+      return 66;
+    }
+    stdout.writeln(const JsonEncoder.withIndent('  ').convert(item.toJson()));
+    if (!apply) {
+      stdout.writeln('\nNot saved. Run again with --apply to add it.');
+      return 0;
+    }
+    final saved = await item.save(
+      store,
+      research.tree,
+      author: author!,
+      summary: args['summary'] as String?,
+    );
+    final change = (await store.recentChanges(
+      limit: 20,
+    )).where((c) => c.media.contains(saved.key)).firstOrNull;
+    stdout.writeln(
+      '\nAdded #${saved.key}${change == null ? '' : ' (change ${change.id})'}.',
+    );
+    return 0;
+  }
+
+  final page = research.pageOf(words.single);
+  if (page == null) {
+    stderr.writeln('No page in the tree matches ${words.single}.');
+    return 1;
+  }
+  final text = File(args['file'] as String);
+  if (!text.existsSync()) {
+    stderr.writeln('No such file: ${text.path}');
+    return 66;
+  }
+  final edit = command == 'edit'
+      ? PageEdit.replace(research, page, text.readAsStringSync())
+      : PageEdit.append(research, page, text.readAsStringSync());
+  final basedOn = args['based-on'] == null
+      ? page.revision
+      : int.parse(args['based-on'] as String);
+  if (!edit.changed) {
+    stdout.writeln('No change to ${page.title}.');
+    return 0;
+  }
+  stdout.writeln('${page.title} (${page.id}), revision ${page.revision}:\n');
+  stdout.writeln(edit.diff());
+  if (basedOn != page.revision) {
+    stderr.writeln(
+      '\nThe page is at revision ${page.revision}, not $basedOn: someone has '
+      'changed it since. Run show again and redo the edit on its text.',
+    );
+    return 75;
+  }
+  if (edit.issues.isNotEmpty) {
+    stderr.writeln('\nThe new text has problems, so it cannot be saved:');
+    for (final issue in edit.issues) {
+      stderr.writeln('  $issue');
+    }
+    return 65;
+  }
+  if (!apply) {
+    stdout.writeln('\nNot saved. Run again with --apply to save it.');
+    return 0;
+  }
+  final result = await edit.save(
+    store,
+    basedOn: basedOn,
+    author: author!,
+    summary: args['summary'] as String,
+    helpedBy: helpedBy,
+  );
+  if (!result.saved) {
+    stderr.writeln(
+      '\nNot saved: the page moved on to revision ${result.conflictWith} '
+      'while this was being written. Run show again and redo the edit.',
+    );
+    return 75;
+  }
+  final change = await store.changeOf(page.id, result.revision!);
+  stdout.writeln(
+    '\nSaved revision ${result.revision}'
+    '${change == null ? '' : ' (change ${change.id})'}.',
+  );
+  return 0;
 }

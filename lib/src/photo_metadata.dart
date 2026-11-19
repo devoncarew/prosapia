@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import 'dates.dart';
+import 'store.dart';
 import 'tree.dart';
 
 /// What Prosapia writes into a photo file, so a copy that leaves Prosapia
@@ -150,4 +151,28 @@ Future<({String? title, String? date})> embeddedDetails(File file) async {
     title: first(['Title']),
     date: first(['Coverage']) ?? created?.split(' ').first.replaceAll(':', '-'),
   );
+}
+
+/// [source] copied as [media]'s file, with [details] written into it, ready
+/// to store; [media] takes the same details.
+Future<MediaWrite> prepareMedia(
+  File source,
+  Media media,
+  PhotoDetails details,
+) async {
+  final work = Directory.systemTemp.createTempSync('prosapia_photo');
+  final file = source.copySync(p.join(work.path, media.fileName));
+  await writeMetadata(file, media.key, details);
+  media
+    ..title = details.title
+    ..date = details.date
+    ..place = details.place
+    ..transcription = details.transcription
+    ..notes = details.notes
+    ..set = details.set
+    ..setIndex = details.setIndex;
+  media.people
+    ..clear()
+    ..addAll([if (!media.isBack) ...details.people.map((p) => p.id)]);
+  return MediaWrite(media, file);
 }

@@ -165,6 +165,14 @@ mention the person and the relatives named without a page; `find` takes `--born`
 Done when a task's findings reach the tree without using the website, and show in a
 page's history as helped by Claude.
 
+Built in November 2026, in
+[lib/src/research_write.dart](../lib/src/research_write.dart). A write refuses new text
+that refers to nothing in the tree, so a `#NEW-…` placeholder for an item not yet added
+cannot be saved by mistake. The change summary is recorded as written by the model that
+helped. Tests use a store in memory; the commands were also run against the emulators.
+Items record their author but not `helpedBy`, which the store does not yet keep for
+them.
+
 ### R4: Free-source search
 
 - `lookup` for loc.gov newspapers, Internet Archive and WikiTree, then HathiTrust.
