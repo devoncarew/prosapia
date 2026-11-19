@@ -1,5 +1,7 @@
 # Sample trees and other local data: a person's page is the family's text.
-data/
+# Research logs are Claude's and the owner's notes, so they are formatted.
+data/*
+!data/research/
 test/fixtures/tree/
 .emulator_data/
 .prosapia_cache/
@@ -8,3 +10,11 @@ test/fixtures/tree/
 spikes/*/out/
 spikes/image_format/results_table.md
 web/dist/
+
+# The rest of .gitignore, which the scripts do not read (they pass
+# --ignore-path .prettierignore, so that data/research/ is formatted).
+.dart_tool/
+.loom_cache/
+.firebase/
+node_modules/
+web/node_modules/

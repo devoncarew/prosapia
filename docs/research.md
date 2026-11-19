@@ -10,15 +10,16 @@ see it. The milestones below are numbered R1, R2 and so on, apart from that plan
 
 - **FamilySearch** is the main source. It is free but has no public API, and its record
   search needs a signed-in person. Claude writes the searches and a person runs them.
-- **Ancestry** is for a limited time, with a subscription taken out while there is a
-  batch of searches worth running. Its terms forbid automated access, so all of it is
-  done by a person. Anything found is saved into Prosapia then, so nothing depends on
-  the subscription afterwards.
+- **Ancestry** and the other paid sites are optional. A task may propose a search there,
+  marked as needing an account, alongside the free ones; the owner runs it when they
+  have access, or leaves it. Its terms forbid automated access, so all of it is done by
+  a person. Anything found is saved into Prosapia, so nothing depends on the account
+  afterwards.
 - **Free sources with open APIs** Claude can search itself: newspapers (loc.gov's
   Chronicling America; Trove and Papers Past if a branch leads there), books and
   directories (Internet Archive, HathiTrust), and WikiTree for spot checks.
 - **Find a Grave and MyHeritage** forbid automated access, so a person searches them
-  too. Find a Grave is free; MyHeritage, like Ancestry, is for a limited time if at all.
+  too. Find a Grave is free; MyHeritage, like Ancestry, is optional.
 
 ## How a task runs
 
@@ -37,7 +38,10 @@ see it. The milestones below are numbered R1, R2 and so on, apart from that plan
    person with the facts citing them and any dated section for the story. Each is shown
    as a diff, which the owner reviews in the log, and applied only when they agree.
 7. **Close.** The log records what was written, with the change ids, and what is still
-   open. Searches worth running later move to one file of open searches.
+   open. Searches worth running later, including paid ones not run, move to one file of
+   open searches.
+8. **Later.** Now and then the owner picks an open search to run, as a small task of its
+   own, or drops ones no longer worth running.
 
 ## Parts
 
@@ -79,6 +83,8 @@ diff for writing.
   already refuses the write if the page has moved on.
 - `add-item --file <image or pdf> --details <json>`: a new item, with or without a file,
   with its title, date, place, people, transcription, link and access date.
+- `edit-item <item> --details <json>`: change an item's details, such as a link found
+  later; those given replace, an empty one clears, and the rest are kept.
 
 Writes show their diff and change nothing without `--apply`. They are saved like any
 edit: a revision, a change log entry with a summary, the owner as author (`--by`), and
@@ -114,10 +120,17 @@ data/research/
 A search for a person lives in its task's log, as a section headed with the site first
 ("### Ancestry: 1900 census"), with a Results list below it that the person fills in:
 the record's link, the file saved, related finds, or "not found". A search with results
-is done; there are no checkboxes to tick, and nothing is kept in two places. One site's
-searches across every task are found by searching the logs for its heading, which is how
-Ancestry's are batched during a subscription. When a task closes, the one or two
-searches still worth running move to `open.md`, each linking back to its log.
+is done; there are no checkboxes to tick, and nothing is kept in two places. A search on
+a paid site says so in its heading ("### Ancestry (account needed): 1900 census"), so
+the owner can skip it. When a task closes, the searches still worth running, run or not,
+move to `open.md`, each linking back to its log.
+
+`open.md` is worked one entry at a time, not drained. Running an entry reopens its log:
+the results go there, and the entry is removed from `open.md` once it is run, whatever
+it found. An entry often mixes a free search Claude can run with one for a person; when
+only Claude's part is run, the entry is reworded to what is left. Dropping an entry also
+removes it, with a line in its log saying it was dropped and why, so it is not proposed
+again.
 
 Images are kept in preference to links, since an image is self-contained and outlasts a
 subscription; the link is still asked for, as the item's citation.
@@ -136,7 +149,7 @@ stops the next researcher repeating it.
 | R2: Reading commands   | Done, November 2026      |
 | R3: Writing commands   | Done, November 2026      |
 | R4: Free-source search | Built; first use to come |
-| R5: The inbox          | Not started              |
+| R5: Open searches      | Not started              |
 
 ### R1: The skill and the task log
 
@@ -203,15 +216,21 @@ used.) Tried on the Carew task, `lookup newspapers michael carew` found Michael 
 and Patrick Nolan on the reception committee of St. Anselm's Union, St. Anselm's Church,
 152nd Street, in the New-York Tribune of 14 August 1892.
 
-### R5: The inbox
+### R5: Open searches and paid sites
 
-- Claude reads a task's inbox: transcribes images and PDFs, proposes items and facts
-  from them, and files each one.
-- A session at one site: work through that site's searches across the open logs and
-  `open.md`, saving each find to its task's inbox.
+Reading a task's inbox (transcribing images and PDFs, and proposing items and facts from
+them) was planned here, but the skill already does it, as the Carew task showed. What is
+left is the life of a search that outlasts its task:
 
-Done when a batch of saved Ancestry records becomes cited items and facts in one
-sitting.
+- Paid sites as optional searches within a task, marked as needing an account, rather
+  than a queue drained during a subscription.
+- Working one `open.md` entry: reopen its log, run it (or hand it to the owner), propose
+  and write the changes, and remove the entry.
+- Pruning `open.md`: list the entries with their age and what each would settle, and
+  drop the ones the owner no longer wants, noting it in each log.
+
+Done when an entry from `open.md` is run to a change in the tree, and another is
+dropped, each with its log updated.
 
 ## Open
 

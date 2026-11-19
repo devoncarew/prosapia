@@ -83,13 +83,18 @@ Read these before starting a task:
    ```
 
    Each newspaper page or book comes with an `item`: details `add-item` takes as they
-   are, once you add the people and a transcription of the passage. Log every search,
-   with the query and what it found, including "nothing".
+   are, once you add the people and a transcription of the passage. A newspaper page's
+   words need not be near each other: `together` says whether the passage has them
+   within a few words, and those pages come first. Log every search, with the query and
+   what it found, including "nothing".
 
 6. **Write the searches for a person.** Each search a person must run gets its own
    section in the log, headed with the site first ("### FamilySearch: 1880 census"): a
    search link with the fields filled in, what a matching record should show, and an
    empty Results list. Aim for searches that take a person under fifteen minutes in all.
+   A search on a paid site (Ancestry, MyHeritage, Newspapers.com) is optional: head it
+   "(account needed)", after the free ones, and propose it only when it is the best
+   place for the record.
 7. **Stop and hand over.** Tell the owner the searches are ready. They save files in the
    task's inbox folder, the image or PDF first and the record's link with it, and write
    under each search's Results what they found: the link, the file, the details,
@@ -131,12 +136,32 @@ Read these before starting a task:
     - It refuses a page that has moved on since `--based-on` (show it again and redo the
       edit), and new text with a reference to nothing, such as a `#NEW-…` placeholder
       left in.
+    - **An item already in the tree** (a link or transcription to add or correct):
+      `edit-item <item> --details '{"link": "…"}'`. The details given replace what it
+      has, `""` clears one, and the rest are kept; `people` replaces the whole list.
     - Record each change id it prints in the log.
 
 11. **Close.** Record in the log what was written, what is still open, and any search
     that found nothing worth keeping on the page as a `Note:`. Move the one or two
-    searches worth running later to `data/research/open.md`
-    ([templates/open.md](templates/open.md)), linking back to the log.
+    searches worth running later, including paid ones not run, to
+    `data/research/open.md` ([templates/open.md](templates/open.md)), dated and linking
+    back to the log.
+
+## Open searches
+
+`data/research/open.md` is worked one entry at a time, when the owner asks.
+
+- **Running an entry.** Open its log and carry on there. Run what you may yourself (the
+  free sources) and log it in the Searches table; write what only a person can run as a
+  new section under "Searches for a person". Read the results, propose and write the
+  changes as in steps 8 to 10, and record them under the log's Written list. Remove the
+  entry from `open.md` once all of it is run, whatever it found; if only your part is
+  run, reword the entry to what is left for a person. A search that found nothing can be
+  kept as a `Note:` on the page.
+- **Pruning.** When asked to tidy `open.md`, list each entry with its date, its site,
+  and what it would settle, and suggest which to drop: ones a later task has answered,
+  or that depend on an account the owner does not expect to have. Remove the ones the
+  owner agrees to, with a line in each log: "Dropped from open searches, <date>: <why>".
 
 ## Rules
 

@@ -293,6 +293,58 @@ void main() {
     );
   });
 
+  group('ItemEdit', () {
+    late Media census;
+    setUp(() {
+      census = tree.media['m-c4n5us']!
+        ..notes = 'page 166'
+        ..people.add('p-k3m9qa');
+    });
+
+    test('changes what is given, clears what is empty, keeps the rest', () {
+      final edit = ItemEdit.read(research, census, {
+        'link': 'https://www.familysearch.org/ark:/61903/1:1:MC7L-6T4',
+        'notes': '',
+      });
+      expect(edit.changes.keys, ['notes', 'link']);
+      expect(edit.changes['notes'], (from: 'page 166', to: null));
+      expect(edit.details.title, '1860 census');
+      expect(edit.details.people.single.id, 'p-k3m9qa');
+      expect(
+        ItemEdit.read(research, census, {'title': '1860 census'}).changed,
+        isFalse,
+      );
+    });
+
+    test('replaces the people as a whole, and needs a title', () {
+      final edit = ItemEdit.read(research, census, {
+        'people': ['@burns-ellen-a1b2c3'],
+      });
+      final people = edit.changes['people']!;
+      expect(people.from, ['Michael Carew (p-k3m9qa)']);
+      expect(people.to, ['Ellen Burns (p-a1b2c3)']);
+      expect(
+        () => ItemEdit.read(research, census, {'title': ''}),
+        throwsFormatException,
+      );
+    });
+
+    test('saves an item without a file, with who helped', () async {
+      final store = MemoryStore(tree);
+      await ItemEdit.read(research, census, {
+        'link': 'https://example.com/ark',
+      }).save(store, author: _me, helpedBy: 'claude-opus-5-5');
+      final saved = store.media.single;
+      expect(saved.summary, 'Change the details of 1860 census');
+      expect(saved.helpedBy, 'claude-opus-5-5');
+      final item = saved.files.single.media;
+      expect(item.id, 'm-c4n5us');
+      expect(item.link, 'https://example.com/ark');
+      expect(item.notes, 'page 166');
+      expect(item.people, ['p-k3m9qa']);
+    });
+  });
+
   test('unifiedDiff marks skipped lines', () {
     final before = [for (var i = 1; i <= 10; i++) 'line $i'].join('\n');
     final after = before
