@@ -10,60 +10,51 @@ drift. When the owner says a link opened the wrong search, correct it here.
 
 ## Sites you may search
 
-Fetch a few results at a time, a second or more apart, and log each query.
+Search these with `dart run prosapia:research lookup` and read a hit with `text` (see
+SKILL.md), which keep requests a second apart. Log each query.
 
 **Library of Congress newspapers (Chronicling America).** US newspapers, about 1770 to
-1963, full text.
+1963, full text. `lookup newspapers <words> --years <from>-<to> --place <state>`.
 
-- API:
-  `https://www.loc.gov/collections/chronicling-america/?q=<words>&dates=<yyyy>/<yyyy>&fo=json`.
-  Add `&fa=location_state:<state>` to narrow by state, such as
-  `location_state:new+york`. Results give a title, a date, a link to the page, and its
-  text.
-- Quotes do not force an exact phrase: `"m. f. carew"` matched 638 pages, most of them
-  unrelated. Check each hit's text before treating it as a lead. The text is OCR and has
-  errors.
-- To read a hit, fetch its page with `fo=json`; `resource.fulltext_file` is the page's
-  text. Search that text for the name rather than reading the whole page.
+- Each hit gives the page as an item (paper, date, page, place, link), the passage
+  around the words, and an image of the page at half size. The passage is OCR and has
+  errors; check it names the right person before treating it as a lead.
+- Words are not an exact phrase: `michael carew` also finds pages with a Michael and a
+  Carew far apart. Read a hit with `text <link> carew --context 20`, which prints the
+  lines around each match, to see what it is about (a heading may be 20 or more lines
+  above).
 - Coverage is thin for the Bronx and for New York after 1922, so a later death notice
   usually goes to a person (the Brooklyn Daily Eagle is free through the Brooklyn Public
   Library; others are on Newspapers.com).
-- A finding is an item with no file: the newspaper, date, page and the link, with a
-  transcription of the relevant paragraph.
+- A finding is an item with no file, or with the page image: the `item` from `lookup`,
+  with `people` and a `transcription` of the relevant paragraph added.
 
 **Internet Archive.** County histories, city directories, yearbooks, church histories.
+`lookup books <query> --years <from>-<to>`, where the query may use fields:
+`title:(directory) AND title:(bronx)`.
 
-- API:
-  `https://archive.org/advancedsearch.php?q=<query>&fl[]=identifier&fl[]=title&fl[]=date&rows=20&output=json`.
-  Narrow with `mediatype:texts`, and terms such as
-  `title:(directory) AND title:(scranton)`.
+- City directories come in parts (`p1`, `p2`), shown after the title; a family's letter
+  may be in any of them. `text https://archive.org/details/<id> <surname> <given>`
+  searches a book's whole text (kept in the cache once fetched). Directory lines are
+  abbreviated (`carp` carpenter, `h` home, `av` avenue) and OCR may split a line.
 - Reclaim the Records' free indexes are here (`collection:reclaimtherecords`). Its New
   York City marriage indexes start in 1908.
-- A book's full text is at
-  `https://archive.org/stream/<identifier>/<identifier>_djvu.txt`; search it for the
-  name rather than reading it whole.
 
-**HathiTrust.** Digitized books, many of them the same as the Internet Archive's, with
-better full-text search.
-
-- Full-text search:
-  `https://babel.hathitrust.org/cgi/ls?q1=<words>&anyall1=phrase&lmt=ft`. Only
-  public-domain books (`lmt=ft`) can be read in full.
-- It refuses most automated requests (403). When it does, write the search for a person
-  rather than retrying.
+**HathiTrust.** Digitized books, many the same as the Internet Archive's, with better
+full-text search. It refuses automated requests, so it is a search for a person:
+`https://babel.hathitrust.org/cgi/ls?q1=<words>&anyall1=phrase&lmt=ft`. Only
+public-domain books (`lmt=ft`) can be read in full. The search needs no sign-in; a
+member can also download whole books. (This is the public search, not the HathiTrust
+Research Center, whose access is ending in 2026.)
 
 **WikiTree.** A shared tree, for spot checks only: a profile is a lead to the records it
-cites, not a source.
+cites, not a source. `lookup wikitree <given> <family> --born <year>` lists profiles
+with that family name, with `--born` to narrow loosely by birth year.
 
-- API:
-  `https://api.wikitree.com/api.php?appId=prosapia&action=searchPerson&FirstName=<first>&LastName=<last>&BirthDate=<yyyy-mm-dd>`
-  to find a profile (with only the year known, use `<yyyy>-01-01`; results are loose, so
-  check each name), and
-  `appId=prosapia&action=getProfile&key=<WikiTree-ID>&fields=Name,FirstName,LastNameAtBirth,BirthDate,BirthLocation,DeathDate,DeathLocation,Father,Mother&bioFormat=text`
-  to read one. Public profiles need no sign-in. Without `appId` every request is refused
-  with "Limit exceeded".
 - When a profile is the same person, propose `WikiTree: <id>` as a fact, and follow its
-  sources.
+  sources. To read one:
+  `https://api.wikitree.com/api.php?appId=prosapia&action=getProfile&key=<WikiTree-ID>&fields=Name,FirstName,LastNameAtBirth,BirthDate,BirthLocation,DeathDate,DeathLocation,Father,Mother&bioFormat=text`.
+  Without `appId` every request is refused with "Limit exceeded".
 
 **Free national indexes.** Free and public, but with search pages rather than APIs:
 fetch a results page only when the site's terms allow it, and otherwise write the search
