@@ -72,9 +72,16 @@ class Lookup {
           // No passage.
         }
       }
-      found.add(newspaperPage(result, snippet: snippet));
+      found.add({
+        ...newspaperPage(result, snippet: snippet),
+        if (snippet != null) 'together': together(snippet, words),
+      });
     }
-    return found;
+    // The words need not be near each other on a page ("alice carew"
+    // finds an Alice and a Carew in different columns), so the pages whose
+    // passage has them together come first.
+    final near = found.where((f) => f['together'] == true).toList();
+    return [...near, ...found.where((f) => f['together'] != true)];
   }
 
   /// One page from a Chronicling America search [result], as a candidate.
@@ -291,6 +298,8 @@ class Lookup {
 
   Future<Object?> _json(Uri uri) async => jsonDecode(await _get(uri));
 
+  static const _headers = {'User-Agent': 'prosapia-research'};
+
   Future<String> _get(Uri uri) async {
     final wait = pause ?? const Duration(seconds: 1);
     if (_last case final last?) {
@@ -298,10 +307,19 @@ class Lookup {
       if (left > Duration.zero) await Future<void>.delayed(left);
     }
     _last = DateTime.now();
-    final response = await _client.get(
-      uri,
-      headers: {'User-Agent': 'prosapia-research'},
-    );
+    http.Response response;
+    try {
+      response = await _client.get(uri, headers: _headers);
+    } on http.ClientException {
+      // A dropped connection is tried once more, after a longer pause.
+      await Future<void>.delayed(wait * 3);
+      _last = DateTime.now();
+      try {
+        response = await _client.get(uri, headers: _headers);
+      } on http.ClientException catch (e) {
+        throw HttpException('${uri.host}: ${e.message}', uri: uri);
+      }
+    }
     if (response.statusCode != 200) {
       throw HttpException(
         '${uri.host} answered ${response.statusCode}',
@@ -339,6 +357,28 @@ class Lookup {
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
 }
+
+/// Whether every one of [words] (separated by spaces) is in [text] within a
+/// few words of the others, each as the start of a word, ignoring case:
+/// "Michael F. Carew" has `michael carew` together.
+bool together(String text, String words, {int within = 4}) {
+  final wanted = _wordsOf(words);
+  if (wanted.isEmpty) return false;
+  final tokens = _wordsOf(text);
+  for (var i = 0; i < tokens.length; i++) {
+    final window = tokens.sublist(
+      i,
+      (i + wanted.length + within).clamp(0, tokens.length),
+    );
+    if (wanted.every((w) => window.any((t) => t.startsWith(w)))) return true;
+  }
+  return false;
+}
+
+List<String> _wordsOf(String text) => [
+  for (final m in RegExp(r'[\p{L}\p{N}]+', unicode: true).allMatches(text))
+    m[0]!.toLowerCase(),
+];
 
 /// The passages of [text] that have every one of [words], each a run of
 /// lines: [context] lines either side of a line with the first word, kept

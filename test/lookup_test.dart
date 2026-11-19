@@ -79,6 +79,7 @@ void main() {
         found.single['snippet'],
         '... Patrick Nolan, Michael F. Carew, Michael M',
       );
+      expect(found.single['together'], isTrue);
       expect(found.single['image'], endsWith('/full/pct:50/0/default.jpg'));
     });
 
@@ -226,6 +227,34 @@ void main() {
         throwsFormatException,
       );
     });
+  });
+
+  test('a dropped connection is tried once more', () async {
+    var calls = 0;
+    final lookup = Lookup(
+      client: MockClient((request) async {
+        if (calls++ == 0) throw http.ClientException('Connection closed');
+        return http.Response(jsonEncode({'results': <Object>[]}), 200);
+      }),
+      pause: Duration.zero,
+    );
+    expect(await lookup.newspapers('carew'), isEmpty);
+    expect(calls, 2);
+  });
+
+  test('together: the words within a few words of each other', () {
+    expect(
+      together('Patrick Nolan, Michael F. Carew, Michael M', 'michael carew'),
+      isTrue,
+    );
+    expect(together('Carew, Michael', 'michael carew'), isTrue);
+    expect(
+      together(
+        'Miss Alice Dempsey attended the bride; the Rev. Paul Carew',
+        'alice carew',
+      ),
+      isFalse,
+    );
   });
 
   test('passages need every word, and join when they overlap', () {

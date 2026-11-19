@@ -86,8 +86,10 @@ from around the world, many with images, and a shared tree.
 - Ask for: the record's link (the ARK, `https://www.familysearch.org/ark:/61903/…`), the
   image where there is one, and the indexed details copied as text.
 
-**Ancestry** (paid; searched in batches during a subscription). Strongest for US and UK
-census, immigration, military records and newspapers (Newspapers.com).
+**Ancestry** (paid; optional). Strongest for US and UK census, immigration, military
+records and newspapers (Newspapers.com). Propose a search here when it is the best place
+for a record, but head it "(account needed)" and put the free searches first: the owner
+may not have an account. Unrun, it moves to `open.md` when the task closes.
 
 - Search:
   `https://www.ancestry.com/search/?name=<first>_<last>&birth=<yyyy>&birth_x=2-0-0`
@@ -107,9 +109,9 @@ census, immigration, military records and newspapers (Newspapers.com).
   biography and family links are someone's work, not a record: only the stone is
   evidence.
 
-**MyHeritage** (paid; only if there is a subscription). Strong for Europe and
-Scandinavia. Write the name, dates and place for the person to enter; its search links
-are not reliable to build.
+**MyHeritage** (paid; optional, as Ancestry). Strong for Europe and Scandinavia. Write
+the name, dates and place for the person to enter; its search links are not reliable to
+build.
 
 **Newspapers.com, GenealogyBank, Findmypast, Fold3** (paid): the same as Ancestry.
 Suggest them only when the owner has an account.

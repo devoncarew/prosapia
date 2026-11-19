@@ -33,12 +33,11 @@ One line per search, including those that found nothing.
 
 ## Searches for a person
 
-Searches only a person can run, one section each, with the site first in the heading so
-that one site's searches across all tasks can be found together
-(`grep -h "^### Ancestry" data/research/*.md`). Save files in the task's inbox,
-`data/research/<task>/`, and write what was found under Results: the record's link, the
-file saved, its details, anything else found along the way, or "not found". A search
-with results is done; remove or reword searches as the task moves on.
+Searches only a person can run, one section each, with the site first in the heading and
+"(account needed)" after a paid site's name, free searches first. Save files in the
+task's inbox, `data/research/<task>/`, and write what was found under Results: the
+record's link, the file saved, its details, anything else found along the way, or "not
+found". A search with results is done; remove or reword searches as the task moves on.
 
 ### <Site>: <collection or record>
 
