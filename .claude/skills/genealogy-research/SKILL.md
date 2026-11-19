@@ -72,9 +72,20 @@ Read these before starting a task:
 4. **Plan the searches.** From [method.md](method.md), list the records that would
    answer the question, for the person's time and place, and where each is held.
    Siblings, parents and neighbours are often how a record is found.
-5. **Search what you may.** Run the searches on the free sources in
-   [sites.md](sites.md). Log every one, with the query, the link and what it found,
-   including "nothing". Keep requests few and slow.
+5. **Search what you may.** Run the searches on the free sources in [sites.md](sites.md)
+   with `lookup`, and read a hit with `text`:
+
+   ```
+   dart run prosapia:research lookup newspapers <words> [--years 1890-1900] [--place <US state>]
+   dart run prosapia:research lookup books <query> [--years 1880-1920]
+   dart run prosapia:research lookup wikitree <given> <family> [--born <year>]
+   dart run prosapia:research text <link> <words> [--context <lines>]
+   ```
+
+   Each newspaper page or book comes with an `item`: details `add-item` takes as they
+   are, once you add the people and a transcription of the passage. Log every search,
+   with the query and what it found, including "nothing".
+
 6. **Write the searches for a person.** Each search a person must run gets its own
    section in the log, headed with the site first ("### FamilySearch: 1880 census"): a
    search link with the fields filled in, what a matching record should show, and an

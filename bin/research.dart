@@ -7,6 +7,7 @@ import 'package:prosapia/src/claude.dart';
 import 'package:prosapia/src/env.dart';
 import 'package:prosapia/src/file_store.dart';
 import 'package:prosapia/src/firestore_store.dart';
+import 'package:prosapia/src/lookup.dart';
 import 'package:prosapia/src/research.dart';
 import 'package:prosapia/src/research_write.dart';
 import 'package:prosapia/src/store.dart';
@@ -30,6 +31,17 @@ Writing: each shows what it would save, and saves only with --apply.
                                                    add an item, with or without a file
 Writes are saved as --by, a member who may edit, with --helped-by in the history.
 
+Searching the free sources, as JSON; neither needs a tree:
+  dart run prosapia:research lookup newspapers <words>  Chronicling America pages
+      [--years 1890-1900] [--place <US state>]
+  dart run prosapia:research lookup books <query>       Internet Archive texts
+      [--years 1880-1920]
+  dart run prosapia:research lookup wikitree <name>     WikiTree profiles, as leads
+      [--born <year>]
+  dart run prosapia:research text <link> <words>        the passages with <words>
+      [--context <lines>]                              in a page or text found
+A newspaper or book's "item" is details that add-item takes as they are.
+
 <id> is a page's id or reference: carew-michael-k3m9qa, @carew-michael-k3m9qa,
 p-k3m9qa, or #carew-family-k3m9qa for a page about a family.
 See docs/research.md.
@@ -37,6 +49,7 @@ See docs/research.md.
 
 const reading = {'show', 'gaps', 'find'};
 const writing = {'edit', 'append', 'add-item'};
+const searching = {'lookup', 'text'};
 
 Future<void> main(List<String> arguments) async {
   final env = {...readDotEnv('.env'), ...Platform.environment};
@@ -56,7 +69,17 @@ Future<void> main(List<String> arguments) async {
     ..addOption('cache', defaultsTo: env['PROSAPIA_CACHE'] ?? '.prosapia_cache')
     ..addOption('born', help: 'find: a birth year.')
     ..addOption('within', defaultsTo: '5', help: 'find: years either side.')
-    ..addOption('place', help: 'find: part of a place name.')
+    ..addOption(
+      'place',
+      help: 'find: part of a place name; lookup newspapers: a US state.',
+    )
+    ..addOption('years', help: 'lookup: a year or years, such as 1890-1900.')
+    ..addOption('rows', defaultsTo: '10', help: 'lookup: how many results.')
+    ..addOption(
+      'context',
+      defaultsTo: '3',
+      help: 'text: lines either side of each match.',
+    )
     ..addOption('file', help: 'edit, append: the text; add-item: the file.')
     ..addOption(
       'details',
@@ -90,10 +113,19 @@ Future<void> main(List<String> arguments) async {
       return;
     }
     final command = args.rest.firstOrNull;
-    if (command == 'add-item' ? args.rest.length != 1 : args.rest.length < 2) {
-      throw const FormatException('Give a command and its argument.');
+    final needed = switch (command) {
+      'add-item' => 1,
+      'lookup' || 'text' => 3,
+      _ => 2,
+    };
+    if (command == 'add-item'
+        ? args.rest.length != 1
+        : args.rest.length < needed) {
+      throw const FormatException('Give a command and its arguments.');
     }
-    if (!reading.contains(command) && !writing.contains(command)) {
+    if (!reading.contains(command) &&
+        !writing.contains(command) &&
+        !searching.contains(command)) {
       throw FormatException('"$command" is not a command.');
     }
     for (final (option, needed) in [
@@ -106,7 +138,14 @@ Future<void> main(List<String> arguments) async {
         throw FormatException('$command needs --$option.');
       }
     }
-    if (args['files'] == null && args['tree'] == null) {
+    if (command == 'lookup' && !Lookup.sources.contains(args.rest[1])) {
+      throw FormatException(
+        'lookup searches ${Lookup.sources.join(', ')}, not ${args.rest[1]}.',
+      );
+    }
+    if (!searching.contains(command) &&
+        args['files'] == null &&
+        args['tree'] == null) {
       throw const FormatException('Give --tree or --files.');
     }
   } on FormatException catch (e) {
@@ -115,6 +154,10 @@ Future<void> main(List<String> arguments) async {
   }
 
   final [command, ...words] = args.rest;
+  if (searching.contains(command)) {
+    exitCode = await search(command, words, args);
+    return;
+  }
   final project = args['project'] as String;
   FirebaseApp? app;
   final TreeStore store;
@@ -314,4 +357,53 @@ Future<int> write(
     '${change == null ? '' : ' (change ${change.id})'}.',
   );
   return 0;
+}
+
+/// Runs `lookup` or `text`, printing JSON. Returns the exit code.
+Future<int> search(String command, List<String> words, ArgResults args) async {
+  final lookup = Lookup(cacheDir: args['cache'] as String);
+  try {
+    final rows = int.parse(args['rows'] as String);
+    final years = (args['years'] as String?)?.split(RegExp(r'\s*[-–/]\s*'));
+    final from = years == null ? null : int.parse(years.first);
+    final to = years == null ? null : int.parse(years.last);
+    final Object result;
+    if (command == 'text') {
+      result = await lookup.text(
+        words.first,
+        words.sublist(1),
+        context: int.parse(args['context'] as String),
+      );
+    } else {
+      final query = words.sublist(1).join(' ');
+      result = switch (words.first) {
+        'newspapers' => await lookup.newspapers(
+          query,
+          from: from,
+          to: to,
+          state: args['place'] as String?,
+          rows: rows,
+        ),
+        'books' => await lookup.books(query, from: from, to: to, rows: rows),
+        _ => await lookup.wikitree(
+          query,
+          born: switch (args['born']) {
+            final String b => int.parse(b),
+            _ => null,
+          },
+          rows: rows,
+        ),
+      };
+    }
+    stdout.writeln(const JsonEncoder.withIndent('  ').convert(result));
+    return 0;
+  } on FormatException catch (e) {
+    stderr.writeln(e.message);
+    return 65;
+  } on IOException catch (e) {
+    stderr.writeln('$e');
+    return 69;
+  } finally {
+    lookup.close();
+  }
 }

@@ -93,10 +93,11 @@ store interface, revisions and the log on every write) still holds.
 ### Free-source search
 
 `dart run prosapia:research lookup <source> <query> [--years …] [--place …]`, with
-`newspapers`, `books` and `wikitree` to start. Each result is a candidate in the shape
-of an item: title, date, place, link, a snippet of text, and the date it was accessed. A
-candidate becomes an item through `add-item`. Requests are slow and few, within each
-API's rate limit.
+`newspapers`, `books` and `wikitree`, and `text <link> <words>` to read a hit. Each
+newspaper page or book is a candidate whose `item` is in the shape `add-item` takes:
+title, date, place, link and the date it was found, beside a snippet of text (and for a
+newspaper, an image of the page). A WikiTree profile is a lead, not an item. Requests
+are a second apart at least.
 
 ### Task logs and the inbox
 
@@ -128,6 +129,14 @@ in the log. A search that found nothing can be kept on the page as a `Note:`, wh
 stops the next researcher repeating it.
 
 ## Milestones
+
+| Milestone              | State                    |
+| ---------------------- | ------------------------ |
+| R1: The skill and log  | Done, November 2026      |
+| R2: Reading commands   | Done, November 2026      |
+| R3: Writing commands   | Done, November 2026      |
+| R4: Free-source search | Built; first use to come |
+| R5: The inbox          | Not started              |
 
 ### R1: The skill and the task log
 
@@ -183,6 +192,16 @@ owner reviewed its diff.
 - Results that `add-item` takes as they are.
 
 Done when a task finds and cites a newspaper item without a person searching.
+
+Built in November 2026, in [lib/src/lookup.dart](../lib/src/lookup.dart): Chronicling
+America through loc.gov's JSON API (with each hit's passage from its word-coordinates
+service), the Internet Archive's advanced search and a book's OCR text, and WikiTree's
+`searchPerson`, filtered to the family name since its matching is loose. HathiTrust is
+left out: its public full-text search refuses automated requests, so its searches stay
+with a person. (The HathiTrust Research Center, whose access ends in 2026, was never
+used.) Tried on the Carew task, `lookup newspapers michael carew` found Michael F. Carew
+and Patrick Nolan on the reception committee of St. Anselm's Union, St. Anselm's Church,
+152nd Street, in the New-York Tribune of 14 August 1892.
 
 ### R5: The inbox
 
