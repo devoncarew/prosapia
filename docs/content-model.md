@@ -309,7 +309,7 @@ own.
 - **Who it is about is read from the text,** never stored apart: the people its story
   mentions with `@`, and anyone whose page has a `See also:` line naming it
   (`See also: #carew-family-k3m9qa`; a person may name several; the earlier `Family:` is
-  still read). It lists them, and their pages show it, under Family or Mentioned in.
+  still read). It lists them, and their pages show it, under See also or Mentioned in.
 - **It is found** from the home page, from the family name's heading in the People list
   (for pages named in `See also:` lines), from search, and from the people it is about.
 - **Not yet:** membership by descent from an ancestor, and pages chosen as a family

@@ -1453,7 +1453,7 @@ ${rows.isEmpty ? '<p class="empty">Nothing is marked as needing a source.</p>' :
     ]);
 
     final (:families, :mentions) = pagesFor(p);
-    row('Family', [
+    row('See also', [
       for (final w in families) '<a href="${wikiPath(w)}">${esc(w.title)}</a>',
     ]);
     row('Mentioned in', [

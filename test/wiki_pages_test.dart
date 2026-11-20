@@ -78,7 +78,7 @@ void main() {
     expect(pages.families, [family]);
     expect(pages.mentions, [house]);
     final html = r.personArticle(john);
-    expect(html, contains('<th>Family</th>'));
+    expect(html, contains('<th>See also</th>'));
     expect(html, contains('<a href="/pages/carew-family-k3m9qa">'));
     expect(html, contains('<th>Mentioned in</th>'));
   });
