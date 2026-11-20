@@ -2,6 +2,34 @@ import 'package:prosapia/src/tree.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test(
+    'the editor understands the offered labels and their other spellings',
+    () {
+      final understood = Person.understoodLabels;
+      for (final label in Person.labels) {
+        expect(understood, contains(label.toLowerCase()));
+      }
+      expect(understood, containsAll(['baptized', 'spouse', 'findagrave']));
+      expect(understood, isNot(contains('divored')));
+      expect(understood, isNot(contains('note')));
+    },
+  );
+
+  test('ids in other systems are read with or without "ID"', () {
+    final p = Person.fromSource(
+      'p-a1a1a1',
+      'carew-john-a1a1a1',
+      'Name: John Carew\nFamilySearch ID: LZ5X-QRT\nWikiTree: Carew-123\n'
+          'Find a Grave ID: 12345678\n',
+    );
+    expect(p.externalIds, {
+      'FamilySearch': 'LZ5X-QRT',
+      'WikiTree': 'Carew-123',
+      'Find a Grave': '12345678',
+    });
+    expect(p.facts, isEmpty);
+  });
+
   test('ids in file metadata use the project prefix', () {
     expect(Media.idScheme, 'prosapia:');
   });

@@ -29,11 +29,12 @@ void main() {
   final john = Person.fromSource(
     'p-a1a1a1',
     'carew-john-a1a1a1',
-    'Name: John Carew\nFamily: #carew-family-k3m9qa\n',
+    'Name: John Carew\nSee also: #carew-family-k3m9qa\n',
   );
   final mary = Person.fromSource(
     'p-b2b2b2',
     'carew-mary-b2b2b2',
+    // `Family:` is the earlier label, still read.
     'Name: Mary Carew\nFamily: #carew-family-k3m9qa, #nothing-zzzzzz\n\n'
         'She wrote about #carew-family-k3m9qa.\n',
   );

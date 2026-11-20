@@ -15,7 +15,7 @@ void main() {
   final page = Person.fromSource(
     'p-a1a1a1',
     'a-a1a1a1',
-    'Name: A\nPhoto: #m-gdcade\nFamilySearch: LZ5X-QRT\n'
+    'Name: A\nPhoto: #m-gdcade\nFamilySearch ID: LZ5X-QRT\n'
         'Married: B, 1910, source: "#m-gdcade, page 2"\n'
         'Born: 1890, source: #m-nothin\n\n'
         'They married in 1910 [source: #m-gdcade] and moved [source: 1920 census]. '

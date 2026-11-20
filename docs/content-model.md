@@ -190,6 +190,10 @@ Settled at the start of milestone 13:
   `Christened`, `Died`, `Buried`, `Married`, `Divorced`; `Parents`, `Children`,
   `Partner`, `Siblings`; `Occupation`, `Education`, `Residence`, `Degree`, `Graduated`,
   `Title`. Any other label is kept as a fact of that kind and shown as written.
+  `Immigrated`, `Naturalized`, `Military`, `Religion` and `Cause of death` are
+  recommended for facts outside the vocabulary, and offered with it as you type. The
+  editor highlights the labels it knows, and `@` and `#` references that lead to a page
+  or item, so a misspelt label or a reference to nothing is left plain.
 - **What was typed is what is kept.** A page is stored as typed, after a light
   formatting pass that never changes what it says or how it renders: single spaces in
   fact lines, one blank line between blocks, and paragraphs and list items wrapped at 88
@@ -264,8 +268,10 @@ puts them into practice.
   other documents are printed to PDF. Decided after milestone 25. A PDF that has text of
   its own offers it as the transcription, filled in only when asked. A claim is marked
   as needing a source with `source: needed` or `[source: needed]`.
-- **Ids in other systems are facts:** `FamilySearch: LZ5X-QRT`, `WikiTree: Carew-123`,
-  `Find a Grave: 12345678`, each shown as a link to the record, like GEDCOM 7's `EXID`.
+- **Ids in other systems are facts:** `FamilySearch ID: LZ5X-QRT`,
+  `WikiTree ID: Carew-123`, `Find a Grave ID: 12345678`, each shown as a link to the
+  record, like GEDCOM 7's `EXID`. The labels say "ID", as the sites do, so they are not
+  mistaken for `Family name:`; the earlier labels without it are still read.
 - **Dates** stay forgiving and as typed; `1861 or 1862` is also read, as between the
   two.
 - **Places stay free text,** written smallest to largest, with completion steering
@@ -301,13 +307,13 @@ own.
 - **It is an item, referred to with `#`:** `#carew-family-k3m9qa`, with completion. Its
   six-character id is unique across photos, documents, sources and pages.
 - **Who it is about is read from the text,** never stored apart: the people its story
-  mentions with `@`, and anyone whose page has a `Family:` line naming it
-  (`Family: #carew-family-k3m9qa`; a person may name several). It lists them, and their
-  pages show it, under Family or Mentioned in.
+  mentions with `@`, and anyone whose page has a `See also:` line naming it
+  (`See also: #carew-family-k3m9qa`; a person may name several; the earlier `Family:` is
+  still read). It lists them, and their pages show it, under Family or Mentioned in.
 - **It is found** from the home page, from the family name's heading in the People list
-  (for pages named in `Family:` lines), from search, and from the people it is about.
+  (for pages named in `See also:` lines), from search, and from the people it is about.
 - **Not yet:** membership by descent from an ancestor, and pages chosen as a family
-  name's page without a `Family:` line. Two unrelated families of one name are simply
+  name's page without a `See also:` line. Two unrelated families of one name are simply
   two pages.
 
 ### Proposed

@@ -55,7 +55,7 @@ A project skill at `.claude/skills/genealogy-research/`. It holds method, not ac
   probate, land, military, immigration, city directories, newspapers.
 - Which sites Claude may search itself and which go into a brief, as listed above.
 - How to cite in Prosapia: items, `source: #…` on facts, `[source: …]` in the story, ids
-  in other systems as facts (`FamilySearch: LZ5X-QRT`), and `source: needed`.
+  in other systems as facts (`FamilySearch ID: LZ5X-QRT`), and `source: needed`.
 - Rules: never state a match as fact without a source; when records disagree, add a
   second value with its source rather than replacing the first; leave a page's prose
   alone unless the task is about it.

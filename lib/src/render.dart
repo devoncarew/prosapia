@@ -96,7 +96,7 @@ $body
   }
 
   /// The pages about families and things that [p] belongs to, by a
-  /// `Family:` line on their page, and those whose stories mention them.
+  /// `See also:` line on their page, and those whose stories mention them.
   ({List<WikiPage> families, List<WikiPage> mentions}) pagesFor(Person p) {
     final families = [for (final id in p.families) ?tree.pages[id]];
     final mentions = [
@@ -106,7 +106,7 @@ $body
     return (families: families, mentions: mentions);
   }
 
-  /// The people a page is about: those whose pages name it in a `Family:`
+  /// The people a page is about: those whose pages name it in a `See also:`
   /// line, then those its story mentions.
   List<Person> peopleOf(WikiPage w) {
     final family = [
@@ -275,7 +275,7 @@ $body
 <li><strong>Work back one generation at a time,</strong> and be sure of each link before going further.</li>
 <li><strong>Expect records to disagree.</strong> Names are spelled many ways, ages drift from one census to the next, and indexes have transcription errors. Search for variants, and look at the image of the original record, not just the index entry.</li>
 <li><strong>Other people's online family trees copy each other's mistakes.</strong> Use them to find records, not as records.</li>
-<li><strong>Write down where each fact came from,</strong> on the person's page: in a <code>Note:</code> line or in the story, such as “1920 census, Hartford, CT, on FamilySearch”.</li>
+<li><strong>Write down where each fact came from,</strong> on the person's page: as a <code>source:</code> part of the fact, or in the story, such as “1920 census, Hartford, CT, on FamilySearch”.</li>
 </ul>
 
 <h2>Free</h2>
@@ -608,15 +608,15 @@ ${q('names', 'How do I add a nickname, a maiden name or another spelling?', '<co
 ${q('family-name', 'Do I need a Family name line?', 'Almost never. Prosapia takes the family name from the last word of the name, skipping endings such as Jr. or 3rd. Add <code>Family name:</code> only when that is wrong, as for some Spanish and Dutch names; it decides how the person is grouped in the People list.', 'Name: Maria de la Cruz García\nFamily name: de la Cruz')}
 ${q('unknown', 'What if part of a name is not known?', 'Write <code>Unknown</code> for the missing part, and a question mark after a word you are unsure of.', 'Name: Joyce Unknown\nName: Unknown Condon\nName: Anna? Hayes')}
 ${q('adopted', 'What about adopted, step or foster relations?', 'Put the kind in parentheses after the name.', 'Children: John Price (adopted)\nParents: @hughes-thomas-3f8d1a (step)')}
-${q('facts', 'Where do jobs, schools, military service or homes go?', 'Any label works, one fact per line: <code>Occupation:</code>, <code>Education:</code>, <code>Military:</code>, <code>Residence:</code>, <code>Religion:</code>, or whatever fits. Repeat a label for more than one. Each shows in the timeline when it has a date.', 'Occupation: teacher, 1905 to 1910\nEducation: "Scranton High School", 1904')}
+${q('facts', 'Where do jobs, schools, military service or homes go?', 'Any label works, one fact per line: <code>Occupation:</code>, <code>Education:</code>, <code>Military:</code>, <code>Residence:</code>, <code>Religion:</code>, or whatever fits. Repeat a label for more than one. Each shows in the timeline when it has a date. The labels Prosapia knows are highlighted as you type; one left plain may be misspelt.', 'Occupation: teacher, 1905 to 1910\nEducation: "Scranton High School", 1904')}
 ${q('note', 'Where does something go that is not a fact?', 'In the story. A remark about the record, such as why a date is doubtful or a search that found nothing, goes under a <code>## Notes</code> heading at the end of the page.', "## Notes\n\n- Her mother's family came from Wales.\n- Not found in the 1901 Irish census, searched in 2026.")}
 ${q('story', 'How do I write the story?', 'Below the facts, after a blank line, write as you would anywhere: paragraphs separated by blank lines. Start a line with <code>##</code> for a section heading. <code>*Italics*</code>, <code>**bold**</code> and lists work too; the buttons above the editor add them.', '## 1923: The move to Hartford')}
 ${q('link', 'How do I mention a person in the story?', 'Type <code>@</code> and part of their name, and choose them. The page shows their name as a link.', 'She married @price-walter-7k2m9x in 1910.')}
 ${q('cite', 'How do I say where something in the story came from?', 'Add a <code>[source: …]</code> mark after it, as you would a footnote. It shows as a small number, which leads to the photo or document if it is one, and the page lists its sources at the end. Write the source as text, or type <code>#</code> and part of a photo or document\'s title to point to it, with any detail after a comma.', 'They married in 1910 [source: #m-gdcade, page 2] and were\nin Hartford by 1920 [source: 1920 census, Hartford].')}
 ${q('needed', 'How do I mark something that needs a source?', 'Write <code>needed</code> as its source. It shows as “source needed”, and is listed under <a href="/sources-wanted">Sources wanted</a> for anyone who wants to find one.', 'Born: 1861, source: needed\nShe worked at the mill [source: needed].')}
 ${q('items', 'How do I mention a photo or document in the story?', 'Type <code>#</code> and part of its title, and choose it. The page shows its title as a link. In a fact, <code>source: #…</code> cites it.', 'The certificate is #m-gdcade.')}
-${q('elsewhere', 'How do I link to their record on FamilySearch, WikiTree or Find a Grave?', 'Add a fact with the site as its label and their id there as the value. It shows as a link on the page.', 'FamilySearch: LZ5X-QRT\nWikiTree: Hughes-123\nFind a Grave: 12345678')}
-${q('family', 'How do I show that someone belongs to a family page?', 'A <a href="/pages">page</a> about a family, a house or a company lists the people its story mentions, and shows on their pages. To add someone it does not mention, add a <code>Family:</code> line to their page with the page\'s <code>#</code> reference; type <code>#</code> and part of its title to find it.', 'Family: #carew-family-k3m9qa')}
+${q('elsewhere', 'How do I link to their record on FamilySearch, WikiTree or Find a Grave?', 'Add a fact with the site and ID as its label, and their id there as the value. It shows as a link on the page.', 'FamilySearch ID: LZ5X-QRT\nWikiTree ID: Hughes-123\nFind a Grave ID: 12345678')}
+${q('family', 'How do I show that someone belongs to a family page?', 'A <a href="/pages">page</a> about a family, a house or a company lists the people its story mentions, and shows on their pages. To add someone it does not mention, add a <code>See also:</code> line to their page with the page\'s <code>#</code> reference; type <code>#</code> and part of its title to find it.', 'See also: #carew-family-k3m9qa')}
 ${q('marks', 'What are [date: …] and [place: …]?', 'Marks for a date or a place in the story, so Prosapia reads them reliably. They show as ordinary text. The Date and Place buttons add them.', 'In [date: spring 1923] the family moved to [place: Hartford, CT].')}
 ${q('long', 'A fact is too long for one line.', 'Carry it on to the next line, indented by two spaces. Format does this for you.', 'Married: Walter Price, 12 June 1910, place: "St. Luke\'s Church, Scranton, PA",\n  source: Pennsylvania marriage records')}
 ${q('format', 'What does the Format button do?', 'It tidies the text the way Publish will save it: single spaces, quotes and labels where they make the meaning clear, and long lines wrapped. It puts the facts in the usual order (names, birth and death, parents, partners, children, other facts, notes last) and writes sex as male, female, intersex or unknown. It never changes what the page says; a line it cannot be sure of is left as you wrote it.')}
@@ -920,7 +920,7 @@ ${error == null ? '' : '<p class="message" role="alert">${esc(error)}</p>'}
 <form class="memory" method="post" action="/pages/new">
   <label for="title">Title</label>
   <input id="title" name="title" value="${esc(title)}" required maxlength="120" placeholder="The Carew family">
-  <p class="hint">To show this page on someone's page, mention them in its story, or add <code>Family:</code> and the page's # reference to theirs.</p>
+  <p class="hint">To show this page on someone's page, mention them in its story, or add <code>See also:</code> and the page's # reference to theirs.</p>
   <div class="save"><button class="primary">Create the page</button> <a href="/pages">Cancel</a></div>
 </form>''');
 
@@ -1003,7 +1003,7 @@ ${!_canEdit
       'No photo has the id ${p.photo}.',
     for (final id in p.families)
       if (!tree.pages.containsKey(id))
-        'No page in the tree has the id $id, named in a "Family:" line.',
+        'No page in the tree has the id $id, named in a "See also:" line.',
   ];
 
   /// Dates that look unlikely. These are questions, never errors: real

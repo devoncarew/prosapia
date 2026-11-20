@@ -117,7 +117,7 @@ abstract class Page {
 
 /// A page about something other than one person, such as a family, a house
 /// or a company: a `Title:` line, then a story. The people its story
-/// mentions, and those whose pages name it in a `Family:` line, are shown
+/// mentions, and those whose pages name it in a `See also:` line, are shown
 /// with it, and it is shown on their pages.
 class WikiPage extends Page {
   WikiPage._(super.id, super.directory, super.source);
@@ -219,9 +219,37 @@ class Person extends Page {
   };
   static const coupleEvents = {'married', 'divorced', 'separated', 'engaged'};
 
+  /// The labels offered when writing a fact, in the order offered: the
+  /// vocabulary, then labels recommended for facts outside it. Any other
+  /// label is kept as a fact of that kind, but these are the ones the editor
+  /// shows as understood.
+  static const labels = [
+    'Name', 'Nickname', 'Also known as', 'Family name', 'Sex', //
+    'Born', 'Christened', 'Died', 'Buried', //
+    'Parents', 'Children', 'Partner', 'Siblings', //
+    'Married', 'Divorced', 'Separated', 'Engaged', //
+    'Occupation', 'Education', 'Residence', 'Degree', 'Graduated', 'Title',
+    'Immigrated', 'Naturalized', 'Military', 'Religion', 'Cause of death',
+    'Photo', 'See also', 'FamilySearch ID', 'WikiTree ID', 'Find a Grave ID',
+  ];
+
+  /// Every label the editor shows as understood, as keys: [labels], and the
+  /// other spellings read as one of them.
+  static Set<String> get understoodLabels => {
+    for (final label in labels) label.toLowerCase(),
+    ...lifeEvents,
+    ...relationships,
+    ...externalSites.keys,
+    'family',
+  };
+
   /// Labels that give a person's id in another system, by that system's
   /// name as shown.
   static const externalSites = {
+    'familysearch id': 'FamilySearch',
+    'wikitree id': 'WikiTree',
+    'find a grave id': 'Find a Grave',
+    // The earlier labels, without "ID".
     'familysearch': 'FamilySearch',
     'wikitree': 'WikiTree',
     'find a grave': 'Find a Grave',
@@ -275,9 +303,9 @@ class Person extends Page {
         externalIds[externalSites[key]!] = line.value;
       case 'note':
         notes.add(line.value);
-      case 'family':
-        // `Family: #carew-family-k3m9qa`: the pages about the families they
-        // belong to.
+      case 'see also' || 'family':
+        // `See also: #carew-family-k3m9qa`: the pages about the families and
+        // things they belong to. `Family:` is the earlier label.
         for (final s in line.segments) {
           final ref = s.value.trim();
           if (ref.startsWith('#')) {
@@ -465,7 +493,7 @@ class Person extends Page {
   @override
   String get title => name;
 
-  /// The ids of the pages named in `Family:` lines: `w-k3m9qa`.
+  /// The ids of the pages named in `See also:` lines: `w-k3m9qa`.
   final families = <String>[];
   String? sex;
 

@@ -1,7 +1,8 @@
 // The page editor, with Write and Preview tabs.
 // The text is plain: facts as "Label: value" lines, then the story. The
-// editor helps without hiding that: it highlights labels, @ references,
-// quoted values and marked dates and places; it completes people after @,
+// editor helps without hiding that: it highlights the labels it
+// understands, @ and # references that lead somewhere, quoted values and
+// marked dates and places, so what is left plain is a hint; it completes people after @,
 // places after place: and labels at the start of a fact line; and it asks
 // before leaving with changes unsaved. When the tree allows it, Claude can
 // draft the story, or work new information into it: its text replaces the
@@ -53,6 +54,49 @@ function factLines(state: EditorState): Set<number> {
   return lines;
 }
 
+/**
+ * What the page understands, from the server: the fact labels (as keys)
+ * and the ids references can lead to. Until it arrives, every label and
+ * reference is highlighted.
+ */
+interface Vocabulary {
+  labels: string[];
+  understood: Set<string>;
+  people: Set<string>;
+  items: Set<string>;
+}
+let known: Vocabulary | null = null;
+
+/** Sets [known] once the server has sent it, and redraws the highlighting. */
+const vocabularyArrived = StateEffect.define<null>();
+
+async function loadVocabulary(view: EditorView): Promise<void> {
+  const response = await fetch('/api/vocabulary');
+  if (!response.ok) return;
+  const v = (await response.json()) as {
+    labels: string[];
+    understood: string[];
+    people: string[];
+    items: string[];
+  };
+  known = {
+    labels: v.labels,
+    understood: new Set(v.understood),
+    people: new Set(v.people),
+    items: new Set(v.items),
+  };
+  // The editor may have been taken down meanwhile.
+  if (view.dom.isConnected)
+    view.dispatch({ effects: vocabularyArrived.of(null) });
+}
+
+/** A label as the page reads it: "Also  Known as" is "also known as". */
+const labelKey = (label: string) =>
+  label.trim().toLowerCase().replace(/\s+/g, ' ');
+
+/** The id a reference relies on: the part after its last dash. */
+const refId = (ref: string) => ref.slice(1).split('-').pop()!;
+
 const marks = {
   label: Decoration.mark({ class: 'cm-label' }),
   ref: Decoration.mark({ class: 'cm-ref' }),
@@ -71,8 +115,8 @@ function decorate(view: EditorView): DecorationSet {
       const found: [number, number, Decoration][] = [];
       if (facts.has(line.number)) {
         // A fact's label, unless the line carries on the fact above it.
-        const label = /^[A-Za-z][A-Za-z ]{0,30}?\s*:/.exec(line.text);
-        if (label)
+        const label = /^([A-Za-z][A-Za-z ]{0,30}?)\s*:/.exec(line.text);
+        if (label && (!known || known.understood.has(labelKey(label[1]))))
           found.push([line.from, line.from + label[0].length, marks.label]);
         // A part's label, and quoted values.
         for (const m of line.text.matchAll(
@@ -98,6 +142,18 @@ function decorate(view: EditorView): DecorationSet {
       for (const m of line.text.matchAll(
         /(?<![\w@.])@[a-z0-9]+(?:-[a-z0-9]+)*/g,
       )) {
+        if (known && !known.people.has(refId(m[0]))) continue;
+        found.push([
+          line.from + m.index,
+          line.from + m.index + m[0].length,
+          marks.ref,
+        ]);
+      }
+      // "#" and an id; "# " at the start of a line is a heading instead.
+      for (const m of line.text.matchAll(
+        /(?<![\w#&/])#[a-z0-9]+(?:-[a-z0-9]+)*/g,
+      )) {
+        if (known && !known.items.has(refId(m[0]))) continue;
         found.push([
           line.from + m.index,
           line.from + m.index + m[0].length,
@@ -133,7 +189,13 @@ const highlighter = ViewPlugin.fromClass(
       this.decorations = decorate(view);
     }
     update(update: ViewUpdate): void {
-      if (update.docChanged || update.viewportChanged)
+      if (
+        update.docChanged ||
+        update.viewportChanged ||
+        update.transactions.some((t) =>
+          t.effects.some((e) => e.is(vocabularyArrived)),
+        )
+      )
         this.decorations = decorate(update.view);
     }
   },
@@ -245,6 +307,7 @@ async function places(
   };
 }
 
+/** The labels offered until the server's list arrives. */
 const vocabulary = [
   'Name',
   'Nickname',
@@ -261,17 +324,24 @@ const vocabulary = [
   'Siblings',
   'Married',
   'Divorced',
+  'Separated',
+  'Engaged',
   'Occupation',
   'Education',
   'Residence',
   'Degree',
   'Graduated',
   'Title',
+  'Immigrated',
+  'Naturalized',
+  'Military',
+  'Religion',
+  'Cause of death',
   'Photo',
-  'Family',
-  'FamilySearch',
-  'WikiTree',
-  'Find a Grave',
+  'See also',
+  'FamilySearch ID',
+  'WikiTree ID',
+  'Find a Grave ID',
 ];
 
 function labels(context: CompletionContext): CompletionResult | null {
@@ -282,7 +352,7 @@ function labels(context: CompletionContext): CompletionResult | null {
   if (!word || word.from !== line.from || line.text.includes(':')) return null;
   return {
     from: word.from,
-    options: vocabulary.map((label) => ({
+    options: (known?.labels ?? vocabulary).map((label) => ({
       label,
       apply: `${label}: `,
     })),
@@ -689,6 +759,8 @@ export function mount(form: HTMLFormElement): Mounted {
   });
   textarea.hidden = true;
   textarea.after(view.dom);
+  if (!known) void loadVocabulary(view);
+  else view.dispatch({ effects: vocabularyArrived.of(null) });
   helpButtons
     ?.querySelector('button[data-request=draft]')
     ?.addEventListener('click', openPanel);
