@@ -138,8 +138,8 @@ subscription; the link is still asked for, as the item's citation.
 A log has: the question, what was already known, each search Claude ran (site, query,
 link, what it found), the searches for a person with their results, the findings, and
 the changes proposed and written. What lasts goes into the tree as items and facts, not
-in the log. A search that found nothing can be kept on the page as a `Note:`, where it
-stops the next researcher repeating it.
+in the log. A search that found nothing can be kept in the page's `## Notes` section,
+where it stops the next researcher repeating it.
 
 ## Milestones
 
@@ -234,7 +234,7 @@ dropped, each with its log updated.
 
 ## Open
 
-- Whether negative results belong on the page as a `Note:`, in the item, or only in the
+- Whether negative results belong in the page's `## Notes`, in the item, or only in the
   log.
 - Copyright and site terms for record images saved from FamilySearch and Ancestry,
   already open in [content-model.md](content-model.md#open-1).

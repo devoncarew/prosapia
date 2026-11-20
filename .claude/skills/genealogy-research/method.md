@@ -97,5 +97,5 @@ The common cases for this family; ask for others.
 - Search for the surname alone in a small place.
 - Consider that the record does not survive, or was never made, and say so in the log.
 - A search that found nothing is still worth recording: in the log always, and on the
-  page as a `Note:` when it would save the next researcher the same search ("Not found
-  in the 1901 Irish census, searched by name and county, 2026").
+  page, in its `## Notes` section, when it would save the next researcher the same
+  search ("Not found in the 1901 Irish census, searched by name and county, 2026").

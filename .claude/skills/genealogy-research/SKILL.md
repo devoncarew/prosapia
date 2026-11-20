@@ -62,9 +62,9 @@ Read these before starting a task:
    [templates/task-log.md](templates/task-log.md), or open it if the task is already
    under way: read it first, and carry on from where it stopped.
 2. **Read what is known.** `show` and `gaps` for the person, then `show` for their
-   parents, partners and children; the items that name them; any `Note:` lines recording
-   searches already run. Write down in the log what is known, with each fact's source or
-   "no source".
+   parents, partners and children; the items that name them; the `## Notes` section and
+   any `Note:` lines, which may record searches already run. Write down in the log what
+   is known, with each fact's source or "no source".
 3. **Frame the question.** One specific question: "When and where was Michael born, and
    who were his parents?" not "Research Michael". If the owner's request is broad, pick
    the gap that would unlock the most (usually an event that names parents or a place)
@@ -132,7 +132,9 @@ Read these before starting a task:
     - **Then each person's page**: `show <id>` again for its text and revision, apply
       the approved changes to that text in a scratch file, and run
       `edit <id> --file <page.md> --based-on <revision> --summary <summary>`. A dated
-      story section alone can go through `append <id> --file <section.md>`.
+      story section alone can go through `append <id> --file <section.md>`, which puts
+      it before the page's `## Notes`; a file that is itself a `## Notes` section is
+      added to the page's notes.
     - It refuses a page that has moved on since `--based-on` (show it again and redo the
       edit), and new text with a reference to nothing, such as a `#NEW-…` placeholder
       left in.
@@ -142,8 +144,8 @@ Read these before starting a task:
     - Record each change id it prints in the log.
 
 11. **Close.** Record in the log what was written, what is still open, and any search
-    that found nothing worth keeping on the page as a `Note:`. Move the one or two
-    searches worth running later, including paid ones not run, to
+    that found nothing worth keeping on the page, under its `## Notes` section. Move the
+    one or two searches worth running later, including paid ones not run, to
     `data/research/open.md` ([templates/open.md](templates/open.md)), dated and linking
     back to the log.
 
@@ -157,7 +159,7 @@ Read these before starting a task:
   changes as in steps 8 to 10, and record them under the log's Written list. Remove the
   entry from `open.md` once all of it is run, whatever it found; if only your part is
   run, reword the entry to what is left for a person. A search that found nothing can be
-  kept as a `Note:` on the page.
+  kept in the page's `## Notes` section.
 - **Pruning.** When asked to tidy `open.md`, list each entry with its date, its site,
   and what it would settle, and suggest which to drop: ones a later task has answered,
   or that depend on an account the owner does not expect to have. Remove the ones the

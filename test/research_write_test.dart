@@ -172,6 +172,45 @@ void main() {
       expect(edit.diff(), contains('+## 1927: Death'));
     });
 
+    group('with a Notes section', () {
+      final page = Person.fromSource(
+        'p-k3m9qa',
+        'carew-michael-k3m9qa',
+        'Name: Michael Carew\n\nHe was a carpenter.\n\n## Notes\n\n'
+            '- Not in the 1880 census.\n',
+      );
+
+      test('puts a story section before it', () {
+        final edit = PageEdit.append(
+          research,
+          page,
+          '## 1927: Death\n\nHe died in the Bronx.\n',
+        );
+        expect(
+          edit.after,
+          endsWith(
+            'He was a carpenter.\n\n## 1927: Death\n\nHe died in the '
+            'Bronx.\n\n## Notes\n\n- Not in the 1880 census.\n',
+          ),
+        );
+      });
+
+      test('adds notes to it', () {
+        final edit = PageEdit.append(
+          research,
+          page,
+          '## Notes\n\n- Not in the 1890 directory.\n',
+        );
+        expect(
+          edit.after,
+          endsWith(
+            '## Notes\n\n- Not in the 1880 census.\n'
+            '- Not in the 1890 directory.\n',
+          ),
+        );
+      });
+    });
+
     test(
       'saves with the summary and who helped, or refuses an old revision',
       () async {
