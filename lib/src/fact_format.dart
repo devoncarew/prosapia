@@ -39,7 +39,11 @@ List<String> _parts(FactLine line) {
   final couple = Person.coupleEvents.contains(key);
   final relation = Person.relationships.contains(key);
   // Lists of names, or of `#` references to pages, keep each part apart.
-  final names = key == 'nickname' || key == 'also known as' || key == 'family';
+  final names =
+      key == 'nickname' ||
+      key == 'also known as' ||
+      key == 'see also' ||
+      key == 'family';
   final segments = line.segments;
 
   if (relation || names) {

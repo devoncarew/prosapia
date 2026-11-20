@@ -1705,6 +1705,21 @@ Handler siteHandler(
         },
     ]);
   });
+  // What the editor shows as understood: the fact labels, and the ids that
+  // `@` and `#` references can resolve to.
+  router.get(
+    '/api/vocabulary',
+    (Request r) => json({
+      'labels': Person.labels,
+      'understood': Person.understoodLabels.toList(),
+      'people': [for (final id in site.tree.people.keys) itemIdOf(id)],
+      'items': [
+        for (final m in site.tree.media.values)
+          if (!m.isBack) itemIdOf(m.id),
+        for (final id in site.tree.pages.keys) itemIdOf(id),
+      ],
+    }),
+  );
   router.get(
     '/api/places',
     (Request r) =>

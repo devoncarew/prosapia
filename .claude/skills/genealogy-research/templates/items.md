@@ -98,5 +98,5 @@ Born: 12 March 1882, Kilkenny, Ireland, source: #m-xxxxxx
 Born: about 1884, Ireland, source: #m-yyyyyy
 ```
 
-An id in another system is a fact of its own: `FamilySearch: LZ5X-QRT`,
-`WikiTree: Carew-123`, `Find a Grave: 12345678`.
+An id in another system is a fact of its own: `FamilySearch ID: LZ5X-QRT`,
+`WikiTree ID: Carew-123`, `Find a Grave ID: 12345678`.

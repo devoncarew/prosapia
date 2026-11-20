@@ -178,8 +178,8 @@ Read these before starting a task:
 - **Trees are not sources.** A FamilySearch, WikiTree or Ancestry tree is a lead to the
   records it cites. Cite the record, not the tree.
 - **Ids in other systems are facts.** When the person is found in FamilySearch's tree,
-  WikiTree or Find a Grave, propose `FamilySearch: LZ5X-QRT`, `WikiTree: Carew-123` or
-  `Find a Grave: 12345678` as a fact line.
+  WikiTree or Find a Grave, propose `FamilySearch ID: LZ5X-QRT`,
+  `WikiTree ID: Carew-123` or `Find a Grave ID: 12345678` as a fact line.
 - **Respect each site's terms.** Never fetch, scrape or drive a browser on a site that
   [sites.md](sites.md) lists for a person to search, even when it seems quicker.
 - **Living people are left alone.** Do not search for anyone who may be living unless

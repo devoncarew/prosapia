@@ -51,8 +51,8 @@ Research Center, whose access is ending in 2026.)
 cites, not a source. `lookup wikitree <given> <family> --born <year>` lists profiles
 with that family name, with `--born` to narrow loosely by birth year.
 
-- When a profile is the same person, propose `WikiTree: <id>` as a fact, and follow its
-  sources. To read one:
+- When a profile is the same person, propose `WikiTree ID: <id>` as a fact, and follow
+  its sources. To read one:
   `https://api.wikitree.com/api.php?appId=prosapia&action=getProfile&key=<WikiTree-ID>&fields=Name,FirstName,LastNameAtBirth,BirthDate,BirthLocation,DeathDate,DeathLocation,Father,Mother&bioFormat=text`.
   Without `appId` every request is refused with "Limit exceeded".
 
@@ -105,7 +105,7 @@ may not have an account. Unrun, it moves to `open.md` when the task closes.
 - Search:
   `https://www.findagrave.com/memorial/search?firstname=<first>&lastname=<last>&birthyear=<yyyy>&deathyear=<yyyy>`.
 - Ask for: the memorial's number and link, a photo of the stone if there is one, and the
-  inscription as text. Propose `Find a Grave: <number>` as a fact. The memorial's
+  inscription as text. Propose `Find a Grave ID: <number>` as a fact. The memorial's
   biography and family links are someone's work, not a record: only the stone is
   evidence.
 
