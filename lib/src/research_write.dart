@@ -44,15 +44,35 @@ class PageEdit {
   static PageEdit replace(Research research, Page page, String source) =>
       _of(research, page, formatPage(source.replaceAll('\r\n', '\n')));
 
-  /// [page] with [section] added to the end of its story.
-  static PageEdit append(Research research, Page page, String section) => _of(
-    research,
-    page,
-    formatPage(
-      '${page.source.trimRight()}\n\n'
-      '${section.replaceAll('\r\n', '\n').trim()}\n',
-    ),
-  );
+  /// [page] with [section] added to the end of its story, before its
+  /// `## Notes` section if it has one. A `## Notes` section is added to the
+  /// page's own, below what it already has.
+  static PageEdit append(Research research, Page page, String section) {
+    final source = page.source.replaceAll('\r\n', '\n').trimRight();
+    var text = section.replaceAll('\r\n', '\n').trim();
+    final notes = _notesHeading.allMatches(source).lastOrNull;
+    final String after;
+    if (notes == null) {
+      after = '$source\n\n$text\n';
+    } else if (_notesHeading.matchAsPrefix(text) case final m?) {
+      text = text.substring(m.end).trim();
+      // A list continues the list the notes end with.
+      final gap =
+          _listItem.hasMatch(source.split('\n').last) &&
+              _listItem.hasMatch(text)
+          ? '\n'
+          : '\n\n';
+      after = text.isEmpty ? '$source\n' : '$source$gap$text\n';
+    } else {
+      after =
+          '${source.substring(0, notes.start).trimRight()}\n\n$text\n\n'
+          '${source.substring(notes.start)}\n';
+    }
+    return _of(research, page, formatPage(after));
+  }
+
+  static final _notesHeading = RegExp(r'^## Notes[ \t]*$', multiLine: true);
+  static final _listItem = RegExp(r'^\s*([-*+]|\d+[.)])\s');
 
   static PageEdit _of(Research research, Page page, String after) {
     final before = research.issuesOf(page).toSet();

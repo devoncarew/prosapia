@@ -272,7 +272,6 @@ const vocabulary = [
   'FamilySearch',
   'WikiTree',
   'Find a Grave',
-  'Note',
 ];
 
 function labels(context: CompletionContext): CompletionResult | null {

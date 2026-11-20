@@ -189,7 +189,7 @@ Settled at the start of milestone 13:
 - **The vocabulary:** `Name`, `Nickname`, `Also known as`, `Family name`, `Sex`; `Born`,
   `Christened`, `Died`, `Buried`, `Married`, `Divorced`; `Parents`, `Children`,
   `Partner`, `Siblings`; `Occupation`, `Education`, `Residence`, `Degree`, `Graduated`,
-  `Title`, `Note`. Any other label is kept as a fact of that kind and shown as written.
+  `Title`. Any other label is kept as a fact of that kind and shown as written.
 - **What was typed is what is kept.** A page is stored as typed, after a light
   formatting pass that never changes what it says or how it renders: single spaces in
   fact lines, one blank line between blocks, and paragraphs and list items wrapped at 88
@@ -211,8 +211,8 @@ puts them into practice.
   written in; nothing is sorted by date. The value is that the first lines are
   predictable and notes come last.
 - **No comments.** Hidden lines are unfamiliar, invisible to readers by design, and tend
-  to collect facts that belong on the page. Blank fields are the prompts, and a `Note:`
-  line, which readers see, holds a remark
+  to collect facts that belong on the page. Blank fields are the prompts, and a remark
+  goes in the page's `## Notes` section, which readers see
   ([#53](https://github.com/devoncarew/prosapia/issues/53)).
 - **New pages start with blank fields:** `Sex:`, `Born:`, `Died:` and `Parents:`, empty
   unless something is known. An empty fact is never a problem, never shown, and has no
@@ -270,6 +270,20 @@ puts them into practice.
   two.
 - **Places stay free text,** written smallest to largest, with completion steering
   toward forms already in the tree. Places as records stay future work.
+- **Notes are a section of the story,** not fact lines. Remarks about the record, such
+  as why a census's birthplace is not used or a search that found nothing, go under a
+  `## Notes` heading at the end of the story, as ordinary markdown (a list or short
+  paragraphs). `Note:` lines made the facts block long; they are still read, and are
+  moved into `## Notes` as pages are edited. Decided after milestone 25. Raw stories
+  from the family's notes are left as they are until someone writes them up.
+- **Unknown names.** `Unknown` stands for any part of a name that is not known, as a
+  whole, capitalised word: `Joyce Unknown` for a wife whose family name is not known,
+  `Unknown Condon`, or `Unknown Heyes` for an unnamed child. A question mark on a word
+  marks it as uncertain: `Anna? Hayes`. There is no standard across genealogy sites:
+  FamilySearch leaves the part blank, which needs a separate surname field; WikiTree
+  uses `Unknown`. Prosapia shows the name as written. Not yet: leaving `Unknown` out of
+  the family names in the People list, and writing each export format's own form, such
+  as a blank surname in GEDCOM.
 - **Shared events,** when scheduled, start from GEDCOM X's model: an event as a record
   of its own, with each person given a role in it. GEDCOM 7 instead puts an event on one
   person or one family, with others linked as associations. Until then a fact can name

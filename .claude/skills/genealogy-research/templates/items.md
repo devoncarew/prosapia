@@ -79,7 +79,14 @@ Once the item exists, cite it by its `#` id. A fact names it with `source:`:
 ```
 Born: 12 March 1882, Kilkenny, Ireland, source: #m-xxxxxx
 Died: 4 June 1941, Scranton, Pennsylvania, source: #m-yyyyyy
-Note: Not found in the 1901 Irish census, searched by name and county, 2026
+```
+
+A remark goes in the story's `## Notes` section, at the end of the page:
+
+```
+## Notes
+
+- Not found in the 1901 Irish census, searched by name and county, 2026.
 ```
 
 The story cites with a mark: `He sailed for New York in 1903 [source: #m-zzzzzz].`

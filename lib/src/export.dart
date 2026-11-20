@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import 'firestore_store.dart';
+import 'page_syntax.dart';
 import 'store.dart';
 import 'tree.dart';
 
@@ -96,6 +97,20 @@ class Exporter {
         }
       }
 
+      // Folders left by pages renamed before old folders were removed.
+      if (removeRenamed(checkout, tree) > 0) {
+        _writeState(checkout, state, tree);
+        if (await _commit(
+          checkout,
+          message: 'Remove the folders of renamed pages',
+          name: 'Prosapia export',
+          email: 'export@prosapia.app',
+          at: DateTime.now(),
+        )) {
+          commits++;
+        }
+      }
+
       // Files no logged change added, such as those loaded with the tree.
       if (await _copyMissingMedia(checkout, tree) > 0) {
         _writeState(checkout, state, tree);
@@ -132,6 +147,17 @@ class Exporter {
       );
       final revision = await store.revision(id, number);
       if (revision == null) continue;
+      // A page renamed since it was last exported is in a folder of its old
+      // name, which ends in the same id.
+      final parent = Directory(p.dirname(dir));
+      if (parent.existsSync()) {
+        final suffix = '-${itemIdOf(id)}';
+        for (final old in parent.listSync().whereType<Directory>()) {
+          if (old.path != dir && p.basename(old.path).endsWith(suffix)) {
+            old.deleteSync(recursive: true);
+          }
+        }
+      }
       if (revision.deleted) {
         if (Directory(dir).existsSync()) {
           Directory(dir).deleteSync(recursive: true);
@@ -291,4 +317,29 @@ class _ExportState {
   /// The changes already exported at time [at], which a query for changes
   /// since [at] returns again.
   Set<String> ids = {};
+}
+
+/// Removes each folder in [checkout] whose id belongs to a page now
+/// exported under another name, and returns how many.
+int removeRenamed(String checkout, Tree tree) {
+  var removed = 0;
+  for (final (kind, pages) in [
+    ('people', tree.people.values),
+    ('pages', tree.pages.values),
+  ]) {
+    final current = {
+      for (final page in pages) itemIdOf(page.id): page.directory,
+    };
+    final parent = Directory(p.join(checkout, kind));
+    if (!parent.existsSync()) continue;
+    for (final dir in parent.listSync().whereType<Directory>()) {
+      final name = p.basename(dir.path);
+      final now = current[itemIdOf(name)];
+      if (now != null && now != name) {
+        dir.deleteSync(recursive: true);
+        removed++;
+      }
+    }
+  }
+  return removed;
 }
