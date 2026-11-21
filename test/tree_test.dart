@@ -20,12 +20,12 @@ void main() {
       'p-a1a1a1',
       'carew-john-a1a1a1',
       'Name: John Carew\nFamilySearch ID: LZ5X-QRT\nWikiTree: Carew-123\n'
-          'Find a Grave ID: 12345678\n',
+          'Find a Grave ID: 12345678\nFamilySearch ID: MTZQ-Q43\n',
     );
     expect(p.externalIds, {
-      'FamilySearch': 'LZ5X-QRT',
-      'WikiTree': 'Carew-123',
-      'Find a Grave': '12345678',
+      'FamilySearch': ['LZ5X-QRT', 'MTZQ-Q43'],
+      'WikiTree': ['Carew-123'],
+      'Find a Grave': ['12345678'],
     });
     expect(p.facts, isEmpty);
   });
