@@ -77,6 +77,40 @@ void main() {
     expect(RegExp('<h2>Sources</h2>').allMatches(html), hasLength(1));
   });
 
+  test('facts beside the story share its numbered sources', () {
+    final t = Tree('test');
+    t.media['m-gdcade'] = tree.media['m-gdcade']!;
+    final p = Person.fromSource(
+      'p-d4d4d4',
+      'd-d4d4d4',
+      'Name: D\nAlso known as: D Smith (married name), source: #m-gdcade\n'
+          'Born: 1890, source: 1900 census\nDied: 1950, source: #m-gdcade\n\n'
+          'She married in 1910 [source: #m-gdcade].\n',
+    );
+    t.people[p.id] = p;
+    final html = Renderer(t, Index.build(t)).personArticle(p);
+    expect(p.alsoKnownAs, ['D Smith']);
+    expect(html, isNot(contains('source: #')));
+    expect(html, isNot(contains('>source<')));
+    // The story's source is 1 wherever it is cited (the name, the death in
+    // the infobox and the timeline, and the story); the census is 2.
+    expect(
+      RegExp(
+        '<a href="/media/m-gdcade" title="Marriage certificate">1</a>',
+      ).allMatches(html),
+      hasLength(4),
+    );
+    expect(html, contains('<a href="#source-2" title="1900 census">2</a>'));
+    expect(
+      html,
+      contains(
+        '<li id="source-1"><a href="/media/m-gdcade">Marriage certificate</a> '
+        '<span class="kind">Died, Also known as, Story</span></li>',
+      ),
+    );
+    expect(html, contains('<li id="source-2">1900 census'));
+  });
+
   test('a birth or death known only by its place is in Also recorded', () {
     final t = Tree('test');
     final p = Person.fromSource(
@@ -106,8 +140,8 @@ void main() {
     expect(
       html,
       contains(
-        'Father of <a href="/people/a-a1a1a1">A</a>, born in Ireland '
-        '<a class="cite" href="/media/m-gdcade"',
+        'Father of <a href="/people/a-a1a1a1">A</a>, born in Ireland'
+        '<sup class="cite-ref"><a href="/media/m-gdcade"',
       ),
     );
     expect(html, isNot(contains('source: #')));

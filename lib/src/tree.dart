@@ -280,14 +280,24 @@ class Person extends Page {
       case 'name':
         name = line.value;
       case 'nickname':
-        nicknames.addAll(line.segments.map((s) => s.value));
+        nicknames.addAll([
+          for (final s in line.segments)
+            if (s is! SourceSegment) s.value,
+        ]);
       case 'also known as':
-        // `Margaret Price (married name)`: the name, and what kind it is.
+        // `Margaret Price (married name)`: the name, and what kind it is,
+        // with the sources the line cites.
+        final sources = [
+          for (final s in line.segments)
+            if (s is SourceSegment) s.source,
+        ];
         for (final s in line.segments) {
+          if (s is SourceSegment) continue;
           final m = _namedWithQualifier.firstMatch(s.value);
           final name = m == null ? s.value : m[1]!;
           alsoKnownAs.add(name);
           if (m != null) nameKinds[name] = m[2]!.trim();
+          if (sources.isNotEmpty) nameSources[name] = sources;
         }
       case 'family name':
         familyName = line.value;
@@ -513,6 +523,9 @@ class Person extends Page {
   /// What kind of name each of [alsoKnownAs] is, when written:
   /// `married name`.
   final nameKinds = <String, String>{};
+
+  /// Where each of [alsoKnownAs] comes from, when its line cites a source.
+  final nameSources = <String, List<String>>{};
 
   /// For a life event written more than once, the other versions, keyed by
   /// the one that is used.

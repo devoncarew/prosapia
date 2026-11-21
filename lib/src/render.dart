@@ -708,6 +708,30 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
   /// not yet part of the tree; a [preview] leaves out photos and actions.
   /// An [editor] takes the story's place.
   String personArticle(Person p, {bool preview = false, String? editor}) {
+    // The page's sources, numbered once for the story, the facts beside it
+    // and the timeline: the story's first, in order, then the facts'.
+    _numbered = [
+      for (final c in citationsOn(p))
+        if (c.where == 'Story' && !isWanted(c.source)) c.source,
+    ];
+    for (final c in citationsOn(p)) {
+      if (!isWanted(c.source) && !_numbered!.contains(c.source)) {
+        _numbered!.add(c.source);
+      }
+    }
+    try {
+      return _personArticle(p, preview: preview, editor: editor);
+    } finally {
+      _numbered = null;
+    }
+  }
+
+  /// The sources of the person's page being rendered, in the order they
+  /// are numbered; null on other pages, where a fact's source shows as a
+  /// "source" mark.
+  List<String>? _numbered;
+
+  String _personArticle(Person p, {required bool preview, String? editor}) {
     final sb = StringBuffer();
     final actions = _canEdit && !preview;
     sb.write(
@@ -737,10 +761,9 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
       }
     }
 
-    final storySources = <String>[];
     if (p.body.isNotEmpty) {
       sb.write(
-        '<div class="prose">${markdown(p.body, cited: storySources)}</div>',
+        '<div class="prose">${markdown(p.body, cited: _numbered)}</div>',
       );
     } else {
       sb.write(
@@ -763,7 +786,7 @@ ${q('claude', 'Can Claude help?', 'If your family has it switched on, <strong>Cl
       }
       sb.write('</ul>');
     }
-    sb.write(_sourcesSection(p, storySources));
+    sb.write(_sourcesSection(p, _numbered!));
 
     final media = preview
         ? const <Media>[]
@@ -1166,11 +1189,14 @@ ${!_canEdit
     return source == null ? html : html + cite(Event(sources: [source]));
   }
 
-  /// Where [e] comes from, as small marks with the source on hover.
+  /// Where [e] comes from, as small marks with the source on hover: on a
+  /// person's page, the source's number, as in the story.
   String cite(Event e) => [
     for (final source in e.sources)
       if (isWanted(source))
         ' <span class="cite needed" title="A source is wanted for this">source needed</span>'
+      else if (_numbered case final numbered?)
+        _numberMark(numbered, source)
       else
         switch (_source(source)) {
           (final href?, final title) =>
@@ -1181,6 +1207,18 @@ ${!_canEdit
                 '<span>${esc(title)}</span></details>',
         },
   ].join();
+
+  /// [source]'s number among [numbered], added if it is new, as a footnote
+  /// mark: to the item it names, or else to the list of sources.
+  String _numberMark(List<String> numbered, String source) {
+    var n = numbered.indexOf(source) + 1;
+    if (n == 0) {
+      numbered.add(source);
+      n = numbered.length;
+    }
+    final (href, title) = _source(source);
+    return '<sup class="cite-ref"><a href="${href ?? '#source-$n'}" title="${esc(title)}">$n</a></sup>';
+  }
 
   /// Every citation on [p]'s page: where it is (a fact's label, or the
   /// story) and the source as written.
@@ -1193,6 +1231,9 @@ ${!_canEdit
     ])
       for (final event in [?e, ...p.alternativesTo(e)])
         for (final s in event.sources) (where: label, source: s),
+    for (final name in p.alsoKnownAs)
+      for (final s in p.nameSources[name] ?? const <String>[])
+        (where: 'Also known as', source: s),
     for (final c in p.couples)
       for (final s in c.event.sources) (where: c.kind, source: s),
     for (final f in p.facts)
@@ -1203,36 +1244,28 @@ ${!_canEdit
       (where: 'Story', source: m[1]!.trim()),
   ];
 
-  /// The sources of [p]'s page in one place: those cited in the story,
-  /// numbered as they are there, then those cited by the facts.
-  String _sourcesSection(Person p, List<String> story) {
-    String show(String s) => switch (_source(s)) {
-      (final href?, final title) => '<a href="$href">${esc(title)}</a>',
-      (null, final title) => esc(title),
-    };
-    final facts = [
-      for (final c in citationsOn(p))
-        if (c.where != 'Story' && !isWanted(c.source)) c,
-    ];
-    if (story.isEmpty && facts.isEmpty) return '';
-    final sb = StringBuffer('<section class="sources"><h2>Sources</h2>');
-    if (story.isNotEmpty) {
-      sb.write('<ol>');
-      for (final (i, s) in story.indexed) {
-        sb.write('<li id="source-${i + 1}">${show(s)}</li>');
-      }
-      sb.write('</ol>');
+  /// The sources of [p]'s page in one place, numbered as they are cited,
+  /// each with where on the page it is cited.
+  String _sourcesSection(Person p, List<String> numbered) {
+    if (numbered.isEmpty) return '';
+    final where = <String, List<String>>{};
+    for (final c in citationsOn(p)) {
+      final at = where.putIfAbsent(c.source, () => []);
+      if (!at.contains(c.where)) at.add(c.where);
     }
-    if (facts.isNotEmpty) {
-      sb.write('<ul class="fact-sources">');
-      for (final c in facts) {
-        sb.write(
-          '<li><span class="kind">${esc(c.where)}</span> ${show(c.source)}</li>',
-        );
-      }
-      sb.write('</ul>');
+    final sb = StringBuffer('<section class="sources"><h2>Sources</h2><ol>');
+    for (final (i, s) in numbered.indexed) {
+      final shown = switch (_source(s)) {
+        (final href?, final title) => '<a href="$href">${esc(title)}</a>',
+        (null, final title) => esc(title),
+      };
+      final at = where[s] ?? const [];
+      sb.write(
+        '<li id="source-${i + 1}">$shown'
+        '${at.isEmpty ? '' : ' <span class="kind">${esc(at.join(', '))}</span>'}</li>',
+      );
     }
-    sb.write('</section>');
+    sb.write('</ol></section>');
     return sb.toString();
   }
 
@@ -1389,7 +1422,8 @@ ${rows.isEmpty ? '<p class="empty">Nothing is marked as needing a source.</p>' :
               switch (p.nameKinds[name]) {
                 null => '',
                 final kind => ' <span class="years">(${esc(kind)})</span>',
-              },
+              } +
+              cite(Event(sources: p.nameSources[name] ?? const [])),
       ]);
     }
     // A life event the records disagree on shows its other versions too.
@@ -1577,15 +1611,9 @@ ${rows.isEmpty ? '<p class="empty">Nothing is marked as needing a source.</p>' :
           if (isWanted(text)) {
             return '<sup class="needed" title="A source is wanted for this">source needed</sup>';
           }
-          var n = sources.indexOf(text) + 1;
-          if (n == 0) {
-            sources.add(text);
-            n = sources.length;
-          }
           // A photo or document leads to its page; other sources to the
           // list at the end.
-          final (href, title) = _source(text);
-          return '<sup class="cite-ref"><a href="${href ?? '#source-$n'}" title="${esc(title)}">$n</a></sup>';
+          return _numberMark(sources, text);
         })
         .replaceAllMapped(proseItemRef, (m) {
           final found = target(m[0]!);
@@ -2955,6 +2983,7 @@ h2 { font-size: 1.15em; font-weight: 600; margin: 1.8em 0 0.5em; padding-bottom:
 .cite-ref { font: 600 11px var(--ui); margin-left: 1px; }
 sup.needed, .cite.needed { font: italic 12px var(--ui); color: var(--muted); margin-left: 2px; }
 .cite-ref a { text-decoration: none; }
+.cite-ref + .cite-ref::before { content: ','; }
 .sources ol, .sources ul { font: 15px/1.5 var(--ui); color: var(--muted); padding-left: 1.4em; }
 .sources .fact-sources { list-style: none; padding-left: 0; }
 .sources .kind { font-variant: small-caps; margin-right: 4px; }
