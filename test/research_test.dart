@@ -83,7 +83,9 @@ void main() {
         (born['alsoRecorded'] as List).single,
         containsPair('date', '1854'),
       );
-      expect(shown['externalIds'], {'FamilySearch': 'LZ5X-QRT'});
+      expect(shown['externalIds'], {
+        'FamilySearch': ['LZ5X-QRT'],
+      });
     });
 
     test('gives the family, from whichever page states it', () {

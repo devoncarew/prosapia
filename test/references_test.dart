@@ -56,7 +56,9 @@ void main() {
 
   test('the photo, other ids, and what matches nothing', () {
     expect(page.photo, 'm-gdcade');
-    expect(page.externalIds, {'FamilySearch': 'LZ5X-QRT'});
+    expect(page.externalIds, {
+      'FamilySearch': ['LZ5X-QRT'],
+    });
     expect(page.facts, isEmpty);
     expect(r.issuesOf(page), ['Nothing in the tree matches #m-nothin.']);
   });
@@ -150,6 +152,21 @@ void main() {
       source: '#marriage-certificate-gdcade',
     ));
     tree.people.remove(p.id);
+  });
+
+  test('two records in one system each show their id', () {
+    final t = Tree('test');
+    final p = Person.fromSource(
+      'p-e5e5e5',
+      'e-e5e5e5',
+      'Name: E\nFamilySearch ID: LW85-BXX\nFamilySearch ID: MTZQ-Q43\n'
+          'Find a Grave ID: 205481226\n',
+    );
+    t.people[p.id] = p;
+    final html = Renderer(t, Index.build(t)).personArticle(p);
+    expect(html, contains('details&#47;LW85-BXX'));
+    expect(html, contains('<span class="years">MTZQ-Q43</span>'));
+    expect(html, isNot(contains('<span class="years">205481226</span>')));
   });
 
   test('readable item references', () {

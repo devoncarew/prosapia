@@ -310,7 +310,9 @@ class Person extends Page {
             ? null
             : 'm-${itemIdOf(line.value.trim())}';
       case _ when externalSites.containsKey(key):
-        externalIds[externalSites[key]!] = line.value;
+        // A person may have more than one record in a system, as when two
+        // entries in FamilySearch's tree are not yet merged.
+        externalIds.putIfAbsent(externalSites[key]!, () => []).add(line.value);
       case 'note':
         notes.add(line.value);
       case 'see also' || 'family':
@@ -518,7 +520,7 @@ class Person extends Page {
   String? get surname => familyName ?? nameParts(name).surname;
 
   /// The person's ids in other systems, by system: `FamilySearch`.
-  final externalIds = <String, String>{};
+  final externalIds = <String, List<String>>{};
 
   /// What kind of name each of [alsoKnownAs] is, when written:
   /// `married name`.

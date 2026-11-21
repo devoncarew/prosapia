@@ -1499,8 +1499,11 @@ ${rows.isEmpty ? '<p class="empty">Nothing is marked as needing a source.</p>' :
       rows.add((
         'Elsewhere',
         [
-          for (final MapEntry(key: site, value: id) in p.externalIds.entries)
-            '<a href="${esc(Person.externalLink(site, id))}" rel="noopener" target="_blank">${esc(site)}</a>',
+          for (final MapEntry(key: site, value: ids) in p.externalIds.entries)
+            for (final id in ids)
+              // With two records in one system, each says which it is.
+              '<a href="${esc(Person.externalLink(site, id))}" rel="noopener" target="_blank">${esc(site)}</a>'
+                  '${ids.length > 1 ? ' <span class="years">${esc(id)}</span>' : ''}',
         ].join('<br>'),
       ));
     }
